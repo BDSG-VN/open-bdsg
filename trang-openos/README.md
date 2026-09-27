@@ -1,4 +1,4 @@
-# trang-platform — trang của platform.bdsg.vn
+# trang-platform — trang của openos.bdsg.vn
 
 Trang tĩnh, không có bước đóng gói, không một dòng JavaScript nào. Triển khai
 bằng cách chép thẳng `index.html` vào docroot.
@@ -23,7 +23,7 @@ grep -c '<script' trang-platform/index.html     # phải ra 0
 
 ## Trang này nói gì
 
-`platform.bdsg.vn` là **trang sản phẩm của BDSG OS** — hệ điều hành gồm những
+`openos.bdsg.vn` là **trang sản phẩm của BDSG OS** — hệ điều hành gồm những
 nhân viên agent làm theo bốn chặng **Tư vấn → Triển khai → Vận hành → Kinh
 doanh**, mã nguồn mở Apache-2.0 để cơ quan nhà nước, doanh nghiệp và tổ chức xã
 hội tự cài trên máy chủ của mình.
@@ -184,7 +184,7 @@ cụ thể **cố ý không ghi ở đây**: kho này công khai, và bố cục
 chủ là thứ chỉ có ích cho người đang dò nó. Cổng `cong/khong-ha-tang.py` bắt
 đúng lỗi ấy khi bản đầu của tệp tương đương ghi ra — giữ nguyên bài học.
 
-**Trạng thái `platform.bdsg.vn` tại 26/09/2026: chưa đo.** Tên miền có bản ghi
+**Trạng thái `openos.bdsg.vn` tại 26/09/2026: chưa đo.** Tên miền có bản ghi
 DNS, nhưng có DNS **không** suy ra có vhost. Ở máy chủ này một tên miền có DNS
 mà thiếu vhost từng rơi vào vhost mặc định của một tên miền khác thay vì trả
 404 sạch sẽ. Kiểm bằng `curl` **từ ngoài**, kèm `Host:` đúng — không kiểm bằng
