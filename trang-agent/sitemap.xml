@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sinh bởi scripts/seo/sinh-sitemap-ten-mien.mjs. ĐỪNG SỬA TAY:
+     lần sinh sau sẽ ghi đè. Sửa ke-hoach-sitemap.mjs. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://agent.bdsg.vn/</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

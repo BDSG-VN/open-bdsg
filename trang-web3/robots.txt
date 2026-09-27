@@ -1,0 +1,17 @@
+# web3.bdsg.vn — BDSG
+# Sinh bởi scripts/seo/sinh-sitemap-ten-mien.mjs. ĐỪNG SỬA TAY.
+#
+# ⚠ TRƯỚC 28/09/2026 TÊN MIỀN NÀY KHÔNG CÓ robots.txt Ở GỐC.
+#   Kiểm từ ngoài vẫn thấy HTTP 200 — vì Cloudflare tự dựng một robots.txt
+#   chỉ gồm chú thích "content signals", không một dòng User-agent nào và
+#   KHÔNG có dòng Sitemap. Nên "robots 200" KHÔNG chứng minh ta có robots.
+#   Đo lại: curl -k --resolve web3.bdsg.vn:443:<IP may chu> https://web3.bdsg.vn/robots.txt
+#   (đi thẳng vào gốc, bỏ qua Cloudflare — IP lấy từ cấu hình, không ghi ở đây
+#    vì robots.txt là tệp công khai) — trước bản này nó trả 404.
+
+User-agent: *
+Allow: /
+
+# Dòng này phải trỏ sitemap CỦA CHÍNH tên miền này. Trỏ sang host khác là
+# lỗi đang có thật trên twin.bdsg.vn (nó khai sitemap của bdsg.vn).
+Sitemap: https://web3.bdsg.vn/sitemap.xml
