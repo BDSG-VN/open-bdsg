@@ -203,8 +203,11 @@ curl -sS -o /dev/null -w "%{http_code}\n" --resolve web3.bdsg.vn:443:<IP-GOC> ht
 #      tức là trang của một tên miền khác, và bạn sẽ kết luận nhầm.
 
 # 6.3 — trang trả về có ĐÚNG là trang này không (đây mới là phép chống bắt lạc vhost)
-curl -sS --resolve web3.bdsg.vn:443:<IP-GOC> https://web3.bdsg.vn/ | grep -c "<title>BDSG Web3</title>"
+curl -sS --resolve web3.bdsg.vn:443:<IP-GOC> https://web3.bdsg.vn/ | grep -c "<title>BDSG Web3"
 # CHỜ: 1.  Nếu 0 thì đang rơi vào vhost của tên miền khác, dù mã vẫn 200.
+#      Khớp tiền tố "<title>BDSG Web3" chứ KHÔNG khớp cả thẻ đóng: phần đuôi tiêu
+#      đề còn được biên tập, và một phép kiểm tự đỏ mỗi lần sửa chữ là phép kiểm
+#      sẽ bị bỏ qua.
 
 # 6.4 — byte trả về khớp đúng tệp trong kho
 curl -sS --resolve web3.bdsg.vn:443:<IP-GOC> https://web3.bdsg.vn/ | shasum -a 256
