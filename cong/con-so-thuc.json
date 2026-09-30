@@ -1,0 +1,115 @@
+{
+  "do_luc": "2026-09-30T20:46:24+00:00",
+  "cach_do": "đếm từ parameters() / tensor thật, KHÔNG đọc số viết tay",
+  "luat": "Không tài liệu nào của BDSG được viết số tham số bằng tay. README, thẻ mô hình và trang web đọc tệp này.",
+  "muc": [
+    {
+      "ten": "bdsg-lon",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/lon.json",
+      "muc_tieu": "sinh-van",
+      "tham_so": 295748608,
+      "tham_so_hoc_duoc": 295748608,
+      "tham_so_dau_ra": null,
+      "hinh_dang": {
+        "hidden_size": 1024,
+        "num_hidden_layers": 24,
+        "vocab_size": 24576,
+        "max_position_embeddings": 2048
+      },
+      "trong_so_fp32_MiB": 1128.19,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": null,
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+    },
+    {
+      "ten": "bdsg-nho",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/nho.json",
+      "muc_tieu": "sinh-van",
+      "tham_so": 36184576,
+      "tham_so_hoc_duoc": 36184576,
+      "tham_so_dau_ra": null,
+      "hinh_dang": {
+        "hidden_size": 512,
+        "num_hidden_layers": 8,
+        "vocab_size": 24576,
+        "max_position_embeddings": 2048
+      },
+      "trong_so_fp32_MiB": 138.03,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": null,
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+    },
+    {
+      "ten": "bdsg-quyet-dinh-lon",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/quyet-dinh-lon.json",
+      "muc_tieu": "quyet-dinh-co-kieu",
+      "tham_so": 26883084,
+      "tham_so_hoc_duoc": 26883084,
+      "tham_so_dau_ra": 4620,
+      "hinh_dang": {
+        "hidden_size": 512,
+        "num_hidden_layers": 8,
+        "vocab_size": 6400,
+        "max_position_embeddings": 512
+      },
+      "trong_so_fp32_MiB": 102.55,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": null,
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+    },
+    {
+      "ten": "bdsg-quyet-dinh-nho",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/quyet-dinh-nho.json",
+      "muc_tieu": "quyet-dinh-co-kieu",
+      "tham_so": 4592140,
+      "tham_so_hoc_duoc": 4592140,
+      "tham_so_dau_ra": 2316,
+      "hinh_dang": {
+        "hidden_size": 256,
+        "num_hidden_layers": 4,
+        "vocab_size": 6400,
+        "max_position_embeddings": 512
+      },
+      "trong_so_fp32_MiB": 17.52,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": null,
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+    },
+    {
+      "ten": "bdsg-quyet-dinh-vua",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/quyet-dinh-vua.json",
+      "muc_tieu": "quyet-dinh-co-kieu",
+      "tham_so": 12198156,
+      "tham_so_hoc_duoc": 12198156,
+      "tham_so_dau_ra": 3468,
+      "hinh_dang": {
+        "hidden_size": 384,
+        "num_hidden_layers": 6,
+        "vocab_size": 6400,
+        "max_position_embeddings": 512
+      },
+      "trong_so_fp32_MiB": 46.53,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": null,
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+    },
+    {
+      "ten": "bdsg-vua",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/vua.json",
+      "muc_tieu": "sinh-van",
+      "tham_so": 119563008,
+      "tham_so_hoc_duoc": 119563008,
+      "tham_so_dau_ra": null,
+      "hinh_dang": {
+        "hidden_size": 768,
+        "num_hidden_layers": 16,
+        "vocab_size": 24576,
+        "max_position_embeddings": 2048
+      },
+      "trong_so_fp32_MiB": 456.1,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": null,
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+    }
+  ]
+}

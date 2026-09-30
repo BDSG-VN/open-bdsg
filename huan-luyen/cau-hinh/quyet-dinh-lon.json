@@ -1,0 +1,31 @@
+{
+  "hidden_size": 512,
+  "num_hidden_layers": 8,
+  "num_attention_heads": 8,
+  "num_key_value_heads": 4,
+  "head_dim": 64,
+  "intermediate_size": 1408,
+  "vocab_size": 6400,
+  "hidden_act": "silu",
+  "max_position_embeddings": 512,
+  "rope_theta": 10000.0,
+  "rms_norm_eps": 1e-06,
+  "tie_word_embeddings": true,
+  "attention_dropout": 0.0,
+  "bos_token_id": 1,
+  "eos_token_id": 2,
+  "pad_token_id": 0,
+
+  "bdsg": {
+    "ten": "bdsg-quyet-dinh-lon",
+    "ngay_viet": "01/10/2026",
+    "muc_tieu": "quyet-dinh-co-kieu",
+    "muc_dich": "TRÙNG KHÍT thân bản trọng số BDSG đã huấn luyện 26/09/2026 (512 chiều · 8 lớp · 8 đầu truy vấn / 4 đầu khoá-giá trị · từ vựng 6.400). Chọn đúng cấu hình này để nạp lại được 74/74 tensor thân, không mất gì.",
+    "dau": [
+      { "ma": "chang-uu-tien",   "loai": "choice", "nhan": ["tu-van", "trien-khai", "kinh-doanh"] },
+      { "ma": "can-nguoi-duyet", "loai": "noul" },
+      { "ma": "diem-kha-thi",    "loai": "score",  "nhan": ["rất thấp", "thấp", "vừa", "cao", "rất cao"] }
+    ],
+    "ghi_chu_so": "So tham so o day KHONG ghi trong tep nay. Chay huan-luyen/cau-hinh/tinh_tham_so.py de tinh, hoac mo-hinh/dau_quyet_dinh.py:dem_tham_so() de dem that. Mot con so ghi tay trong JSON se lech ngay lan sua kien truc dau tien ma khong ai biet."
+  }
+}
