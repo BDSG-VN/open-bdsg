@@ -1,0 +1,167 @@
+[
+  {
+    "ma": "he_dieu_hanh",
+    "ten": "BDSG OS",
+    "tom_tat": "Trang chủ hệ điều hành: doanh nghiệp xem mình đang bật lĩnh vực nào và bật thêm lĩnh vực mới.",
+    "bieu_tuong": {
+      "chu": "O",
+      "mau": "#1B2A4A"
+    },
+    "duong_dan": "/os",
+    "loai": "tep-tinh",
+    "cong_cu": [
+      "he_dieu_hanh.liet_ke_linh_vuc",
+      "he_dieu_hanh.bat_linh_vuc"
+    ],
+    "quyen_can": [
+      "doc",
+      "ghi"
+    ],
+    "ghi_chu": "Tự chứa trong một tệp HTML, đo 01/10/2026: 0 tài nguyên ngoài.",
+    "tep": "linh-vuc/he-dieu-hanh/linh-vuc.json"
+  },
+  {
+    "ma": "iot",
+    "ten": "BDSG IoT",
+    "tom_tat": "Thu và xem số liệu từ thiết bị đo đặt tại công trình, nhà máy, toà nhà.",
+    "bieu_tuong": {
+      "chu": "I",
+      "mau": "#C0492B"
+    },
+    "duong_dan": "/iot",
+    "loai": "spa-tinh",
+    "cong_cu": [
+      "iot.doc_cam_bien",
+      "iot.dat_nguong_canh_bao"
+    ],
+    "quyen_can": [
+      "doc",
+      "ghi"
+    ],
+    "ghi_chu": "Vite riêng, mã băm riêng (index-BIHSDIg4.js). Phải đặt base=/iot khi dựng.",
+    "tep": "linh-vuc/iot/linh-vuc.json"
+  },
+  {
+    "ma": "llm",
+    "ten": "BDSG LLM",
+    "tom_tat": "Cổng mô hình cho doanh nghiệp: một địa chỉ, có khoá, có hạn mức, có nhật ký.",
+    "bieu_tuong": {
+      "chu": "L",
+      "mau": "#1A1AA8"
+    },
+    "duong_dan": "/llm",
+    "loai": "proxy",
+    "cong_cu": [
+      "llm.hoi",
+      "llm.liet_ke_mo_hinh"
+    ],
+    "quyen_can": [
+      "doc"
+    ],
+    "ghi_chu": "Có tiến trình riêng phía sau. Trang giới thiệu chỉ là 2 tệp phẳng (giao-dien.css, trang.js).",
+    "tep": "linh-vuc/llm/linh-vuc.json"
+  },
+  {
+    "ma": "map5d",
+    "ten": "BDSG Map5D",
+    "tom_tat": "Bản đồ hành chính chính thống 34 tỉnh và 3.321 xã, đặt dữ liệu doanh nghiệp lên đó.",
+    "bieu_tuong": {
+      "chu": "M",
+      "mau": "#2E8B7A"
+    },
+    "duong_dan": "/map5d",
+    "loai": "spa-tinh",
+    "cong_cu": [
+      "map5d.tra_cuu_don_vi",
+      "map5d.tim_quanh_diem"
+    ],
+    "quyen_can": [
+      "doc"
+    ],
+    "ghi_chu": "⚠ Dùng CHUNG bộ gói với twin (trùng mã băm index-DzAweHNA.js). Phải dựng lại với base=/map5d.",
+    "tep": "linh-vuc/map5d/linh-vuc.json"
+  },
+  {
+    "ma": "tac_nhan",
+    "ten": "BDSG Agent",
+    "tom_tat": "Tác nhân trả quyết định có kiểu từ dữ liệu doanh nghiệp — trả nhãn kèm xác suất, không trả câu.",
+    "bieu_tuong": {
+      "chu": "A",
+      "mau": "#1E5631"
+    },
+    "duong_dan": "/tac-nhan",
+    "loai": "tep-tinh",
+    "cong_cu": [
+      "tac_nhan.quyet_dinh",
+      "tac_nhan.liet_ke_cau_hoi"
+    ],
+    "quyen_can": [
+      "doc"
+    ],
+    "ghi_chu": "Tự chứa. Đo 01/10/2026: 0 tài nguyên ngoài.",
+    "tep": "linh-vuc/tac-nhan/linh-vuc.json"
+  },
+  {
+    "ma": "tro_chuyen",
+    "ten": "BDSG Chat",
+    "tom_tat": "Hỏi đáp trên tri thức của chính doanh nghiệp, câu trả lời kèm trích dẫn nguồn.",
+    "bieu_tuong": {
+      "chu": "C",
+      "mau": "#4A9CC0"
+    },
+    "duong_dan": "/tro-chuyen",
+    "loai": "tep-tinh",
+    "cong_cu": [
+      "tro_chuyen.hoi",
+      "tro_chuyen.lich_su"
+    ],
+    "quyen_can": [
+      "doc",
+      "ghi"
+    ],
+    "ghi_chu": "⚠ Đo 01/10/2026: giao diện tải được nhưng 6/8 đường /api/* CHƯA có bản hiện thực trong kho.",
+    "tep": "linh-vuc/tro-chuyen/linh-vuc.json"
+  },
+  {
+    "ma": "twin",
+    "ten": "BDSG Twin",
+    "tom_tat": "Không gian trưng bày ba chiều của doanh nghiệp, khách xem trực tiếp trong trình duyệt.",
+    "bieu_tuong": {
+      "chu": "T",
+      "mau": "#7B3F98"
+    },
+    "duong_dan": "/twin",
+    "loai": "spa-tinh",
+    "cong_cu": [
+      "twin.tao_khong_gian",
+      "twin.mo_khong_gian"
+    ],
+    "quyen_can": [
+      "doc",
+      "ghi"
+    ],
+    "ghi_chu": "⚠ Dùng CHUNG bộ gói với map5d. Hai tên miền phụ hiện tại là một ứng dụng định tuyến theo hostname.",
+    "tep": "linh-vuc/twin/linh-vuc.json"
+  },
+  {
+    "ma": "web3",
+    "ten": "BDSG Web3",
+    "tom_tat": "Lớp ghi nhận giao dịch có đối chứng giữa hai bên không tin nhau.",
+    "bieu_tuong": {
+      "chu": "W",
+      "mau": "#8B4513"
+    },
+    "duong_dan": "/web3",
+    "loai": "tep-tinh",
+    "cong_cu": [
+      "web3.ghi_nhan",
+      "web3.tra_cuu"
+    ],
+    "quyen_can": [
+      "doc",
+      "ghi"
+    ],
+    "ghi_chu": "⚠ web3.bdsg.vn CỐ Ý rỗng: lớp blockchain còn trên giấy. Khai ở đây để giữ khe, không để khoe.",
+    "tep": "linh-vuc/web3/linh-vuc.json"
+  }
+]

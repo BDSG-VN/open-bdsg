@@ -1,0 +1,21 @@
+{
+  "ma": "he_dieu_hanh",
+  "ten": "BDSG OS",
+  "tom_tat": "Trang chủ hệ điều hành: doanh nghiệp xem mình đang bật lĩnh vực nào và bật thêm lĩnh vực mới.",
+  "bieu_tuong": {
+    "chu": "O",
+    "mau": "#1B2A4A"
+  },
+  "duong_dan": "/os",
+  "loai": "tep-tinh",
+  "cong_cu": [
+    "he_dieu_hanh.liet_ke_linh_vuc",
+    "he_dieu_hanh.bat_linh_vuc"
+  ],
+  "quyen_can": [
+    "doc",
+    "ghi"
+  ],
+  "ghi_chu": "Tự chứa trong một tệp HTML, đo 01/10/2026: 0 tài nguyên ngoài.",
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+}

@@ -1,0 +1,21 @@
+{
+  "ma": "tro_chuyen",
+  "ten": "BDSG Chat",
+  "tom_tat": "Hỏi đáp trên tri thức của chính doanh nghiệp, câu trả lời kèm trích dẫn nguồn.",
+  "bieu_tuong": {
+    "chu": "C",
+    "mau": "#4A9CC0"
+  },
+  "duong_dan": "/tro-chuyen",
+  "loai": "tep-tinh",
+  "cong_cu": [
+    "tro_chuyen.hoi",
+    "tro_chuyen.lich_su"
+  ],
+  "quyen_can": [
+    "doc",
+    "ghi"
+  ],
+  "ghi_chu": "⚠ Đo 01/10/2026: giao diện tải được nhưng 6/8 đường /api/* CHƯA có bản hiện thực trong kho.",
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+}

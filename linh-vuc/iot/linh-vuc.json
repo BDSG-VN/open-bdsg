@@ -1,0 +1,21 @@
+{
+  "ma": "iot",
+  "ten": "BDSG IoT",
+  "tom_tat": "Thu và xem số liệu từ thiết bị đo đặt tại công trình, nhà máy, toà nhà.",
+  "bieu_tuong": {
+    "chu": "I",
+    "mau": "#C0492B"
+  },
+  "duong_dan": "/iot",
+  "loai": "spa-tinh",
+  "cong_cu": [
+    "iot.doc_cam_bien",
+    "iot.dat_nguong_canh_bao"
+  ],
+  "quyen_can": [
+    "doc",
+    "ghi"
+  ],
+  "ghi_chu": "Vite riêng, mã băm riêng (index-BIHSDIg4.js). Phải đặt base=/iot khi dựng.",
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+}

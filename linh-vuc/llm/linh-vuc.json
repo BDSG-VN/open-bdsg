@@ -1,0 +1,20 @@
+{
+  "ma": "llm",
+  "ten": "BDSG LLM",
+  "tom_tat": "Cổng mô hình cho doanh nghiệp: một địa chỉ, có khoá, có hạn mức, có nhật ký.",
+  "bieu_tuong": {
+    "chu": "L",
+    "mau": "#1A1AA8"
+  },
+  "duong_dan": "/llm",
+  "loai": "proxy",
+  "cong_cu": [
+    "llm.hoi",
+    "llm.liet_ke_mo_hinh"
+  ],
+  "quyen_can": [
+    "doc"
+  ],
+  "ghi_chu": "Có tiến trình riêng phía sau. Trang giới thiệu chỉ là 2 tệp phẳng (giao-dien.css, trang.js).",
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+}

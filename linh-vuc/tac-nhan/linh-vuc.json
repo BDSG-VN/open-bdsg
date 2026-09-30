@@ -1,0 +1,20 @@
+{
+  "ma": "tac_nhan",
+  "ten": "BDSG Agent",
+  "tom_tat": "Tác nhân trả quyết định có kiểu từ dữ liệu doanh nghiệp — trả nhãn kèm xác suất, không trả câu.",
+  "bieu_tuong": {
+    "chu": "A",
+    "mau": "#1E5631"
+  },
+  "duong_dan": "/tac-nhan",
+  "loai": "tep-tinh",
+  "cong_cu": [
+    "tac_nhan.quyet_dinh",
+    "tac_nhan.liet_ke_cau_hoi"
+  ],
+  "quyen_can": [
+    "doc"
+  ],
+  "ghi_chu": "Tự chứa. Đo 01/10/2026: 0 tài nguyên ngoài.",
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+}

@@ -1,0 +1,21 @@
+{
+  "ma": "web3",
+  "ten": "BDSG Web3",
+  "tom_tat": "Lớp ghi nhận giao dịch có đối chứng giữa hai bên không tin nhau.",
+  "bieu_tuong": {
+    "chu": "W",
+    "mau": "#8B4513"
+  },
+  "duong_dan": "/web3",
+  "loai": "tep-tinh",
+  "cong_cu": [
+    "web3.ghi_nhan",
+    "web3.tra_cuu"
+  ],
+  "quyen_can": [
+    "doc",
+    "ghi"
+  ],
+  "ghi_chu": "⚠ web3.bdsg.vn CỐ Ý rỗng: lớp blockchain còn trên giấy. Khai ở đây để giữ khe, không để khoe.",
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+}

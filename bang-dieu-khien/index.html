@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bảng điều khiển — Open BDSG</title>
+<meta name="description" content="Bật lĩnh vực kinh doanh cần dùng. Một tên miền, một lần đăng nhập.">
+<style>
+:root{
+  --duong:#005CA6; --la:#5BBA46; --cam:#F5821F; --xam:#7C878E;
+  --toi:#002B4E; --nen:#fff; --nen2:#F2F2F2; --vien:#E3E8ED; --chu:#1a1a1a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Roboto,-apple-system,"Segoe UI",Arial,sans-serif;font-weight:300;
+  color:var(--chu);background:var(--nen)}
+a{color:var(--duong)}
+header{border-bottom:1px solid var(--vien);padding:16px 22px;display:flex;
+  align-items:baseline;gap:14px;flex-wrap:wrap}
+header .ten{font-weight:700;font-size:19px;color:var(--toi)}
+header .phu{font-size:13px;color:var(--xam)}
+main{max-width:1060px;margin:0 auto;padding:26px 22px 60px}
+h2{font-size:13px;font-weight:500;letter-spacing:.9px;text-transform:uppercase;
+  color:var(--xam);margin:34px 0 16px}
+h2:first-child{margin-top:0}
+
+.luoi{display:grid;grid-template-columns:repeat(auto-fill,minmax(192px,1fr));gap:18px}
+.o{border:1px solid var(--vien);border-radius:7px;padding:16px;background:#fff;
+  display:flex;flex-direction:column;gap:9px;text-decoration:none;color:inherit}
+.o:hover{border-color:var(--duong)}
+.o[aria-disabled="true"]{opacity:.62;pointer-events:none}
+.bt{width:52px;height:52px;border-radius:13px;display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:22px;line-height:1}
+.o .ten{font-weight:500;color:var(--toi);font-size:15px}
+.o .tt{font-size:12.5px;color:var(--xam);line-height:1.5}
+.nhan{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;
+  padding:2.5px 8px;border-radius:99px;width:fit-content}
+.nhan i{width:6px;height:6px;border-radius:50%}
+.n-chay{background:#eaf6ec;color:#1e5631} .n-chay i{background:#5BBA46}
+.n-trang{background:#fdf0e4;color:#8a4a00} .n-trang i{background:#F5821F}
+.n-hong{background:#fbe9e9;color:#8a1c1c} .n-hong i{background:#c0392b}
+.n-chuado{background:#eef1f4;color:#5b6772} .n-chuado i{background:#7C878E}
+.n-motphan{background:#fdf0e4;color:#8a4a00} .n-motphan i{background:#F5821F}
+
+.khai{border:1px solid var(--vien);border-left:3px solid var(--cam);border-radius:5px;
+  padding:13px 15px;margin:26px 0 0;background:#fffdf9;font-size:13.5px;line-height:1.62}
+.khai b{color:var(--toi)}
+footer{border-top:1px solid var(--vien);padding:14px 22px;font-size:12px;color:var(--xam);
+  line-height:1.6;max-width:1060px;margin:0 auto}
+code{font-size:12px;background:var(--nen2);padding:1px 5px;border-radius:3px}
+@media(max-width:620px){main{padding:20px 16px 44px}header{padding:14px 16px}
+  .luoi{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:13px}}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="ten">Open BDSG</span>
+  <span class="phu">Hệ điều hành kinh doanh đa ngành bởi trí tuệ nhân tạo tự chủ</span>
+</header>
+
+<main>
+  <div id="noi-dung">
+    <h2>Đang nạp</h2>
+    <p class="tt" id="tt-nap">Đọc sổ ghi lĩnh vực…</p>
+  </div>
+
+  <div class="khai">
+    <b>Bảng này hiện trạng thái ĐO ĐƯỢC, không hiện lời khai.</b>
+    Mỗi lĩnh vực khai mình làm gì trong <code>linh-vuc/&lt;mã&gt;/linh-vuc.json</code>, nhưng
+    <b>không</b> được khai mình có chạy hay không — <code>linh-vuc/so_ghi.py</code> từ chối bản
+    khai nào tự nhận. Trạng thái do <code>linh-vuc/do_trang_thai.py</code> gọi thật từng đường
+    dẫn rồi <b>tải thật từng tệp .js/.css</b> mà trang khai. Vì vậy nhãn
+    <b>trang trắng</b> tồn tại: một trang trả mã 200 nhưng tài nguyên 404 thì người dùng thấy
+    trang trắng, còn mọi phép kiểm chỉ nhìn mã HTTP đều báo lành.
+    <b>“Chưa đo” khác “chạy được”</b> và cũng khác “hỏng”.
+  </div>
+</main>
+
+<footer id="chan"></footer>
+
+<script src="bang-dieu-khien.js"></script>
+</body>
+</html>

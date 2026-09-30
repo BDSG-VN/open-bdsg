@@ -1,0 +1,96 @@
+{
+  "do_luc": "2026-09-30T21:48:15+00:00",
+  "goc_da_goi": null,
+  "cach_do": "gọi thật từng đường dẫn rồi TẢI THẬT từng tài nguyên .js/.css mà HTML khai",
+  "luat": "Bản khai linh-vuc.json KHÔNG được chứa trang_thai. Tệp này là nguồn duy nhất của trạng thái, và 'chua-do' là một câu trả lời hợp lệ — khác hẳn 'chay-duoc'.",
+  "muc": [
+    {
+      "ma": "he_dieu_hanh",
+      "ten": "BDSG OS",
+      "duong_dan": "/os",
+      "loai": "tep-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "iot",
+      "ten": "BDSG IoT",
+      "duong_dan": "/iot",
+      "loai": "spa-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "llm",
+      "ten": "BDSG LLM",
+      "duong_dan": "/llm",
+      "loai": "proxy",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "map5d",
+      "ten": "BDSG Map5D",
+      "duong_dan": "/map5d",
+      "loai": "spa-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "tac_nhan",
+      "ten": "BDSG Agent",
+      "duong_dan": "/tac-nhan",
+      "loai": "tep-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "tro_chuyen",
+      "ten": "BDSG Chat",
+      "duong_dan": "/tro-chuyen",
+      "loai": "tep-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "twin",
+      "ten": "BDSG Twin",
+      "duong_dan": "/twin",
+      "loai": "spa-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    },
+    {
+      "ma": "web3",
+      "ten": "BDSG Web3",
+      "duong_dan": "/web3",
+      "loai": "tep-tinh",
+      "trang_thai": "chua-do",
+      "bang_chung": [
+        "không truyền --goc nên chưa gọi thử lần nào"
+      ],
+      "canh_bao": []
+    }
+  ]
+}
