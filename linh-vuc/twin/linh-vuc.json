@@ -4,7 +4,7 @@
   "tom_tat": "Không gian trưng bày ba chiều của doanh nghiệp, khách xem trực tiếp trong trình duyệt.",
   "bieu_tuong": {
     "chu": "T",
-    "mau": "#7B3F98"
+    "mau": "#7b2d8b"
   },
   "duong_dan": "/twin",
   "loai": "spa-tinh",
@@ -17,5 +17,7 @@
     "ghi"
   ],
   "ghi_chu": "⚠ Dùng CHUNG bộ gói với map5d. Hai tên miền phụ hiện tại là một ứng dụng định tuyến theo hostname.",
-  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md.",
+  "nguon_bdsg": "https://twin.bdsg.vn",
+  "mo_ta_hst": "Không gian 3D doanh nghiệp"
 }

@@ -4,7 +4,7 @@
   "tom_tat": "Cổng mô hình cho doanh nghiệp: một địa chỉ, có khoá, có hạn mức, có nhật ký.",
   "bieu_tuong": {
     "chu": "L",
-    "mau": "#1A1AA8"
+    "mau": "#10069f"
   },
   "duong_dan": "/llm",
   "loai": "proxy",
@@ -16,5 +16,7 @@
     "doc"
   ],
   "ghi_chu": "Có tiến trình riêng phía sau. Trang giới thiệu chỉ là 2 tệp phẳng (giao-dien.css, trang.js).",
-  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md.",
+  "nguon_bdsg": "https://llm.bdsg.vn",
+  "mo_ta_hst": "Mô hình ngôn ngữ và API tri thức doanh nghiệp"
 }

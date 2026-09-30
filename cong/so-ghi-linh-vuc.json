@@ -5,7 +5,7 @@
     "tom_tat": "Trang chủ hệ điều hành: doanh nghiệp xem mình đang bật lĩnh vực nào và bật thêm lĩnh vực mới.",
     "bieu_tuong": {
       "chu": "O",
-      "mau": "#1B2A4A"
+      "mau": "#0f2d4d"
     },
     "duong_dan": "/os",
     "loai": "tep-tinh",
@@ -26,7 +26,7 @@
     "tom_tat": "Thu và xem số liệu từ thiết bị đo đặt tại công trình, nhà máy, toà nhà.",
     "bieu_tuong": {
       "chu": "I",
-      "mau": "#C0492B"
+      "mau": "#c2410c"
     },
     "duong_dan": "/iot",
     "loai": "spa-tinh",
@@ -47,7 +47,7 @@
     "tom_tat": "Cổng mô hình cho doanh nghiệp: một địa chỉ, có khoá, có hạn mức, có nhật ký.",
     "bieu_tuong": {
       "chu": "L",
-      "mau": "#1A1AA8"
+      "mau": "#10069f"
     },
     "duong_dan": "/llm",
     "loai": "proxy",
@@ -67,7 +67,7 @@
     "tom_tat": "Bản đồ hành chính chính thống 34 tỉnh và 3.321 xã, đặt dữ liệu doanh nghiệp lên đó.",
     "bieu_tuong": {
       "chu": "M",
-      "mau": "#2E8B7A"
+      "mau": "#0f766e"
     },
     "duong_dan": "/map5d",
     "loai": "spa-tinh",
@@ -87,7 +87,7 @@
     "tom_tat": "Tác nhân trả quyết định có kiểu từ dữ liệu doanh nghiệp — trả nhãn kèm xác suất, không trả câu.",
     "bieu_tuong": {
       "chu": "A",
-      "mau": "#1E5631"
+      "mau": "#00573f"
     },
     "duong_dan": "/tac-nhan",
     "loai": "tep-tinh",
@@ -107,7 +107,7 @@
     "tom_tat": "Hỏi đáp trên tri thức của chính doanh nghiệp, câu trả lời kèm trích dẫn nguồn.",
     "bieu_tuong": {
       "chu": "C",
-      "mau": "#4A9CC0"
+      "mau": "#0891b2"
     },
     "duong_dan": "/tro-chuyen",
     "loai": "tep-tinh",
@@ -128,7 +128,7 @@
     "tom_tat": "Không gian trưng bày ba chiều của doanh nghiệp, khách xem trực tiếp trong trình duyệt.",
     "bieu_tuong": {
       "chu": "T",
-      "mau": "#7B3F98"
+      "mau": "#7b2d8b"
     },
     "duong_dan": "/twin",
     "loai": "spa-tinh",
@@ -149,7 +149,7 @@
     "tom_tat": "Lớp ghi nhận giao dịch có đối chứng giữa hai bên không tin nhau.",
     "bieu_tuong": {
       "chu": "W",
-      "mau": "#8B4513"
+      "mau": "#a34400"
     },
     "duong_dan": "/web3",
     "loai": "tep-tinh",

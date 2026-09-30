@@ -4,7 +4,7 @@
   "tom_tat": "Bản đồ hành chính chính thống 34 tỉnh và 3.321 xã, đặt dữ liệu doanh nghiệp lên đó.",
   "bieu_tuong": {
     "chu": "M",
-    "mau": "#2E8B7A"
+    "mau": "#0f766e"
   },
   "duong_dan": "/map5d",
   "loai": "spa-tinh",
@@ -16,5 +16,7 @@
     "doc"
   ],
   "ghi_chu": "⚠ Dùng CHUNG bộ gói với twin (trùng mã băm index-DzAweHNA.js). Phải dựng lại với base=/map5d.",
-  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md.",
+  "nguon_bdsg": "https://map.bdsg.vn",
+  "mo_ta_hst": "Bản đồ dữ liệu 5 chiều"
 }

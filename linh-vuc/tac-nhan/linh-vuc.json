@@ -4,7 +4,7 @@
   "tom_tat": "Tác nhân trả quyết định có kiểu từ dữ liệu doanh nghiệp — trả nhãn kèm xác suất, không trả câu.",
   "bieu_tuong": {
     "chu": "A",
-    "mau": "#1E5631"
+    "mau": "#00573f"
   },
   "duong_dan": "/tac-nhan",
   "loai": "tep-tinh",
@@ -16,5 +16,7 @@
     "doc"
   ],
   "ghi_chu": "Tự chứa. Đo 01/10/2026: 0 tài nguyên ngoài.",
-  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md."
+  "_luu_y": "KHONG them 'trang_thai' hay 'bang_chung' vao tep nay — hai truong do do linh-vuc/do_trang_thai.py do va ghi ra cong/trang-thai-linh-vuc.json. Xem linh-vuc/luoc-do.md.",
+  "nguon_bdsg": "https://agent.bdsg.vn",
+  "mo_ta_hst": "Nền tảng tác nhân quy mô dân số"
 }
