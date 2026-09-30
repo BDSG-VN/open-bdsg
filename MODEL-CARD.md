@@ -1,4 +1,6 @@
-# Thẻ mô hình — Open BDSG OS
+# Thẻ mô hình — Open BDSG
+
+<sub>Open BDSG · Hệ điều hành kinh doanh đa ngành bởi trí tuệ nhân tạo tự chủ</sub>
 
 Viết theo khuôn thẻ mô hình (model card) của Hugging Face.
 
@@ -91,7 +93,7 @@ Hai điều cấm về kỹ thuật, cả hai đều hỏng **lặng lẽ**, kh�
 
 | Trường | Giá trị |
 |---|---|
-| Tên | Open BDSG OS |
+| Tên | Open BDSG |
 | Đơn vị phát triển | BDSG |
 | Loại mô hình | mô hình ngôn ngữ nhân quả (decoder-only), pre-norm, kiến trúc do BDSG viết |
 | Ngôn ngữ | **1. Tiếng Việt (chính) · 2. Tiếng Anh (phụ)** |
@@ -486,7 +488,7 @@ chạy thật. Không điền số của thượng nguồn vào ô của mình.
 
 ```bibtex
 @misc{openbdsgos2026,
-  title        = {Open BDSG OS: bộ dữ liệu và bộ đánh giá mở
+  title        = {Open BDSG: bộ dữ liệu và bộ đánh giá mở
                   cho tri thức doanh nghiệp Việt Nam},
   author       = {BDSG},
   year         = {2026},

@@ -4,7 +4,7 @@
 cong/khong-bi-mat.py — CỔNG 1/4: chặn bí mật lọt vào kho công khai.
 
 VÌ SAO CỔNG NÀY TỒN TẠI
-  Kho "Open BDSG OS" là kho CÔNG KHAI. Đẩy lên là việc MỘT CHIỀU:
+  Kho "Open BDSG" là kho CÔNG KHAI. Đẩy lên là việc MỘT CHIỀU:
   GitHub giữ lịch sử, các bản fork giữ bản sao, bộ nhớ đệm máy tìm kiếm giữ nội dung.
   Xoá commit sau đó KHÔNG thu hồi được khoá đã lộ — chỉ có thu hồi (revoke) khoá mới có tác dụng.
   Cho nên cổng phải chặn TRƯỚC khi đẩy, không phải dọn sau khi đẩy.

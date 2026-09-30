@@ -1,4 +1,4 @@
-# Kiến trúc: Open BDSG OS là một hệ điều hành cho doanh nghiệp
+# Kiến trúc: Open BDSG là một hệ điều hành cho doanh nghiệp
 
 Viết ngày **26/09/2026**. Đây là tài liệu **đọc trước khi sửa bất cứ thứ gì** trong
 phần hệ điều hành của kho.
@@ -70,7 +70,7 @@ những tính chất mà hệ thật không có.
 Nên bảng dưới đây có cột thứ tư, và **cột thứ tư mới là cột quan trọng**. Một dòng
 không nói được phép so sánh của nó hỏng ở đâu là một dòng đang đánh lừa người đọc.
 
-| Khái niệm HĐH | Trong Open BDSG OS | Phép so sánh ĐÚNG tới đâu | Nó HỎNG ở đâu |
+| Khái niệm HĐH | Trong Open BDSG | Phép so sánh ĐÚNG tới đâu | Nó HỎNG ở đâu |
 |---|---|---|---|
 | **Lời gọi hệ thống** | Một công cụ MCP | Đúng ở chỗ cốt lõi: đây là ranh giới **duy nhất** mà tiến trình vượt qua để chạm vào thế giới ngoài. Có chữ ký tường minh, có kiểm tham số, có mã lỗi, và **chặn được tại ranh giới**. | Lời gọi hệ thống thật có **ABI ổn định** và chi phí tính bằng micro-giây. Một công cụ MCP là lời gọi mạng: hàng chục tới hàng nghìn mili-giây, hỏng giữa chừng, và chữ ký có thể đổi khi nền tảng đằng sau nâng cấp. **Không được thiết kế như thể nó rẻ và ổn định.** |
 | **Trình điều khiển** | Một máy chủ MCP cho một nền tảng | Đúng ở chỗ: nó biết **một** thiết bị, phơi ra giao diện chung, và thay được mà không sửa nhân. Thêm nền tảng = thêm trình điều khiển. | Trình điều khiển thật chạy **trong không gian nhân**, tin cậy cao, và hỏng thì sập máy. Ở đây nó là một tiến trình riêng nói chuyện qua ống dẫn hoặc mạng: **nhân phải coi trình điều khiển là bên không đáng tin**, có thời hạn chờ, và sống sót khi nó chết. Đây không phải chi tiết nhỏ — nó đảo ngược quan hệ tin cậy so với HĐH thật. |

@@ -10,7 +10,7 @@ Toàn bộ bài chạy xong dưới một giây.
 
 VÌ SAO CÓ BÀI NÀY
 -----------------
-BDSG đã CÔNG BỐ CÔNG KHAI — trên bdsg.vn/open-bdsg-os và trong README của kho —
+BDSG đã CÔNG BỐ CÔNG KHAI — trên bdsg.vn/open-bdsg và trong README của kho —
 câu này:
 
     "mọi lời gọi công cụ đều đi qua nhân, nên nó luôn có MỘT CHỦ THỂ, MỘT PHÉP

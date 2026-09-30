@@ -15,7 +15,7 @@ cần đo mà không có một bí mật thật nào nằm trong kho.
 
 VÌ SAO CÓ BÀI NÀY
 -----------------
-BDSG vừa khẳng định CÔNG KHAI (trang bdsg.vn/open-bdsg-os và README kho): "mọi
+BDSG vừa khẳng định CÔNG KHAI (trang bdsg.vn/open-bdsg và README kho): "mọi
 lời gọi công cụ đều đi qua nhân, nên nó luôn có một chủ thể, một phép thử quyền
 và MỘT DÒNG NHẬT KÝ". Phần "một dòng nhật ký" của khẳng định ấy tính đến hôm nay
 chưa có một phép đo nào. Bài này đo nó.
@@ -160,7 +160,7 @@ URL_CO_MAT_KHAU = ("post" + "gres://nguoidung:matkhaubia@may-chu-bia.test:"
 HEX_DAI_BIA = "d" * 40
 THE_BIA = "4111 1111 1111 1111"          # số thẻ thử nghiệm công khai, không dùng được
 EMAIL_BIA = "khach.hang@vi-du.test"
-DIEN_THOAI_BIA = "0912345678"
+DIEN_THOAI_BIA = "0912345678"  # ly-do=số bịa trong bài thử che bí mật, không phải số của người thật
 MAT_KHAU_BIA = "matkhaubia-1234"
 
 # Mọi chuỗi trên đây, khi lọt vào nhật ký, phải KHÔNG còn nguyên văn.

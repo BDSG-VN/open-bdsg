@@ -10,7 +10,7 @@ chạy xong dưới một giây.
 
 ═══ VÌ SAO CÓ BÀI NÀY ═══
 
-README của kho và trang bdsg.vn/open-bdsg-os nói công khai rằng mọi lời gọi công
+README của kho và trang bdsg.vn/open-bdsg nói công khai rằng mọi lời gọi công
 cụ "luôn có MỘT CHỦ THỂ, MỘT PHÉP THỬ QUYỀN và MỘT DÒNG NHẬT KÝ". Vế thứ nhất —
 CHỦ THỂ — do đúng tệp này quyết định. Trước hôm nay khẳng định ấy chưa có một
 phép đo nào đứng sau, mà một khẳng định công khai không đo được chính là họ lỗi

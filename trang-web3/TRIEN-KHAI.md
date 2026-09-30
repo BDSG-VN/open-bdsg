@@ -90,7 +90,7 @@ tên miền. Dán **ngay sau** khối `agent.bdsg.vn`, giữ nguyên thứ tự 
 
 ```apache
 # ═════════════════════════════════════════════════════════════════════════
-# web3.bdsg.vn — BDSG Web3, lop blockchain cua Open BDSG OS.
+# web3.bdsg.vn — BDSG Web3, lop blockchain cua Open BDSG.
 # Trang TINH, KHONG mot dong JavaScript (xem CSP script-src 'none' o khoi 443).
 # TEP NAY DUNG CHUNG CHO 56 TEN MIEN: sao luu → apachectl configtest →
 # CHI KHI DAT moi graceful. KHONG BAO GIO restart.
@@ -178,7 +178,7 @@ Bản trên máy chủ (19.979 byte) là bản viết lúc 20:01. Bản trong kh
 ### 5.1 Lệnh đẩy
 
 ```bash
-# từ máy làm việc, đứng ở gốc kho open-bdsg-os
+# từ máy làm việc, đứng ở gốc kho open-bdsg
 rsync -avz --checksum trang-web3/index.html <MAY-CHU>:<DOCROOT-WEB3>/index.html
 ssh <MAY-CHU> 'chown <USER-DA>:<USER-DA> <DOCROOT-WEB3>/index.html && chmod 644 <DOCROOT-WEB3>/index.html'
 ```

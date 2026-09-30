@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-xuat.py - Xuat bo du lieu mo "Open BDSG OS" tu CSDL ra JSONL.
+xuat.py - Xuat bo du lieu mo "Open BDSG" tu CSDL ra JSONL.
 
 Doc truoc khi chay: README.md (thẻ dữ liệu) va luoc-do.md (lược đồ JSONL) cung thu muc.
 
@@ -755,7 +755,7 @@ def ghi_jsonl(duong_dan: str, ban_ghi: list) -> int:
 def bao_cao(cac_lop: dict, kich_thuoc: dict, ket_qua_quet: dict) -> None:
     print("")
     print("=" * 72)
-    print("BAO CAO SO DO - bo du lieu mo Open BDSG OS")
+    print("BAO CAO SO DO - bo du lieu mo Open BDSG")
     print("=" * 72)
 
     tong_bg = tong_kt = tong_byte = 0

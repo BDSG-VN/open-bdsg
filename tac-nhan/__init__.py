@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""tac-nhan — vòng lặp tác nhân của Open BDSG OS, đặt TRÊN nhan/."""
+"""tac-nhan — vòng lặp tác nhân của Open BDSG, đặt TRÊN nhan/."""
 from .phoi_cong_cu import (  # noqa: F401
     TEN_CONG_CU_META, TRAN_MAC_DINH, BoPhoiCongCu, LoiPhoiCongCu, linh_vuc_cua,
 )

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""hop_dong.py — hop dong ma MOI trinh dieu khien cua Open BDSG OS phai theo.
+"""hop_dong.py — hop dong ma MOI trinh dieu khien cua Open BDSG phai theo.
 
 =============================================================================
 TEP NAY SINH RA DE GIAI QUYET CAI GI
@@ -708,7 +708,7 @@ def dang_ky(nhan, td):
 
 def _in_tom_tat():
     print("=" * 78)
-    print("HOP DONG TRINH DIEU KHIEN — Open BDSG OS")
+    print("HOP DONG TRINH DIEU KHIEN — Open BDSG")
     print("=" * 78)
     print()
     print("MOT TRINH DIEU KHIEN PHAI CO:")

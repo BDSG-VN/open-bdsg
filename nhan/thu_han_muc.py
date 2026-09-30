@@ -12,7 +12,7 @@ xong dưới một phần mười giây và không bao giờ chập chờn theo 
 VÌ SAO CÓ BÀI NÀY
 -----------------
 `nhan/han_muc.py` là một trong ba phép thử mà BDSG vừa khẳng định CÔNG KHAI trên
-trang bdsg.vn/open-bdsg-os và trong README: "mọi lời gọi công cụ đều đi qua nhân,
+trang bdsg.vn/open-bdsg và trong README: "mọi lời gọi công cụ đều đi qua nhân,
 nên nó luôn có một chủ thể, một phép thử quyền và một dòng nhật ký". Một khẳng
 định công khai dựa trên mã CHƯA CÓ MỘT BÀI KIỂM NÀO là đúng họ lỗi "hỏng mà
 không báo" mà dự án này đặt tên riêng. Bài này biến khẳng định ấy thành phép đo

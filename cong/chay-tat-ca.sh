@@ -95,7 +95,7 @@ CONG_MONG_DOI=(khong-bi-mat.py khong-ha-tang.py khong-du-lieu-cam.py khong-lo-ho
 # quyền trên máy chủ, chứ không phải một dòng tài liệu đọc nhầm.
 
 echo "════════════════════════════════════════════════════════════════════════════"
-echo " CỔNG KIỂM TRƯỚC KHI ĐẨY — Open BDSG OS"
+echo " CỔNG KIỂM TRƯỚC KHI ĐẨY — Open BDSG"
 echo " Gốc quét : $GOC"
 echo " Python   : $($PYTHON --version 2>&1)"
 echo "════════════════════════════════════════════════════════════════════════════"

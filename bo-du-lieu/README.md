@@ -1,6 +1,6 @@
-# Bộ dữ liệu mở — Open BDSG OS
+# Bộ dữ liệu mở — Open BDSG
 
-Thẻ dữ liệu (datasheet) của phần ngữ liệu mở trong dự án **Open BDSG OS**.
+Thẻ dữ liệu (datasheet) của phần ngữ liệu mở trong dự án **Open BDSG**.
 
 - **Ngày đo mọi con số trong tệp này:** 25/09/2026.
 - **Giấy phép bộ dữ liệu:** CC-BY-4.0 (xem mục *Giấy phép và cách trích dẫn*).
@@ -433,26 +433,26 @@ nguồn bị loại, xem [GIAY-PHEP-NGUON.md](GIAY-PHEP-NGUON.md).
 ### Cách trích dẫn
 
 ```
-BDSG (2026). Bo du lieu mo Open BDSG OS.
+BDSG (2026). Bo du lieu mo Open BDSG.
 Phien ban 2026-09-25. Giay phep CC-BY-4.0.
-https://github.com/BDSG-VN/open-bdsg-os
+https://github.com/BDSG-VN/open-bdsg
 ```
 
 BibTeX:
 
 ```bibtex
 @misc{openbdsgos_bodulieu_2026,
-  title        = {Bo du lieu mo Open BDSG OS},
+  title        = {Bo du lieu mo Open BDSG},
   author       = {{BDSG}},
   year         = {2026},
   version      = {2026-09-25},
   license      = {CC-BY-4.0},
-  howpublished = {\url{https://github.com/BDSG-VN/open-bdsg-os}}
+  howpublished = {\url{https://github.com/BDSG-VN/open-bdsg}}
 }
 ```
 
 > Đường dẫn kho mã ở trên là **dự kiến theo quyết định của chủ dự án** (repo GitHub công
-> khai tên "Open BDSG OS"). Kho đã tồn tại công khai tại địa chỉ đó hay chưa:
+> khai tên "Open BDSG"). Kho đã tồn tại công khai tại địa chỉ đó hay chưa:
 > **chưa kiểm tại thời điểm viết tệp này.** Sửa lại đường dẫn khi kho lên thật.
 
 ---

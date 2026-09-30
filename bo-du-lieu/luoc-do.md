@@ -1,6 +1,6 @@
 # Lược đồ JSONL
 
-Lược đồ của ba tệp trong bộ dữ liệu mở **Open BDSG OS**.
+Lược đồ của ba tệp trong bộ dữ liệu mở **Open BDSG**.
 Xem [README.md](README.md) cho số đo và [GIAY-PHEP-NGUON.md](GIAY-PHEP-NGUON.md) cho xuất xứ.
 
 Định dạng: **JSON Lines** — mỗi dòng là một đối tượng JSON hoàn chỉnh, mã hoá **UTF-8**,

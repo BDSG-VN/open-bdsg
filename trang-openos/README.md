@@ -58,7 +58,7 @@ Hai vế đều là phép đo ngày 26/09/2026 và **không mâu thuẫn nhau**:
 
 ### ⚠ Một câu TUYỆT ĐỐI không được chép vào trang
 
-Trang `bdsg.vn/open-bdsg-os` đang chạy viết nguyên văn:
+Trang `bdsg.vn/open-bdsg` đang chạy viết nguyên văn:
 
 > "mọi lời gọi công cụ đều đi qua nhân, nên nó luôn có một chủ thể, một phép thử
 > quyền và một dòng nhật ký"

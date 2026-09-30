@@ -1,4 +1,6 @@
-# Open BDSG OS
+# Open BDSG
+
+**Hệ điều hành kinh doanh đa ngành bởi trí tuệ nhân tạo tự chủ**
 
 [![Giấy phép mã](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE-CODE)
 [![Giấy phép dữ liệu](https://img.shields.io/badge/data-CC--BY--4.0-green.svg)](LICENSE-DATA)
@@ -6,10 +8,22 @@
 ![Kiến trúc](https://img.shields.io/badge/kien%20truc-BDSG%20tu%20viet-orange.svg)
 ![Ngôn ngữ](https://img.shields.io/badge/ngon%20ngu-vi%20%7C%20en-informational.svg)
 
-**Hệ điều hành mã nguồn mở cho doanh nghiệp: một mô hình ngôn ngữ chạy trên máy của chính
-công ty, một phần nhân giữ danh tính — quyền — hạn mức — nhật ký, và một giao thức duy
-nhất (MCP) để chạm tới mọi nền tảng nghiệp vụ. Tiếng Việt là ngôn ngữ chính, tiếng Anh là
-ngôn ngữ phụ.**
+**Một doanh nghiệp Việt Nam muốn mở một lĩnh vực kinh doanh thì bật lĩnh vực ấy lên, chứ
+không đi tìm phần mềm. Đó là điều Open BDSG hướng tới: một phần nhân giữ danh tính — quyền
+— hạn mức — nhật ký, một giao thức duy nhất (MCP) để chạm tới mọi nền tảng nghiệp vụ, và
+từng lĩnh vực là một mô-đun cắm vào cùng một khe. Tiếng Việt là ngôn ngữ chính, tiếng Anh
+là ngôn ngữ phụ.**
+
+> **Trí tuệ nhân tạo ở đây trả QUYẾT ĐỊNH, không trả CÂU.** Từ 01/10/2026, mô hình của BDSG
+> là mô hình **quyết định có kiểu**: nó trả một trong N nhãn đã khai kèm xác suất, và vì
+> vậy nó không thể bịa ra một con số hay một cái tên ngoài tập nhãn. Nó **không** nói chuyện
+> tự do. Lý do và số đo ở [`tai-lieu/QUYET-DINH-CO-KIEU.md`](tai-lieu/QUYET-DINH-CO-KIEU.md).
+>
+> **Và nói rõ chỗ chưa có:** hôm nay kho này chưa phải một hệ điều hành chạy được. Nó có
+> phần nhân, giao diện trò chuyện, kiến trúc mô hình, các cổng nghiệm thu và tài liệu — còn
+> sổ ghi mô-đun, cơ chế bật lĩnh vực, và cơ chế giấy phép tự cập nhật thì **chưa viết**.
+> Trạng thái từng phần ở [`CAI-DAT.md`](CAI-DAT.md) khi tệp ấy có; chừng nào chưa có thì đọc
+> bảng trạng thái ngay dưới đây.**
 
 ## Luận đề
 
@@ -19,10 +33,10 @@ hỏi là một lần dữ liệu rời khỏi toà nhà.
 
 Một **hệ điều hành** giải bài toán khác. Hệ điều hành máy tính không phải là phần mềm chạy
 nhanh hơn — nó là lớp đứng giữa chương trình và phần cứng để quản **tiến trình, quyền, bộ
-nhớ và thiết bị**. Open BDSG OS đặt đúng những lớp ấy giữa **tác nhân AI** và **nghiệp vụ
+nhớ và thiết bị**. Open BDSG đặt đúng những lớp ấy giữa **tác nhân AI** và **nghiệp vụ
 doanh nghiệp**:
 
-| Khái niệm hệ điều hành | Tương ứng trong Open BDSG OS |
+| Khái niệm hệ điều hành | Tương ứng trong Open BDSG |
 |---|---|
 | Lời gọi hệ thống (syscall) | Một **công cụ** mà mô hình được phép gọi |
 | Trình điều khiển thiết bị | Một **máy chủ MCP** nối vào một nền tảng |
@@ -688,10 +702,10 @@ Hai điều nói được chắc, không phụ thuộc thư mục nào:
 ### Chạy được ngay hôm nay
 
 ```bash
-# Kho công khai: github.com/BDSG-VN/open-bdsg-os
+# Kho công khai: github.com/BDSG-VN/open-bdsg
 # Chỗ này còn là chỗ trống vì tên tổ chức chưa được chốt tại 25/09/2026.
-git clone https://github.com/BDSG-VN/open-bdsg-os.git
-cd open-bdsg-os
+git clone https://github.com/BDSG-VN/open-bdsg.git
+cd open-bdsg
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -822,7 +836,7 @@ Bốn điều phải biết trước khi gọi:
 ## Cấu trúc kho
 
 ```
-open-bdsg-os/
+open-bdsg/
 ├── README.md              ← tệp này
 ├── MODEL-CARD.md          ← thẻ mô hình; phần lớn mục còn trống cho tới M7
 ├── LICENSE-CODE           ← Apache License 2.0 (toàn văn), cho MÃ
@@ -891,7 +905,7 @@ nên không có gì để cấp phép.
 
 ```bibtex
 @misc{openbdsgos2026,
-  title        = {Open BDSG OS: bộ dữ liệu và bộ đánh giá mở
+  title        = {Open BDSG: bộ dữ liệu và bộ đánh giá mở
                   cho tri thức doanh nghiệp Việt Nam},
   author       = {BDSG},
   year         = {2026},

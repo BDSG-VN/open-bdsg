@@ -1,6 +1,6 @@
 # Xuất xứ và giấy phép của từng nguồn dữ liệu
 
-Bảng xuất xứ của dự án **Open BDSG OS**. Ngày đo: **25/09/2026**.
+Bảng xuất xứ của dự án **Open BDSG**. Ngày đo: **25/09/2026**.
 
 Tệp này liệt kê **cả nguồn được phát hành lẫn nguồn bị loại**. Nguồn bị loại có mặt ở đây
 là có chủ ý: người đọc cần **kiểm lại được lập luận loại trừ**, chứ không phải chỉ được

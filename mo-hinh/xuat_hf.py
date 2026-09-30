@@ -123,7 +123,7 @@ def dung_config(cfg) -> Dict[str, object]:
         "torch_dtype": "float32",
         # Truong rieng cua BDSG mang tien to, de khong va vao truong nao bo chuyen
         # doi doc. Bo chuyen doi bo qua truong la; nguoi doc thi biet tep tu dau ra.
-        "bdsg_nguon": "Open BDSG OS",
+        "bdsg_nguon": "Open BDSG",
         "bdsg_ten": getattr(cfg, "bdsg_ten", ""),
         "bdsg_ghi_chu": getattr(cfg, "bdsg_ghi_chu", ""),
     }

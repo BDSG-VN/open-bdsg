@@ -17,7 +17,7 @@ Tài nguyên ngoài duy nhất: Google Fonts (`fonts.googleapis.com`,
 
 ## Trang này nói gì
 
-BDSG Web3 là **lớp blockchain** của Open BDSG OS. Trạng thái thật ngày
+BDSG Web3 là **lớp blockchain** của Open BDSG. Trạng thái thật ngày
 26/09/2026: **đang dựng, chưa có mã, chưa chọn chuỗi khối**.
 
 Bố cục cố ý đặt mục **"Trang này chưa làm được gì"** ngay sau phần mở đầu,
