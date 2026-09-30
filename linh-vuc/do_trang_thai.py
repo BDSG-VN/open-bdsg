@@ -155,7 +155,13 @@ def main() -> int:
     dem: Dict[str, int] = {}
     for m in muc:
         dem[m["trang_thai"]] = dem.get(m["trang_thai"], 0) + 1
-    print(f"  đã ghi {ns.ra.relative_to(GOC) if ns.ra.is_relative_to(GOC) else ns.ra}")
+    # KHONG dung Path.is_relative_to(): no chi co tu Python 3.9, con kho nay
+    # chay duoc tu 3.8 (da do that tren Python 3.8.10 cua mot hosting 01/10/2026).
+    try:
+        ten_ra = ns.ra.relative_to(GOC)
+    except ValueError:
+        ten_ra = ns.ra
+    print(f"  đã ghi {ten_ra}")
     for m in muc:
         c = " ⚠" if m["canh_bao"] else ""
         print(f"    {m['ma']:16s} {m['duong_dan']:14s} {m['trang_thai']:12s}{c}")

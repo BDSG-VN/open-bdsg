@@ -1,0 +1,24 @@
+# requirements-mo-hinh.txt — chỉ cho `mo-hinh/` và `huan-luyen/`.
+#
+# KHÔNG cần tệp này để chạy nhân, tác nhân, bảng điều khiển hay các cổng nghiệm
+# thu. Chỉ cần khi bạn muốn đếm tham số bằng phép đếm thật, dựng kiến trúc, hay
+# huấn luyện.
+#
+# ĐÃ KIỂM BẰNG MỘT LẦN CÀI THẬT ngày 01/10/2026 (khác `trien-khai/yeu-cau.txt`,
+# tệp ấy tự khai là chưa):
+#   · bản CPU, cài trong venv riêng: 45 giây, chiếm 773 MB (venv tổng 916 MB)
+#   · và một cách KHÔNG cài gì: image `bdsg/thu-laya:1` đã có torch 2.14.1+cpu
+#   · 13/13 phép kiểm kiến trúc đạt trên máy không GPU
+#
+# Ghim cận trên <3.0 để một lần đổi phiên bản chính không lặng lẽ đi vào.
+# KHÔNG ghim cận dưới cao hơn mức thật sự cần: mã trong `mo-hinh/` chỉ dùng
+# nn.Module, nn.Linear, nn.Embedding, torch.softmax/sigmoid, SDPA và clamp —
+# đều có từ lâu.
+#
+# Cài bản CPU (nhỏ hơn nhiều bản CUDA, và máy không GPU thì bản CUDA vô dụng):
+#     pip install -r requirements-mo-hinh.txt --index-url https://download.pytorch.org/whl/cpu
+torch>=2.0,<3.0
+
+# Chỉ cần khi LUYỆN LẠI bộ từ vựng. Không cần để chạy hay để đếm tham số.
+# huan-luyen/tu-vung/huan_luyen_tu_vung.py và do_tokenizer.py nhập nó.
+tokenizers>=0.15,<0.23

@@ -1,0 +1,31 @@
+# requirements.txt — phụ thuộc để chạy phần LÕI của Open BDSG.
+#
+# =============================================================================
+# TỆP NÀY CỐ Ý RỖNG. ĐÓ LÀ KẾT QUẢ ĐO, KHÔNG PHẢI VIỆC CHƯA LÀM.
+# =============================================================================
+#
+# Đo ngày 01/10/2026 bằng cách nạp thật từng tệp trên Python 3.8.10 của một
+# hosting DirectAdmin: phần lõi — `nhan/` (nhân), `tac-nhan/` (vòng lặp tác
+# nhân), `phuc-vu/` (máy chủ), `linh-vuc/` (sổ ghi lĩnh vực), `cong/` (cổng
+# nghiệm thu), `bang-dieu-khien/` (bảng điều khiển) — **không nhập một thư viện
+# ngoài nào**. Toàn bộ là thư viện chuẩn của Python.
+#
+# Vì sao điều đó là một quyết định chứ không phải may mắn:
+#   · Một doanh nghiệp cài trên hosting chia sẻ thường KHÔNG có quyền cài gói.
+#     Lõi không cần pip thì lõi cài được ở những nơi mà một dự án bình thường
+#     bó tay.
+#   · Mỗi phụ thuộc là một cây phụ thuộc phải vá và một nguồn CVE phải theo.
+#   · `trien-khai/yeu-cau.txt` từng có `openai` và `httpx` mà KHÔNG tệp nào
+#     trong kho nhập. Chúng đã bị gỡ 26/09/2026 — một thư viện không ai dùng
+#     là một khẩu súng đã lên đạn để sẵn.
+#
+# PHIÊN BẢN PYTHON TỐI THIỂU: **3.8**
+#   Đo bằng cách chạy thật trên Python 3.8.10, không suy từ cú pháp. (Một phép
+#   đo bằng biểu thức chính quy trước đó báo "cần 3.10" — sai, vì nó khớp dấu
+#   `|` bên trong chuỗi biểu thức chính quy `r"(?:run|call)"` và tưởng đó là
+#   hợp kiểu `X | Y`.)
+#
+# Phần MÔ HÌNH cần torch — nằm ở tệp riêng, cố ý:
+#     pip install -r requirements-mo-hinh.txt
+# Phần PHỤC VỤ mô hình lớn qua vLLM — nằm ở `trien-khai/yeu-cau.txt`, và tệp ấy
+# tự khai là CHƯA từng được kiểm bằng một lần cài thật.

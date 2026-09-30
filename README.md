@@ -1,6 +1,9 @@
 # Open BDSG
 
-**Hệ điều hành kinh doanh đa ngành bởi trí tuệ nhân tạo tự chủ**
+**Hệ điều hành phát triển kinh doanh trong kỷ nguyên AI**
+
+<sub>Mã nguồn mở. `bdsg.vn` chạy chính mã này — nó là một thực thể, không phải một bản
+đặc biệt. Chỗ nào hai bản lệch nhau, chỗ đó là lỗi.</sub>
 
 [![Giấy phép mã](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE-CODE)
 [![Giấy phép dữ liệu](https://img.shields.io/badge/data-CC--BY--4.0-green.svg)](LICENSE-DATA)
@@ -22,8 +25,8 @@ là ngôn ngữ phụ.**
 > **Và nói rõ chỗ chưa có:** hôm nay kho này chưa phải một hệ điều hành chạy được. Nó có
 > phần nhân, giao diện trò chuyện, kiến trúc mô hình, các cổng nghiệm thu và tài liệu — còn
 > sổ ghi mô-đun, cơ chế bật lĩnh vực, và cơ chế giấy phép tự cập nhật thì **chưa viết**.
-> Trạng thái từng phần ở [`CAI-DAT.md`](CAI-DAT.md) khi tệp ấy có; chừng nào chưa có thì đọc
-> bảng trạng thái ngay dưới đây.**
+> Bảng đo từng phần ở **[`CAI-DAT.md`](CAI-DAT.md)** — cài được gì, chạy được gì, và phép đo
+> nào đứng sau từng dòng. Cài thử mà không tạo tệp nào: `bash cai.sh --chi-kiem`.**
 
 ## Luận đề
 
