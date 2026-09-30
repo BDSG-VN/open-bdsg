@@ -4,6 +4,42 @@ Viết theo khuôn thẻ mô hình (model card) của Hugging Face.
 
 > ## Cảnh báo đặt ở đầu, không giấu xuống cuối
 >
+> ## Đổi hướng ngày 01/10/2026 — đọc trước mọi mục khác
+>
+> BDSG **bỏ** vai trò "phục vụ và tinh chỉnh Gemma 4 31B làm mô hình chính", và **bỏ cách
+> nói "30 tỷ tham số"**. Hướng thay thế: **mô hình quyết định có kiểu** — trả một trong N
+> nhãn kèm xác suất, không sinh văn. Lý do là số đo, không phải sở thích: mục tiêu sinh văn
+> đòi ~20 token mỗi tham số, tức **537.569.280 token** cho 26.878.464 tham số, mà ngữ liệu
+> đã huấn luyện thật là **2.068.295 token** — **thiếu 260 lần**. Đầy đủ ở
+> [`tai-lieu/QUYET-DINH-CO-KIEU.md`](tai-lieu/QUYET-DINH-CO-KIEU.md).
+>
+> Thẻ này **chưa được viết lại** theo hướng mới. Mọi mục dưới đây vẫn nói về mô hình sinh
+> văn, và chúng vẫn đúng như tài liệu về **bản trọng số 26/09/2026**. Mục nào nói về Gemma 4
+> 31B thì đọc như tài liệu lịch sử, không như đường đi hiện tại.
+>
+> ### Số tham số — bảng do máy ghi
+>
+> Bảng này **không được gõ bằng tay**. Nó sinh từ
+> [`cong/con-so-thuc.json`](cong/con-so-thuc.json) bằng
+> `python3 mo-hinh/con_so_thuc.py --cap-nhat-tai-lieu`, mà tệp ấy đếm từ `parameters()` của
+> chính mô hình. Sửa bằng tay sẽ bị ghi đè ở lần chạy sau.
+
+<!-- BAT-DAU-CON-SO-THUC — sinh boi mo-hinh/con_so_thuc.py, DUNG SUA BANG TAY -->
+
+| mô hình | mục tiêu | tham số (đếm thật) | fp32 | dùng được? |
+|---|---|---:|---:|---|
+| `bdsg-quyet-dinh-nho` | quyet-dinh-co-kieu | **4.592.140** | 17,52 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-quyet-dinh-vua` | quyet-dinh-co-kieu | **12.198.156** | 46,53 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-quyet-dinh-lon` | quyet-dinh-co-kieu | **26.883.084** | 102,55 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-da-huan-luyen-20260926` | sinh-van | **26.878.464** | 102,53 MiB | **chưa đạt** cổng nghiệm thu |
+| `bdsg-nho` | sinh-van | **36.184.576** | 138,03 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-vua` | sinh-van | **119.563.008** | 456,10 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-lon` | sinh-van | **295.748.608** | 1 128,19 MiB | chưa huấn luyện — đây là số của kiến trúc |
+
+<sub>Bảng này do máy ghi từ [`cong/con-so-thuc.json`](cong/con-so-thuc.json) bằng `python3 mo-hinh/con_so_thuc.py --cap-nhat-tai-lieu`. Ngày đo ở trường `do_luc` trong tệp ấy. Sửa bảng bằng tay sẽ bị ghi đè ở lần chạy sau.</sub>
+
+<!-- KET-THUC-CON-SO-THUC -->
+
 > **Thẻ này nói về MÔ HÌNH CỦA BDSG. Nó KHÔNG phải thẻ của Gemma 4 31B.**
 > Kho này còn có một backend phục vụ trọng số của Google; ranh giới ở
 > [§0](#0-hai-thu-khac-nhau-dung-lan).
@@ -95,8 +131,16 @@ cắt đường ra của chính mình. Trường nào là phát minh riêng củ
 bề rộng, số đầu, cỡ từ vựng, số tham số, ước tính bộ nhớ) ở `huan-luyen/cau-hinh/`, mỗi
 giá trị kèm lý do chọn. Chép số vào thẻ này chỉ tạo một bản sao sẽ lệch — đọc tại chỗ.
 
-**Cỡ mà BDSG sẽ huấn luyện: chưa chốt.** Đây là quyết định của M7 và phụ thuộc vào lượng
-ngữ liệu thật đang có (7,16 MB). Không ghi con số nào ở đây cho tới khi chốt.
+**Cỡ mà BDSG sẽ huấn luyện: đã chốt ngày 01/10/2026, và chốt theo hướng khác câu hỏi ban
+đầu.** Câu hỏi cũ là "bao nhiêu tham số cho mô hình sinh văn" — câu hỏi ấy không có đáp án
+tốt, vì ngữ liệu thiếu 260 lần ở mọi cỡ đáng làm. Đáp án là đổi mục tiêu: ba cấu hình
+`huan-luyen/cau-hinh/quyet-dinh-{nho,vua,lon}.json`, mục tiêu `quyet-dinh-co-kieu`. Số tham
+số của cả ba **không ghi ở đây** — đọc bảng do máy ghi ở đầu thẻ, hoặc chạy
+`python3 mo-hinh/con_so_thuc.py`.
+
+`quyet-dinh-lon` cố ý **trùng khít thân** bản trọng số đã huấn luyện 26/09/2026 (512 chiều ·
+8 lớp · 8 đầu truy vấn / 4 đầu khoá-giá trị · từ vựng 6.400), nên 74/74 tensor thân nạp lại
+được sang mô hình quyết định — kiểm bằng `nap_than_tu_ngon_ngu()`, chỉ bỏ `lm_head.weight`.
 
 **Số tham số trong các tệp cấu hình là số TÍNH RA từ công thức, không phải số ĐẾM.** Hai
 con số ấy phải khớp **tuyệt đối**; lệch thì một bên hiểu sai kiến trúc.

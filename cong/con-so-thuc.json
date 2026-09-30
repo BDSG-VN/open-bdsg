@@ -1,8 +1,27 @@
 {
-  "do_luc": "2026-09-30T20:46:24+00:00",
+  "do_luc": "2026-09-30T21:06:02+00:00",
   "cach_do": "đếm từ parameters() / tensor thật, KHÔNG đọc số viết tay",
   "luat": "Không tài liệu nào của BDSG được viết số tham số bằng tay. README, thẻ mô hình và trang web đọc tệp này.",
   "muc": [
+    {
+      "ten": "bdsg-da-huan-luyen-20260926",
+      "tep_cau_hinh": "huan-luyen/cau-hinh/da-huan-luyen-20260926.json",
+      "muc_tieu": "sinh-van",
+      "tham_so": 26878464,
+      "tham_so_hoc_duoc": 26878464,
+      "tham_so_dau_ra": null,
+      "hinh_dang": {
+        "hidden_size": 512,
+        "num_hidden_layers": 8,
+        "vocab_size": 6400,
+        "max_position_embeddings": 512
+      },
+      "trong_so_fp32_MiB": 102.53,
+      "dau_lech_hieu_chuan": [],
+      "dung_duoc": false,
+      "vi_sao": "Qua khop 5,2 lan: perplexity phan hoc 19,9 / phan kiem 102,5. Ngu lieu 2.068.295 token so voi ~537 trieu token ma muc tieu sinh van doi (~20 token/tham so) — thieu 260 lan. Day la ban NGHIEN CUU, khong phuc vu duoc.",
+      "ngu_lieu_token": 2068295
+    },
     {
       "ten": "bdsg-lon",
       "tep_cau_hinh": "huan-luyen/cau-hinh/lon.json",
@@ -19,7 +38,8 @@
       "trong_so_fp32_MiB": 1128.19,
       "dau_lech_hieu_chuan": [],
       "dung_duoc": null,
-      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+      "ngu_lieu_token": null
     },
     {
       "ten": "bdsg-nho",
@@ -37,7 +57,8 @@
       "trong_so_fp32_MiB": 138.03,
       "dau_lech_hieu_chuan": [],
       "dung_duoc": null,
-      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+      "ngu_lieu_token": null
     },
     {
       "ten": "bdsg-quyet-dinh-lon",
@@ -55,7 +76,8 @@
       "trong_so_fp32_MiB": 102.55,
       "dau_lech_hieu_chuan": [],
       "dung_duoc": null,
-      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+      "ngu_lieu_token": null
     },
     {
       "ten": "bdsg-quyet-dinh-nho",
@@ -73,7 +95,8 @@
       "trong_so_fp32_MiB": 17.52,
       "dau_lech_hieu_chuan": [],
       "dung_duoc": null,
-      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+      "ngu_lieu_token": null
     },
     {
       "ten": "bdsg-quyet-dinh-vua",
@@ -91,7 +114,8 @@
       "trong_so_fp32_MiB": 46.53,
       "dau_lech_hieu_chuan": [],
       "dung_duoc": null,
-      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+      "ngu_lieu_token": null
     },
     {
       "ten": "bdsg-vua",
@@ -109,7 +133,8 @@
       "trong_so_fp32_MiB": 456.1,
       "dau_lech_hieu_chuan": [],
       "dung_duoc": null,
-      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu"
+      "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+      "ngu_lieu_token": null
     }
   ]
 }

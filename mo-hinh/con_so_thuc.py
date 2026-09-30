@@ -104,11 +104,17 @@ def do_mot_cau_hinh(duong: Path) -> Dict[str, Any]:
         },
         "trong_so_fp32_MiB": round(m.dem_tham_so() * 4 / 2 ** 20, 2),
         "dau_lech_hieu_chuan": lech_hieu_chuan,
-        # Cấu hình chỉ là kiến trúc. Nó KHÔNG nói mô hình đã huấn luyện xong
-        # hay đã đạt cổng nghiệm thu — nên trường này luôn là null ở đây, và
-        # chỉ tệp trọng số mới điền được nó.
-        "dung_duoc": None,
-        "vi_sao": "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+        # Cấu hình thường chỉ là kiến trúc, nên `dung_duoc` là null. NHƯNG một
+        # cấu hình mô tả bản trọng số ĐÃ huấn luyện thật thì được khai tường
+        # minh `dung_duoc` + `vi_sao` trong khối `bdsg` — đó là cách duy nhất
+        # để con số quan trọng nhất (số tham số của bản đã huấn luyện) thôi bị
+        # gõ tay trong tài liệu.
+        "dung_duoc": b.get("dung_duoc"),
+        "vi_sao": b.get(
+            "vi_sao",
+            "đây là số của KIẾN TRÚC; chưa nói gì về việc đã huấn luyện hay đã đạt nghiệm thu",
+        ),
+        "ngu_lieu_token": b.get("ngu_lieu_token"),
     }
 
 
@@ -155,10 +161,91 @@ def do_tep_trong_so(duong: Path) -> Dict[str, Any]:
     }
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# GHI BẢNG VÀO TÀI LIỆU
+# ═══════════════════════════════════════════════════════════════════════════
+# Không tài liệu nào của BDSG được gõ số tham số bằng tay. Hàm dưới đây ghi
+# bảng vào giữa hai dấu mốc trong tệp Markdown; ngoài hai dấu mốc ấy thì nó
+# không sửa gì. Chạy lại được nhiều lần, kết quả như nhau (idempotent).
+
+MOC_BAT_DAU = "<!-- BAT-DAU-CON-SO-THUC"
+MOC_KET_THUC = "<!-- KET-THUC-CON-SO-THUC -->"
+
+
+def dung_bang(muc: List[Dict[str, Any]]) -> str:
+    """Bảng Markdown từ kết quả đo. Không nhận số từ bất kỳ đâu khác."""
+    hang = [
+        "| mô hình | mục tiêu | tham số (đếm thật) | fp32 | dùng được? |",
+        "|---|---|---:|---:|---|",
+    ]
+    for m in sorted(muc, key=lambda x: (x.get("muc_tieu", ""), x.get("tham_so", 0))):
+        if "loi" in m:
+            hang.append(
+                f"| `{m.get('tep_cau_hinh', '?')}` | — | **lỗi đo** | — | {m['loi'][:60]} |"
+            )
+            continue
+        dd = m.get("dung_duoc")
+        nhan_dd = {
+            None: "chưa huấn luyện — đây là số của kiến trúc",
+            True: "đã đạt cổng nghiệm thu",
+            False: "**chưa đạt** cổng nghiệm thu",
+        }.get(dd, str(dd))
+        ts = m.get("tham_so", 0)
+        # Số hàng nghìn dùng dấu chấm, số thập phân dùng dấu phẩy — quy ước
+        # tiếng Việt. Trộn hai dấu trong cùng một bảng làm "138.03 MiB" đọc
+        # thành một trăm ba mươi tám nghìn.
+        mib = f"{m.get('trong_so_fp32_MiB', 0):,.2f}".replace(",", "\u00a0").replace(".", ",")
+        hang.append(
+            f"| `{m.get('ten', '?')}` | {m.get('muc_tieu', '?')} | "
+            + f"**{ts:,}**".replace(",", ".")
+            + f" | {mib} MiB | {nhan_dd} |"
+        )
+    return "\n".join(hang)
+
+
+def ghi_vao_tai_lieu(duong: Path, muc: List[Dict[str, Any]], do_luc: str) -> str:
+    """Thay phần giữa hai dấu mốc. Trả về trạng thái: ghi / khong-co-moc / khong-doi."""
+    if not duong.exists():
+        return "khong-co-tep"
+    van = duong.read_text(encoding="utf-8")
+    i = van.find(MOC_BAT_DAU)
+    j = van.find(MOC_KET_THUC)
+    if i < 0 or j < 0 or j < i:
+        return "khong-co-moc"
+    # Giữ trọn dòng dấu mốc mở (nó có chú thích "DUNG SUA BANG TAY").
+    het_moc = van.find("-->", i)
+    if het_moc < 0 or het_moc > j:
+        return "khong-co-moc"
+
+    # Bảng là HÀM THUẦN của các con số — KHÔNG chèn dấu thời gian vào đây. Chèn
+    # vào thì mỗi lần chạy lại sinh một thay đổi giả trong git dù không con số
+    # nào đổi, và người xem diff sẽ học cách bỏ qua tệp này. Bản ghi phép đo
+    # (kèm `do_luc`) nằm ở cong/con-so-thuc.json.
+    than = (
+        "\n\n" + dung_bang(muc) + "\n\n"
+        + "<sub>Bảng này do máy ghi từ "
+        + "[`cong/con-so-thuc.json`](cong/con-so-thuc.json) bằng "
+        + "`python3 mo-hinh/con_so_thuc.py --cap-nhat-tai-lieu`. "
+        + "Ngày đo ở trường `do_luc` trong tệp ấy. "
+        + "Sửa bảng bằng tay sẽ bị ghi đè ở lần chạy sau.</sub>\n\n"
+    )
+    moi = van[: het_moc + 3] + than + van[j:]
+    if moi == van:
+        return "khong-doi"
+    duong.write_text(moi, encoding="utf-8")
+    return "ghi"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Đo số tham số đang thật sự chạy.")
     ap.add_argument("--trong-so", type=Path, help="đếm từ một tệp .pt")
     ap.add_argument("--ra", type=Path, help="ghi JSON ra tệp (mặc định in ra màn hình)")
+    ap.add_argument(
+        "--cap-nhat-tai-lieu",
+        action="store_true",
+        help="ghi bảng vào README.md và MODEL-CARD.md giữa hai dấu mốc BAT-DAU/KET-THUC-CON-SO-THUC",
+    )
     ns = ap.parse_args()
 
     muc: List[Dict[str, Any]] = []
@@ -193,6 +280,22 @@ def main() -> int:
                 print(f"    {m['ten']:24s} {m['muc_tieu']:22s} {m['tham_so']:>12,}")
     else:
         print(van)
+
+    if ns.cap_nhat_tai_lieu:
+        print("  cập nhật tài liệu:")
+        loi = 0
+        for ten in ("README.md", "MODEL-CARD.md"):
+            tt = ghi_vao_tai_lieu(GOC / ten, muc, ra["do_luc"])
+            print(f"    {ten:16s} {tt}")
+            if tt in ("khong-co-moc", "khong-co-tep"):
+                loi += 1
+        if loi:
+            # Fail-closed: thiếu dấu mốc nghĩa là tài liệu ĐANG gõ số bằng tay,
+            # tức đúng thứ tệp này tồn tại để chặn. Không được im lặng bỏ qua.
+            print(
+                f"    LỖI: {loi} tệp không có dấu mốc — tài liệu đó vẫn đang gõ số bằng tay"
+            )
+            return 1
     return 0
 
 

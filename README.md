@@ -35,32 +35,103 @@ Hệ quả kiểm chứng được, không phải khẩu hiệu: **mọi lời g
 nó luôn có một chủ thể, một phép thử quyền và một dòng nhật ký. Không có đường vòng, vì
 đường vòng là thứ cổng kiểm tra trong `cong/` được viết ra để chặn.
 
-## Quy mô huấn luyện hướng tới: 30 tỷ tham số
+## Con số thực, và vì sao không còn nói "30 tỷ tham số"
 
-Đây là **đích của lộ trình**, không phải hiện trạng. Nói rõ để không ai đọc nhầm:
+**Quyết định 01/10/2026.** Trước ngày này, mục này mang tiêu đề *"Quy mô huấn luyện hướng
+tới: 30 tỷ tham số"*. Con số ấy là một cái đích, và nó đã được ghi rõ là đích — nhưng một
+cái đích đặt ở chỗ dễ đọc nhất của README thì người đọc vẫn mang nó đi như một lời hứa. Nên
+BDSG bỏ cách nói ấy và **nói con số đang thật sự chạy, cập nhật theo từng bản phát hành**.
 
-| | Số thật, đo ngày 26/09/2026 |
+Cách chống tái phạm không phải là sửa câu chữ — câu chữ sẽ lại lệch ở bản sau — mà là **lấy
+quyền viết con số ra khỏi tay người**. Bảng dưới đây **không được gõ bằng tay**: nó sinh từ
+[`cong/con-so-thuc.json`](cong/con-so-thuc.json), mà tệp ấy do
+[`mo-hinh/con_so_thuc.py`](mo-hinh/con_so_thuc.py) đếm từ `parameters()` của chính mô hình.
+Muốn đổi con số thì phải đổi mô hình.
+
+<!-- BAT-DAU-CON-SO-THUC — sinh boi mo-hinh/con_so_thuc.py, DUNG SUA BANG TAY -->
+
+| mô hình | mục tiêu | tham số (đếm thật) | fp32 | dùng được? |
+|---|---|---:|---:|---|
+| `bdsg-quyet-dinh-nho` | quyet-dinh-co-kieu | **4.592.140** | 17,52 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-quyet-dinh-vua` | quyet-dinh-co-kieu | **12.198.156** | 46,53 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-quyet-dinh-lon` | quyet-dinh-co-kieu | **26.883.084** | 102,55 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-da-huan-luyen-20260926` | sinh-van | **26.878.464** | 102,53 MiB | **chưa đạt** cổng nghiệm thu |
+| `bdsg-nho` | sinh-van | **36.184.576** | 138,03 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-vua` | sinh-van | **119.563.008** | 456,10 MiB | chưa huấn luyện — đây là số của kiến trúc |
+| `bdsg-lon` | sinh-van | **295.748.608** | 1 128,19 MiB | chưa huấn luyện — đây là số của kiến trúc |
+
+<sub>Bảng này do máy ghi từ [`cong/con-so-thuc.json`](cong/con-so-thuc.json) bằng `python3 mo-hinh/con_so_thuc.py --cap-nhat-tai-lieu`. Ngày đo ở trường `do_luc` trong tệp ấy. Sửa bảng bằng tay sẽ bị ghi đè ở lần chạy sau.</sub>
+
+<!-- KET-THUC-CON-SO-THUC -->
+
+Ba trường luôn đi cùng nhau trong tệp ấy, và **trường thứ ba là trường quan trọng nhất**:
+
+- `tham_so` — đếm được, không tính ra
+- `muc_tieu` — `sinh-van` hay `quyet-dinh-co-kieu`. **Hai mục tiêu này không so được với nhau
+  bằng số tham số.** Một mô hình quyết định 4,6 triệu tham số không "nhỏ hơn" một mô hình
+  sinh văn 300 triệu tham số theo nghĩa nào có ích; chúng làm hai việc khác nhau.
+- `dung_duoc` — đã đạt cổng nghiệm thu chưa. Thiếu trường này thì một con số hoàn toàn đúng
+  vẫn dựng nên một lời khai sai: bản 26.878.464 tham số quá khớp 5,2 lần **là** 26,88 triệu
+  tham số. Con số đúng, kết luận sai.
+
+### Vì sao bỏ đích 30 tỷ, bằng số chứ không bằng lý lẽ
+
+Đích 30 tỷ đi kèm một con đường: *tinh chỉnh trên nền một mô hình nền đã huấn luyện trước* —
+cụ thể là phục vụ và tinh chỉnh Gemma 4 31B của Google. Đường ấy hợp pháp (Apache-2.0), có
+ghi công đầy đủ, và kịch bản khởi động đạt 45/45 phép tự kiểm. Nó bị bỏ vì ba số đo:
+
+| | số đo |
 |---|---|
-| Trọng số BDSG tự huấn luyện, hiện có | **26.878.464 tham số** (26,9 triệu) |
-| Ngữ liệu BDSG đã gom | **14,72 MB · 4,37 triệu token** |
-| Đích lộ trình | **~30 tỷ tham số** |
-| Khoảng cách | Mô hình hiện tại bằng **0,09 %** đích |
+| Trọng số BDSG tự huấn luyện | **26.878.464** tham số — công thức và phép đếm khớp tuyệt đối |
+| Ngữ liệu **đã huấn luyện thật** | **2.068.295 token** (ngữ liệu đã *gom* là 4,37 triệu; hai con số khác nhau, đừng lẫn) |
+| Mục tiêu sinh văn **cần** | **537.569.280 token** — ~20 token/tham số, Hoffmann và cộng sự 2022 |
+| **Khoảng thiếu** | **260 lần** |
+| Perplexity học / kiểm | 19,9 / **102,5** — quá khớp **5,2 lần** |
 
-Vì sao là 30 tỷ chứ không phải một con số to hơn cho oai. Ở mức 30 tỷ tham số lượng tử hoá
-4-bit, trọng số vừa một card đồ hoạ 24–48 GB — tức **vừa một thùng máy đặt trong phòng máy
-của doanh nghiệp**, không cần một cụm máy chủ. Đó là ràng buộc quyết định kiến trúc: mô
-hình phải đủ lớn để làm được việc, và đủ nhỏ để **không bao giờ cần rời khỏi toà nhà**.
+Perplexity kiểm gấp 5,2 lần perplexity học không phải lỗi cài đặt. Đó là điều **phải** xảy ra
+khi một mô hình 26,88 triệu tham số nhìn 2,07 triệu token: nó học thuộc. Và ở quy mô hệ điều
+hành cho hơn một trăm triệu tác nhân, suy luận sinh văn theo từng token không trả nổi tiền
+dù mô hình chạy trên GPU nào — đo ngày 01/10/2026 trên máy BDSG: bộ luật tất định trả một
+quyết định trong **20 ms** (trung vị, nhỏ nhất 9 ms), còn một mô hình quyết định có kiểu chạy
+trên CPU mất **59.785–121.125 ms** mỗi quyết định. Nhân bất kỳ số giây nào với một trăm triệu
+cũng ra một con số không ai trả.
 
-Ràng buộc đã biết, chưa đo, phải đo trước khi hứa: **gọi công cụ nhạy với lượng tử hoá gấp
-khoảng 70 lần so với sinh văn bản thường** (họ Gemma-3 12B rơi 91,3 % → 69,0 % BFCL khi ép
-xuống Q4_K_M; họ Qwen-3 8B thì gần như không rơi). Một hệ điều hành sống bằng gọi công cụ,
-nên đây là phép đo bắt buộc chứ không phải chi tiết kỹ thuật phụ.
+Đầy đủ lý lẽ và số đo ở [`tai-lieu/QUYET-DINH-CO-KIEU.md`](tai-lieu/QUYET-DINH-CO-KIEU.md).
+Hai tài liệu [`tai-lieu/GEMMA4-31B.md`](tai-lieu/GEMMA4-31B.md) và
+[`tai-lieu/LO-TRINH-LORA.md`](tai-lieu/LO-TRINH-LORA.md) **vẫn giữ lại và vẫn đúng** như tài
+liệu kỹ thuật; chúng chỉ không còn là đường đi chính.
 
-Theo quy luật Chinchilla (~20 token mỗi tham số), 30 tỷ tham số cần khoảng **600 tỷ
-token**. Ngữ liệu BDSG hiện có 4,37 triệu. Con đường không phải là "gom thêm dữ liệu BDSG
-cho đủ" — điều đó bất khả — mà là **tinh chỉnh trên nền một mô hình nền đã huấn luyện
-trước**, dùng ngữ liệu BDSG cho thứ mô hình nền không có: tri thức tư vấn, triển khai, vận
-hành, và dữ liệu hành chính — doanh nghiệp Việt Nam.
+### Hướng thay thế: mô hình quyết định có kiểu
+
+Đổi **mục tiêu**, không đổi **thân mô hình**.
+[`mo-hinh/dau_quyet_dinh.py`](mo-hinh/dau_quyet_dinh.py) giữ nguyên `embed_tokens`,
+`layers` và `norm`, chỉ thay `lm_head` bằng các đầu phân loại có kiểu
+(`choice` · `noul` · `score`). Ba điều đo được, không phải phỏng đoán:
+
+1. **Trọng số đã huấn luyện không mất gì.** 74/74 tensor thân nạp lại được sang mô hình
+   quyết định (kiểm bằng `nap_than_tu_ngon_ngu()`, chỉ bỏ `lm_head.weight`). 53 phút 54 giây
+   huấn luyện không đổ đi đâu cả.
+2. **Khoảng thiếu 260 lần biến mất.** Phân loại không đo bằng token mà bằng **số ví dụ có
+   nhãn**, và bộ luật tất định của BDSG sinh nhãn đúng theo định nghĩa, bằng tiếng Việt,
+   không giới hạn số lượng.
+3. **Không sinh văn thì không bịa.** Một đầu phân loại trả một trong N nhãn đã khai — nó
+   không thể phát minh ra một con số hay một cái tên ngoài tập nhãn. Đây là tính chất có
+   được từ kiến trúc, không phải từ lời nhắc.
+
+Và một hệ quả phải nói thẳng, vì nó là mất mát thật: **bỏ mô hình sinh văn là bỏ khả năng nói
+chuyện tự do.** Mô hình quyết định trả **nhãn**, không trả **câu**. Giao diện `chat/` trong
+kho này hôm nay dựa vào một mô hình bên thứ ba qua đường tương thích OpenAI, và cổng ấy tự
+khai `bdsg_la_trong_so_bdsg = false` cho mọi mã mô hình. Bỏ nó thì chat còn hai lối: truy hồi
+cộng **mẫu câu** (không cần mô hình, vẫn có trích dẫn, vẫn tiếng Việt đúng), hoặc chờ mô hình
+của BDSG đủ dùng.
+
+### Một ràng buộc vẫn còn giá trị, giữ lại nguyên văn
+
+Nếu một ngày BDSG lại phục vụ một mô hình lớn, phép đo này vẫn là phép đo bắt buộc: **gọi
+công cụ nhạy với lượng tử hoá gấp khoảng 70 lần so với sinh văn bản thường** (họ Gemma-3 12B
+rơi 91,3 % → 69,0 % BFCL khi ép xuống Q4_K_M; họ Qwen-3 8B thì gần như không rơi). Một hệ
+điều hành sống bằng gọi công cụ, nên đây là phép đo bắt buộc chứ không phải chi tiết kỹ thuật
+phụ. Nó **chưa được đo** trên bất kỳ mô hình nào của BDSG.
 
 ## Hệ sinh thái: những "thiết bị" mà hệ điều hành này lái
 
