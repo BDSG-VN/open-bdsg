@@ -90,3 +90,25 @@ cong/danh-tinh.local
 *.db
 *.db-wal
 *.db-shm
+
+# --- Bao mat 2026-10: khong commit bi mat (tep da theo doi van giu nguyen) ---
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.p8
+*.mobileprovision
+id_rsa*
+id_ed25519*
+*service-account*.json
+*serviceAccount*.json
+*-credentials.json
+.secret
+*_secret.txt
+*.secret
