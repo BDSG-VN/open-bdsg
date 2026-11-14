@@ -157,6 +157,27 @@ class ThuCong(unittest.TestCase):
         self.app.tasks.model = None
         CauHinhMoHinh(self.app.kho, self.app.tasks)
         self.assertEqual(self.app.tasks.model.public_status()["provider"], "openai")
+        result=self.app.core.goi({"id":"chu-quan","role":"quan-tri","name":"Chu"},"cau_hinh.tat_mo_hinh",{})
+        self.assertTrue(result["ok"])
+        self.assertFalse(self.app.tasks.model.configured)
+        self.assertNotIn(args["api_key"],private.read_text())
+        CauHinhMoHinh(self.app.kho,self.app.tasks)
+        self.assertFalse(self.app.tasks.model.configured)
+
+    def test_connector_management_requires_owner_and_redacts_credentials(self):
+        args={"platform_id":"bdsg_crm","url":"https://crm.bdsg.vn/mcp","token":"fake-private-token","read_tools":["crm.list"]}
+        self.assertTrue(self.rpc("operator-a","cau_hinh.luu_dau_noi",args)["isError"])
+        actor={"id":"chu-quan","role":"quan-tri","name":"Chu"}
+        result=self.app.core.goi(actor,"cau_hinh.luu_dau_noi",args)
+        self.assertTrue(result["ok"])
+        self.assertNotIn(args["token"],json.dumps(result))
+        self.assertNotIn(args["token"],(self.app.kho.root/"nhat-ky-nhan.jsonl").read_text())
+        public = self.request("/api/catalogue")[1]
+        self.assertNotIn("crm.list", json.dumps(public))
+        self.assertNotIn(args["url"], json.dumps(public))
+        self.app.core.nhan.chinh_sach.cong_ghi.dong()
+        self.assertFalse(self.app.core.goi(actor,"cau_hinh.ngat_dau_noi",{"platform_id":"bdsg_crm"})["ok"])
+        self.assertEqual(len(self.app.core.connections.config),1)
 
 
 if __name__ == "__main__":

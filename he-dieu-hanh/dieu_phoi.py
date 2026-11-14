@@ -5,6 +5,7 @@ import json
 import os
 import socket
 import threading
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -34,7 +35,8 @@ class CongMCP:
                 raise ValueError("Danh sách công cụ đầu nối không hợp lệ")
 
     def tom_tat(self):
-        return [{"platform_id": c["platform_id"], "state": "da-khai-bao",
+        return [{"platform_id": c["platform_id"], "state": c.get("state", "da-khai-bao"),
+                 "checked_at": c.get("checked_at"),
                  "read_tools": c.get("read_tools", []), "write_tools": c.get("write_tools", [])} for c in self.config]
 
     def goi(self, actor, platform_id, tool, arguments, ghi=False):
@@ -43,11 +45,17 @@ class CongMCP:
             raise PermissionError("Chưa có đầu nối được cấp cho danh tính này")
         if tool not in config.get("write_tools" if ghi else "read_tools", []):
             raise PermissionError("Công cụ chưa được chủ quản cho phép")
+        return self._phien(config, "tools/call", {"name": tool, "arguments": arguments})
+
+    def kiem_tra(self, config):
+        return self._phien(config, "tools/list", {})
+
+    def _phien(self, config, method, parameters):
         u = urlsplit(config["url"])
         ips = [ipaddress.ip_address(x[4][0]) for x in socket.getaddrinfo(u.hostname, 443, type=socket.SOCK_STREAM)]
         if not ips or not all(ip.is_global for ip in ips):
             raise PermissionError("Đầu nối phải dùng địa chỉ công khai")
-        token = os.environ.get(config.get("token_env", ""), "")
+        token = config.get("token") or os.environ.get(config.get("token_env", ""), "")
         if not token:
             raise ValueError("Chưa cấu hình chứng thư đầu nối")
         opener = build_opener(KhongChuyenHuong())
@@ -60,31 +68,55 @@ class CongMCP:
             if id_ is not None:
                 payload["id"] = id_
             req = Request(config["url"], data=json.dumps(payload).encode(), headers=headers)
-            with opener.open(req, timeout=15) as response:
+            with opener.open(req, timeout=10) as response:
                 if id_ is None:
                     if response.status != 202:
                         raise ValueError("Đầu nối không nhận thông báo khởi tạo")
                     return None
                 if response.headers.get("Mcp-Session-Id"):
                     session["Mcp-Session-Id"] = response.headers["Mcp-Session-Id"]
-                raw = response.read(2 * 1024 * 1024 + 1)
-                if len(raw) > 2 * 1024 * 1024:
-                    raise ValueError("Phản hồi đầu nối quá lớn")
                 if "text/event-stream" in response.headers.get("Content-Type", ""):
-                    frames = [json.loads(line[5:].strip()) for line in raw.decode().splitlines() if line.startswith("data:")]
-                    value = next((x for x in frames if x.get("id") == id_), None)
+                    # Đọc đến kết quả đúng ID, không chờ máy chủ đóng luồng SSE.
+                    used, fields, value, deadline = 0, [], None, time.monotonic() + 10
+                    while time.monotonic() < deadline:
+                        line = response.readline(2 * 1024 * 1024 - used + 1)
+                        used += len(line)
+                        if used > 2 * 1024 * 1024:
+                            raise ValueError("Phản hồi đầu nối quá lớn")
+                        if not line:
+                            break
+                        line = line.decode("utf-8").rstrip("\r\n")
+                        if line.startswith("data:"):
+                            fields.append(line[5:].lstrip(" "))
+                        elif not line and fields:
+                            frame = json.loads("\n".join(fields)); fields = []
+                            if isinstance(frame, dict) and frame.get("id") == id_:
+                                value = frame
+                                break
                 else:
+                    raw = response.read(2 * 1024 * 1024 + 1)
+                    if len(raw) > 2 * 1024 * 1024:
+                        raise ValueError("Phản hồi đầu nối quá lớn")
                     value = json.loads(raw)
             if not isinstance(value, dict) or value.get("id") != id_ or value.get("error"):
                 raise ValueError("Đầu nối không trả phản hồi MCP hợp lệ")
             return value["result"]
 
-        initialized = rpc(1, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "open-bdsg-thanhhoa", "version": "0.2.0"}})
-        if initialized.get("protocolVersion") != "2025-06-18":
-            raise ValueError("Đầu nối cần phiên bản MCP 2025-06-18")
-        rpc(None, "notifications/initialized", {})
-        # Không tự thử các công cụ khác hoặc chạy chỉ dẫn nằm trong kết quả từ nền tảng.
-        return rpc(2, "tools/call", {"name": tool, "arguments": arguments})
+        try:
+            initialized = rpc(1, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "open-bdsg-thanhhoa", "version": "0.2.0"}})
+            if initialized.get("protocolVersion") != "2025-06-18":
+                raise ValueError("Đầu nối cần phiên bản MCP 2025-06-18")
+            rpc(None, "notifications/initialized", {})
+            # Không tự thử các công cụ khác hoặc chạy chỉ dẫn trong kết quả.
+            return rpc(2, method, parameters)
+        finally:
+            if session:
+                try:
+                    request = Request(config["url"], method="DELETE", headers={"Authorization": "Bearer " + token, "MCP-Protocol-Version": "2025-06-18", **session})
+                    with opener.open(request, timeout=3):
+                        pass
+                except Exception:
+                    pass  # Máy chủ có thể không hỗ trợ đóng phiên bằng DELETE.
 
 
 class CongCu(TrinhDieuKhien):
@@ -136,7 +168,7 @@ class DieuPhoi:
         self.nhan.chinh_sach.khai_vai("operator", doc=reads + ["kinh_doanh.danh_sach"], ghi=writes + ["kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang"])
         self.nhan.chinh_sach.khai_vai("quan-tri", doc=reads + ["kinh_doanh.danh_sach", "ket_noi.doc"], ghi=writes + ["kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "ket_noi.ghi"])
 
-    def dang_ky_cong_viec(self, engine, configure_model):
+    def dang_ky_cong_viec(self, engine, configure_model, connectors, disable_model):
         text = {"type": "string"}
         self.nhan.dang_ky("mo_dun", CongCu([
             BanKhaiCongCu("danh_sach", lambda a: engine.modules(self.actor.get()), mo_ta="Mô-đun web và công cụ MCP đã khai báo, không suy diễn liên thông.", luoc_do=schema())]))
@@ -149,13 +181,18 @@ class DieuPhoi:
         common = ["nen_tang.danh_sach", "nen_tang.ket_noi", "agent.danh_sach", "agent.doc_hop_thu", "nhat_ky.danh_sach", "mo_dun.danh_sach"]
         jobs = ["cong_viec.danh_sach", "cong_viec.chi_tiet"]
         self.nhan.dang_ky("cau_hinh", CongCu([
+            BanKhaiCongCu("dau_noi", lambda a: connectors.list(self.actor.get()), mo_ta="Chủ quản xem cấu hình đầu nối đã che chứng thư.", luoc_do=schema()),
+            BanKhaiCongCu("luu_dau_noi", lambda a: connectors.save(self.actor.get(), a), ghi=True, mo_ta="Khai báo đầu nối BDSG và tên công cụ đọc được phép; không tự kết nối.", luoc_do=schema({"platform_id": text, "url": text, "token": text, "read_tools": {"type": "array", "items": text}}, ["platform_id", "url"])),
+            BanKhaiCongCu("kiem_tra_dau_noi", lambda a: connectors.probe(self.actor.get(), a.get("platform_id")), ghi=True, mo_ta="Kiểm initialize/tools/list, không gọi nghiệp vụ bên ngoài.", luoc_do=schema({"platform_id": text}, ["platform_id"])),
+            BanKhaiCongCu("ngat_dau_noi", lambda a: connectors.disconnect(self.actor.get(), a.get("platform_id")), ghi=True, mo_ta="Ngắt đầu nối và xóa chứng thư hoạt động trong cấu hình riêng.", luoc_do=schema({"platform_id": text}, ["platform_id"])),
+            BanKhaiCongCu("tat_mo_hinh", lambda a: disable_model(self.actor.get()), ghi=True, mo_ta="Tắt API mô hình cho các lượt chạy mới, xóa khóa đang lưu.", luoc_do=schema()),
             BanKhaiCongCu("mo_hinh", lambda a: configure_model(self.actor.get(), a), ghi=True,
                           mo_ta="Chủ quản lưu chứng thư mô hình riêng trên máy chủ. Không trả khóa API trong kết quả.",
                           luoc_do=schema({"provider": text, "model": text, "api_key": text, "base_url": text}, ["provider", "model", "api_key"]))]))
         writes = ["agent.gui_tin", "kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "cong_viec.tao", "cong_viec.tiep_tuc", "cong_viec.dung"]
         self.nhan.chinh_sach.khai_vai("agent", doc=common, ghi=["agent.gui_tin"])
         self.nhan.chinh_sach.khai_vai("operator", doc=common + jobs + ["kinh_doanh.danh_sach"], ghi=writes)
-        self.nhan.chinh_sach.khai_vai("quan-tri", doc=common + jobs + ["kinh_doanh.danh_sach", "ket_noi.doc"], ghi=writes + ["ket_noi.ghi", "cau_hinh.mo_hinh"])
+        self.nhan.chinh_sach.khai_vai("quan-tri", doc=common + jobs + ["kinh_doanh.danh_sach", "ket_noi.doc", "cau_hinh.dau_noi"], ghi=writes + ["ket_noi.ghi", "cau_hinh.mo_hinh", "cau_hinh.tat_mo_hinh", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi", "cau_hinh.ngat_dau_noi"])
 
     def danh_tinh(self, actor):
         return DanhTinh(ma=actor["id"], ten=actor["name"], vai=(actor["role"],), nguon="cong-thanhhoa")

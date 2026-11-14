@@ -23,6 +23,9 @@ nhập đúng tên mô hình và khóa API. Lưu cấu hình không tự kiểm 
 hạn mức của khóa bằng một lời gọi tính phí. Tác vụ đầu tiên sử dụng cấu hình
 đó mới gọi API; lỗi được báo rõ, không đổi nhà cung cấp hoặc giả kết quả.
 Khóa không được trả lại giao diện và biểu mẫu xóa khóa khi đóng.
+Chủ quản có thể **Tắt AI và xóa khóa đã lưu**. Lượt mới quay về quy trình có
+kịch bản; dấu tắt được giữ qua khởi động lại, không tự bật lại từ biến môi trường.
+Lượt đang chạy giữ cấu hình đã nhận, có thể cần yêu cầu dừng riêng.
 
 Tệp `model-private.json` nằm trong thư mục dữ liệu riêng, quyền 0600. Chỉ
 chủ quản được sửa qua công cụ `cau_hinh.mo_hinh`; nhật ký chỉ lưu metadata,
@@ -66,12 +69,38 @@ khai báo và danh sách công cụ đọc/ghi từ cấu hình riêng đã đư
 Khách chưa đăng nhập không nhận metadata công cụ kết nối riêng.
 Không coi URL web là endpoint MCP, không tự cấp quyền khi chọn mô-đun.
 
+### Quản lý đầu nối trên giao diện
+
+Trang **Quản lý kết nối** dành cho chủ quản: chọn nền tảng, nhập endpoint HTTPS
+trong miền con BDSG, chứng thư Bearer và tên công cụ đọc được phép. Lưu cấu hình
+không tự gọi mạng. Chứng thư ở `connections-private.json` trong thư mục dữ liệu
+riêng, quyền 0600, không xuất lại qua API hoặc nhật ký. Để trống chứng thư chỉ
+giữ lại khóa khi endpoint không đổi và đầu nối đang bật. Đổi endpoint cần khóa mới.
+
+**Kiểm tra MCP** chỉ gọi initialize, notifications/initialized và tools/list;
+không gọi tools/call. “MCP có phản hồi” không khẳng định nghiệp vụ đã hoạt động.
+Danh sách phân trang được ghi rõ là một phần. Công cụ do máy chủ trả về không
+tự được cấp quyền, kể cả nếu công cụ tự khai là chỉ đọc. Cần chủ quản nhập tên
+công cụ được bên quản trị xác nhận. Bản giao diện này chỉ cấu hình quyền đọc.
+
+**Ngắt kết nối** vô hiệu đầu nối và bỏ chứng thư hoạt động trong cấu hình web;
+không xóa dữ liệu nền tảng. Cấu hình web ghi đè cùng platform_id trong tệp vận
+hành cũ, kể cả trạng thái đã ngắt, để không tự bật lại khi khởi động lại.
+Chặn URL có tài khoản, query, địa chỉ DNS nội bộ và nối ngược vào cổng Thanh Hoá.
+Không theo redirect. Phiên MCP được đề nghị đóng bằng DELETE nếu máy chủ cấp ID.
+Hỗ trợ JSON hoặc SSE nhiều dòng, kết thúc đọc khi nhận đúng ID phản hồi.
+
+Danh mục công khai chỉ nhận trạng thái kết nối và mốc kiểm tra, không nhận URL
+MCP, tên công cụ riêng hoặc chứng thư. Quản lý và kiểm tra đều qua nhân, quyền
+chủ quản và cổng ghi, cùng nhật ký metadata.
+
 ## Kiểm tra
 
 ```sh
 python3 he-dieu-hanh/thu_cong_viec.py -v
 python3 he-dieu-hanh/thu_mo_hinh_bdsg.py -v
 python3 he-dieu-hanh/thu_may_chu.py -v
+python3 he-dieu-hanh/thu_ket_noi.py -v
 python3 trien-khai/thu_giao_dien.py -v
 ```
 

@@ -1,0 +1,157 @@
+.connector-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.connector-form,
+.connector-list,
+.connector-intro {
+  padding: 25px;
+}
+.connector-form h2,
+.connector-list h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+}
+.connector-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 18px 0;
+}
+.connector-form input,
+.connector-form select,
+.connector-form textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 7px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  min-width: 0;
+}
+.connector-form textarea {
+  resize: vertical;
+}
+.connector-feedback {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--green);
+  overflow-wrap: anywhere;
+}
+.connector-row {
+  border-top: 1px solid var(--line);
+  padding: 21px 0;
+}
+.connector-row > div:first-child {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.connector-row code {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 10px 0;
+  font-size: 12px;
+}
+.connector-row p,
+.connector-row summary {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.connector-row pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg);
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.connector-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.connector-intro {
+  max-width: 780px;
+  margin: 25px auto;
+}
+.connector-intro h2 {
+  font-size: 24px;
+  margin: 20px 0 10px;
+}
+.connector-intro p {
+  color: var(--muted);
+  line-height: 1.8;
+  margin-bottom: 22px;
+}
+.connector-principles {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 25px;
+}
+.connector-principles span {
+  background: var(--mint);
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.connector-model-disable {
+  margin-top: 15px;
+  color: #9c5144;
+}
+.connector-module-link {
+  margin-left: 14px;
+}
+.sidebar nav {
+  min-height: 100px;
+  overflow-y: auto;
+}
+.sidebar > nav {
+  flex: 1;
+}
+.sidebar-footer,
+.profile {
+  flex-shrink: 0;
+}
+@media (max-width: 1000px) {
+  .connector-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .connector-form,
+  .connector-list,
+  .connector-intro {
+    padding: 20px;
+  }
+  .connector-form input,
+  .connector-form select,
+  .connector-form textarea {
+    font-size: 16px;
+  }
+  .connector-actions .button {
+    min-height: 42px;
+  }
+  .connector-row > div:first-child {
+    gap: 6px;
+  }
+  .connector-intro {
+    margin: 5px 0;
+  }
+  .connector-principles {
+    gap: 7px;
+  }
+  .connector-module-link {
+    margin: 12px 0 0;
+    display: inline-flex;
+  }
+}

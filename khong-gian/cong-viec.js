@@ -112,6 +112,10 @@
       dialog.className = "bdsg-model-dialog";
       dialog.innerHTML = `<form id="bdsg-model-form"><div class="dialog-heading"><span class="eyebrow">CẤU HÌNH RIÊNG TƯ</span><button type="button" class="icon-button" aria-label="Đóng cấu hình mô hình" data-bdsg-model-close>${icon("close")}</button></div><h2>Kết nối mô hình của bạn.</h2><p class="bdsg-model-description">Khóa chỉ được lưu riêng trên máy chủ Thanh Hoá và gửi tới nhà cung cấp bạn chọn. Khóa không xuất hiện trong chat, GitHub hoặc phản hồi cấu hình. Nội dung giao việc, ngữ cảnh và kết quả công cụ có thể được gửi tới nhà cung cấp đã chọn để xử lý. Cấu hình mới áp dụng cho lượt chạy mới.</p><label>Nhà cung cấp<select name="provider" id="bdsg-model-provider"><option value="openai">OpenAI</option><option value="anthropic">Claude</option><option value="bdsg">BDSG</option></select></label><label>Tên mô hình<input name="model" type="text" required maxlength="150" autocomplete="off" placeholder="Tên mô hình được cấp trong tài khoản API"></label><label id="bdsg-model-base-label" hidden>Địa chỉ API BDSG<input name="base_url" type="url" maxlength="500" placeholder="https://llm.bdsg.vn/v1" autocomplete="off"></label><label>Khóa API mới<input name="api_key" type="password" required maxlength="2048" autocomplete="off" spellcheck="false" placeholder="Tự nhập khóa API tại đây"></label><p class="bdsg-model-description">Mỗi lần lưu cần nhập khóa mới hoặc nhập lại khóa hiện tại. Không thể xem lại khóa đã lưu. Việc dùng API có thể phát sinh phí theo tài khoản nhà cung cấp.</p><p id="bdsg-model-error" class="form-error" role="alert"></p><button type="submit" class="button primary full">Lưu cấu hình mô hình ${icon("lock")}</button></form>`;
       document.body.append(dialog);
+      dialog.insertAdjacentHTML(
+        "beforeend",
+        '<button type="button" class="button connector-model-disable" id="model-disable" data-bdsg-model-disable>Tắt AI và xóa khóa đã lưu</button>',
+      );
       dialog.addEventListener("close", () => $("#bdsg-model-form").reset());
     }
     await getModel();
@@ -126,6 +130,7 @@
     $("#bdsg-model-base-label").hidden =
       form.elements.provider.value !== "bdsg";
     $("#bdsg-model-error").textContent = "";
+    $("#model-disable").hidden = !latestModel.configured;
     $("#bdsg-model-dialog").showModal();
   }
   function listMarkup(rows, compact = false) {
@@ -341,10 +346,18 @@
     main
       .querySelector(".bdsg-module-explainer")
       .insertAdjacentHTML("beforeend", setupButton());
+    main
+      .querySelector(".bdsg-module-explainer")
+      .insertAdjacentHTML(
+        "beforeend",
+        '<a class="text-link connector-module-link" href="#integrations">Quản lý đầu nối MCP →</a>',
+      );
     try {
       await getModules();
       if (ticket === revision && routeIs("modules"))
-        $("#bdsg-module-grid").innerHTML = modulesMarkup();
+        $("#bdsg-module-grid").innerHTML = modulesMarkup(
+          $("#bdsg-module-search")?.value || "",
+        );
     } catch (e) {
       if (ticket === revision)
         $("#bdsg-module-grid").innerHTML = errorBox(e.message);
@@ -386,6 +399,28 @@
     }
   });
   document.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-bdsg-model-disable]")) {
+      if (
+        !confirm(
+          "Tắt mô hình AI cho các lượt mới và xóa khóa đang lưu? Lượt đang chạy có thể hoàn tất với cấu hình trước đó.",
+        )
+      )
+        return;
+      const button = e.target.closest("button");
+      button.disabled = true;
+      try {
+        latestModel = await tool("cau_hinh.tat_mo_hinh");
+        $("#bdsg-model-dialog").close();
+        toast("Đã tắt mô hình cho lượt mới và xóa khóa đang lưu.");
+        if (routeIs("work")) home();
+        else if (routeIs("modules")) modules();
+      } catch (error) {
+        $("#bdsg-model-error").textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
     if (e.target.closest("[data-bdsg-model-setup]")) {
       auth(() => openModelSettings().catch((err) => toast(err.message)));
       return;

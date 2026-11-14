@@ -93,6 +93,7 @@ const stages = [
   ["kinh-doanh", "Kinh doanh", "Mở rộng cơ hội tăng trưởng"],
 ];
 const titles = {
+  integrations: "Quản lý kết nối",
   work: "Giao việc",
   tasks: "Công việc của tôi",
   modules: "Mô-đun BDSG",
@@ -395,6 +396,7 @@ function render() {
     return;
   }
   ({
+    integrations: () => window.BDSGConnectors?.open(),
     work: () => window.BDSGTasks?.home(),
     tasks: () => window.BDSGTasks?.tasks(),
     modules: () => window.BDSGTasks?.modules(),

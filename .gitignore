@@ -109,6 +109,8 @@ id_ed25519*
 *service-account*.json
 *serviceAccount*.json
 *-credentials.json
+model-private.json
+connections-private.json
 .secret
 *_secret.txt
 *.secret

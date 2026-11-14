@@ -11,7 +11,7 @@ class CauHinhMoHinh:
         self.path = kho.root / "model-private.json"
         if self.path.is_file():
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self.engine.model = self.candidate(data)
+            self.engine.model = MoHinhBDSG(environ={}) if data == {"disabled": True} else self.candidate(data)
 
     def candidate(self, data):
         if not isinstance(data, dict) or set(data) - {"provider", "model", "api_key", "base_url"}:
@@ -35,10 +35,7 @@ class CauHinhMoHinh:
             raise ValueError("Cấu hình mô hình chưa hợp lệ; kiểm tra nhà cung cấp và tên mô hình")
         return candidate
 
-    def save(self, actor, data):
-        if actor.get("role") != "quan-tri":
-            raise PermissionError("Chỉ chủ quản được cấu hình mô hình")
-        candidate = self.candidate(data)
+    def _write(self, data, candidate):
         temporary = self.path.with_name("model-private-" + secrets.token_hex(8) + ".tmp")
         try:
             fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -50,5 +47,19 @@ class CauHinhMoHinh:
             self.engine.model = candidate
         finally:
             temporary.unlink(missing_ok=True)
+    def save(self, actor, data):
+        if actor.get("role") != "quan-tri":
+            raise PermissionError("Chỉ chủ quản được cấu hình mô hình")
+        candidate = self.candidate(data)
+        self._write(data, candidate)
         self.kho.su_kien(actor["id"], "cau-hinh-mo-hinh", data["provider"])
         return {**candidate.public_status(), "verified": False}
+
+    def disable(self, actor):
+        if actor.get("role") != "quan-tri":
+            raise PermissionError("Chỉ chủ quản được tắt mô hình")
+        # Giữ dấu tắt để lần khởi động sau không tự bật lại từ biến môi trường.
+        model = MoHinhBDSG(environ={})
+        self._write({"disabled": True}, model)
+        self.kho.su_kien(actor["id"], "tat-mo-hinh")
+        return model.public_status()

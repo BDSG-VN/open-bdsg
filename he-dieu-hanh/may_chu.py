@@ -16,6 +16,7 @@ from kho import Kho
 from dieu_phoi import DieuPhoi
 from cong_viec import CongViec
 from cau_hinh_mo_hinh import CauHinhMoHinh
+from cau_hinh_ket_noi import CauHinhKetNoi
 
 
 class UngDung:
@@ -26,12 +27,13 @@ class UngDung:
         self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
         self.tasks = CongViec(self.kho, self.core)
         self.model_settings = CauHinhMoHinh(self.kho, self.tasks)
-        self.core.dang_ky_cong_viec(self.tasks, self.model_settings.save)
+        self.connectors = CauHinhKetNoi(self.kho, self.core.connections, self.catalogue, self.origin)
+        self.core.dang_ky_cong_viec(self.tasks, self.model_settings.save, self.connectors, self.model_settings.disable)
 
     def catalog(self):
         p = self.kho.root / "web-status.json"
         checks = json.loads(p.read_text()) if p.is_file() else {"checked_at": None, "checks": {}}
-        connections = {c["platform_id"]: c for c in self.core.connections.tom_tat()}
+        connections = {c["platform_id"]: {"state": c["state"], "checked_at": c.get("checked_at")} for c in self.core.connections.tom_tat()}
         return {"products": [{**p, "web": checks["checks"].get(p["id"], {"state": "chua-do"}),
                                "mcp": connections.get(p["id"], {"state": "chua-cau-hinh"})} for p in self.catalogue],
                 "checked_at": checks["checked_at"], "mcp_endpoint": self.origin + "/mcp"}
