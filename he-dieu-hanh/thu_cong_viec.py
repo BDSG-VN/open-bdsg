@@ -5,8 +5,10 @@ import threading
 import time
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 from cong_viec import CongViec
 from kho import Kho
+from mo_hinh_bdsg import MoHinhBDSG
 
 
 OWNER = {"id": "chu-quan", "name": "Chu", "role": "quan-tri"}
@@ -17,6 +19,7 @@ B = {"id": "operator-b", "name": "B", "role": "operator"}
 class MoHinhTat:
     configured = False
     configuration_error = ""
+    module_read_tools = staticmethod(MoHinhBDSG.module_read_tools)
 
     def public_status(self):
         return {"configured": False, "mode": "quy-trinh", "model": None}
@@ -47,6 +50,34 @@ class NhanThu:
 
 
 class ThuCongViec(unittest.TestCase):
+    def test_module_reads_require_explicit_owner_model_and_verified_scope(self):
+        for value in ["true", 1, None]:
+            with self.assertRaises(ValueError):
+                self.create(actor=OWNER, module_ids=["bdsg_crm"], allow_module_reads=value)
+        with self.assertRaises(PermissionError):
+            self.create(allow_module_reads=True, module_ids=["bdsg_crm"])
+        with self.assertRaises(ValueError):
+            self.create(actor=OWNER, allow_module_reads=True, module_ids=["bdsg_crm"])
+        self.tasks.model.configured = True
+        with self.assertRaises(ValueError):
+            self.create(actor=OWNER, allow_module_reads=True)
+        with self.assertRaises(ValueError):
+            self.create(actor=OWNER, allow_module_reads=True, module_ids=["bdsg_crm"])
+
+    def test_module_read_snapshot_persists_and_followup_does_not_expand(self):
+        self.core.connections = SimpleNamespace(config=[{"platform_id": "bdsg_crm", "state": "da-xac-minh", "read_tools": ["crm.list"]}])
+        self.tasks.model.configured = True
+        self.tasks.model.run = lambda *a: "# Dữ liệu công cụ giả"
+        task_id = self.create(actor=OWNER, allow_module_reads=True, module_ids=["bdsg_crm"])
+        original = self.completed(OWNER, task_id)
+        self.assertTrue(original["allow_module_reads"])
+        self.assertEqual(original["allowed_module_tools"], {"bdsg_crm": ["crm.list"]})
+        self.core.connections.config[0]["read_tools"].append("crm.new")
+        self.tasks.followup(OWNER, task_id, "Bổ sung báo cáo từ mô-đun đã chọn")
+        continued = self.completed(OWNER, task_id)
+        self.assertEqual(continued["allowed_module_tools"], original["allowed_module_tools"])
+        self.assertTrue(self.tasks.list(OWNER)["tasks"][0]["allow_module_reads"])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.kho = Kho(self.tmp.name)

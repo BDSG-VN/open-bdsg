@@ -168,18 +168,25 @@ class DieuPhoi:
         self.nhan.chinh_sach.khai_vai("operator", doc=reads + ["kinh_doanh.danh_sach"], ghi=writes + ["kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang"])
         self.nhan.chinh_sach.khai_vai("quan-tri", doc=reads + ["kinh_doanh.danh_sach", "ket_noi.doc"], ghi=writes + ["kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "ket_noi.ghi"])
 
-    def dang_ky_cong_viec(self, engine, configure_model, connectors, disable_model):
+    def dang_ky_cong_viec(self, engine, configure_model, connectors, disable_model, projects):
         text = {"type": "string"}
+        project_fields = {"name": text, "instructions": text, "context": text}
+        self.nhan.dang_ky("du_an", CongCu([
+            BanKhaiCongCu("danh_sach", lambda a: projects.list(self.actor.get()), mo_ta="Dự án và ngữ cảnh riêng trong phạm vi danh tính.", luoc_do=schema()),
+            BanKhaiCongCu("tao", lambda a: projects.create(self.actor.get(), a), ghi=True, mo_ta="Tạo không gian dự án với hướng dẫn và ngữ cảnh dùng lại.", luoc_do=schema(project_fields, ["name"])),
+            BanKhaiCongCu("cap_nhat", lambda a: projects.update(self.actor.get(), a), ghi=True, mo_ta="Cập nhật dự án; tác vụ đã tạo giữ bản chụp ngữ cảnh cũ.", luoc_do=schema({**project_fields,"id":text},["id","name"])),
+            BanKhaiCongCu("luu_tru", lambda a: projects.archive(self.actor.get(), a.get("id")), ghi=True, mo_ta="Lưu trữ có thể khôi phục, không xóa tác vụ hay ngữ cảnh.", luoc_do=schema({"id":text},["id"])),
+            BanKhaiCongCu("khoi_phuc", lambda a: projects.archive(self.actor.get(), a.get("id"), False), ghi=True, mo_ta="Khôi phục dự án đã lưu trữ.", luoc_do=schema({"id":text},["id"]))]))
         self.nhan.dang_ky("mo_dun", CongCu([
             BanKhaiCongCu("danh_sach", lambda a: engine.modules(self.actor.get()), mo_ta="Mô-đun web và công cụ MCP đã khai báo, không suy diễn liên thông.", luoc_do=schema())]))
         self.nhan.dang_ky("cong_viec", CongCu([
             BanKhaiCongCu("danh_sach", lambda a: engine.list(self.actor.get()), mo_ta="Danh sách tác vụ trong phạm vi danh tính.", luoc_do=schema()),
             BanKhaiCongCu("chi_tiet", lambda a: engine.detail(self.actor.get(), a.get("id")), mo_ta="Kế hoạch, tiến trình và sản phẩm của tác vụ có quyền xem.", luoc_do=schema({"id": text}, ["id"])),
-            BanKhaiCongCu("tao", lambda a: engine.create(self.actor.get(), a), ghi=True, mo_ta="Tạo tác vụ theo quy trình có giới hạn; không thực hiện ghi lên nền tảng bên ngoài.", luoc_do=schema({"prompt": text, "module_ids": {"type": "array", "items": text}, "template": text}, ["prompt"])),
+            BanKhaiCongCu("tao", lambda a: engine.create(self.actor.get(), a), ghi=True, mo_ta="Tạo tác vụ với ngữ cảnh dự án và quyền đọc MCP được chọn rõ; không ghi nghiệp vụ bên ngoài.", luoc_do=schema({"prompt": text, "module_ids": {"type": "array", "items": text}, "template": text, "project_id": text, "allow_module_reads": {"type":"boolean"}}, ["prompt"])),
             BanKhaiCongCu("tiep_tuc", lambda a: engine.followup(self.actor.get(), a.get("id"), a.get("text")), ghi=True, mo_ta="Bổ sung ngữ cảnh và chạy tiếp một tác vụ đã dừng.", luoc_do=schema({"id": text, "text": text}, ["id", "text"])),
             BanKhaiCongCu("dung", lambda a: engine.cancel(self.actor.get(), a.get("id")), ghi=True, mo_ta="Yêu cầu dừng hợp tác giữa các bước thực thi.", luoc_do=schema({"id": text}, ["id"]))]))
         common = ["nen_tang.danh_sach", "nen_tang.ket_noi", "agent.danh_sach", "agent.doc_hop_thu", "nhat_ky.danh_sach", "mo_dun.danh_sach"]
-        jobs = ["cong_viec.danh_sach", "cong_viec.chi_tiet"]
+        jobs = ["cong_viec.danh_sach", "cong_viec.chi_tiet", "du_an.danh_sach"]
         self.nhan.dang_ky("cau_hinh", CongCu([
             BanKhaiCongCu("dau_noi", lambda a: connectors.list(self.actor.get()), mo_ta="Chủ quản xem cấu hình đầu nối đã che chứng thư.", luoc_do=schema()),
             BanKhaiCongCu("luu_dau_noi", lambda a: connectors.save(self.actor.get(), a), ghi=True, mo_ta="Khai báo đầu nối BDSG và tên công cụ đọc được phép; không tự kết nối.", luoc_do=schema({"platform_id": text, "url": text, "token": text, "read_tools": {"type": "array", "items": text}}, ["platform_id", "url"])),
@@ -189,7 +196,7 @@ class DieuPhoi:
             BanKhaiCongCu("mo_hinh", lambda a: configure_model(self.actor.get(), a), ghi=True,
                           mo_ta="Chủ quản lưu chứng thư mô hình riêng trên máy chủ. Không trả khóa API trong kết quả.",
                           luoc_do=schema({"provider": text, "model": text, "api_key": text, "base_url": text}, ["provider", "model", "api_key"]))]))
-        writes = ["agent.gui_tin", "kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "cong_viec.tao", "cong_viec.tiep_tuc", "cong_viec.dung"]
+        writes = ["agent.gui_tin", "kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "cong_viec.tao", "cong_viec.tiep_tuc", "cong_viec.dung", "du_an.tao", "du_an.cap_nhat", "du_an.luu_tru", "du_an.khoi_phuc"]
         self.nhan.chinh_sach.khai_vai("agent", doc=common, ghi=["agent.gui_tin"])
         self.nhan.chinh_sach.khai_vai("operator", doc=common + jobs + ["kinh_doanh.danh_sach"], ghi=writes)
         self.nhan.chinh_sach.khai_vai("quan-tri", doc=common + jobs + ["kinh_doanh.danh_sach", "ket_noi.doc", "cau_hinh.dau_noi"], ghi=writes + ["ket_noi.ghi", "cau_hinh.mo_hinh", "cau_hinh.tat_mo_hinh", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi", "cau_hinh.ngat_dau_noi"])

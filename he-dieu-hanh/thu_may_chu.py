@@ -60,6 +60,35 @@ class ThuCong(unittest.TestCase):
         self.assertEqual(len(catalog["products"]), 38)
         self.assertTrue(all(p["mcp"]["state"] == "chua-cau-hinh" for p in catalog["products"]))
 
+    def test_project_task_snapshot_and_archive_permissions(self):
+        args = {"name": "Du an thu Thanh Hoa", "instructions": "Chi doc", "context": "Ngu canh ban dau"}
+        project = self.result(self.rpc("operator-a", "du_an.tao", args))
+        self.assertTrue(self.rpc("agent-a", "du_an.danh_sach")["isError"])
+        task = self.result(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Tong hop ke hoach du an thu", "project_id": project["id"]}))
+        self.result(self.rpc("operator-a", "du_an.cap_nhat", {**args, "id": project["id"], "context": "Ngu canh thay doi"}))
+        self.result(self.rpc("operator-a", "du_an.luu_tru", {"id": project["id"]}))
+        self.assertTrue(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Khong duoc tao trong luu tru", "project_id": project["id"]})["isError"])
+        for _ in range(100):
+            result = self.app.tasks.detail({"id":"operator-a","role":"operator"},task["id"])
+            if result["status"] == "completed": break
+            time.sleep(.02)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["project"]["context"], "Ngu canh ban dau")
+        self.assertIn("Ngu canh ban dau", result["artifacts"][0]["content"])
+        self.assertNotIn("Ngu canh thay doi", result["artifacts"][0]["content"])
+        self.result(self.rpc("operator-a", "du_an.khoi_phuc", {"id":project["id"]}))
+        self.assertFalse(self.app.projects.list({"id":"operator-a","role":"operator"})["projects"][0]["archived"])
+
+    def test_large_unicode_project_web_body_and_mcp_limit(self):
+        _, _, headers = self.request("/api/login", {"username":"chu-quan","password":"mat-khau-chi-trong-test"}, {"Origin":self.app.origin})
+        payload = {"name":"du_an.tao", "arguments":{"name":"Du an Unicode", "instructions":"x"*4000,"context":"x"*12000}}
+        # JSON escaping a Vietnamese character remains below the dedicated 64 KiB web limit.
+        payload["arguments"]["context"] = "\u1ec7"*8000
+        code, body, _ = self.request("/api/tools", payload, {"Origin":self.app.origin,"Cookie":headers["Set-Cookie"].split(";")[0]})
+        self.assertEqual(code,200)
+        self.assertTrue(body["ok"],body)
+        self.assertEqual(self.request("/mcp", {"x":"x"*17000}, self.mcp_headers("agent-a"))[0],400)
+
     def test_web_session_csrf_logout(self):
         payload = {"username": "chu-quan", "password": "mat-khau-chi-trong-test"}
         self.assertEqual(self.request("/api/login", payload)[0], 403)

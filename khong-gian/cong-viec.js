@@ -1,6 +1,13 @@
 "use strict";
 (() => {
-  const draft = { prompt: "", module_ids: [], template: "de-xuat-giai-phap" };
+  const draft = {
+    prompt: "",
+    module_ids: [],
+    template: "de-xuat-giai-phap",
+    project_id: "",
+    allow_module_reads: false,
+  };
+  let projects = [];
   let revision = 0;
   let moduleCache = [];
   let currentTask = null;
@@ -144,16 +151,58 @@
   function modulePicker() {
     return `<details class="bdsg-module-picker"><summary>${icon("grid")}<span>Chọn mô-đun${draft.module_ids.length ? ` (${draft.module_ids.length})` : ""}</span><small>Tuỳ chọn</small></summary><div class="bdsg-module-options">${moduleCache.map((m) => `<label><input type="checkbox" name="bdsg-module" value="${esc(m.id)}" ${draft.module_ids.includes(m.id) ? "checked" : ""}><span>${esc(m.name)}</span></label>`).join("")}</div><p>Nếu chưa chọn, quy trình sẽ đối chiếu nhu cầu với danh mục. Chọn mô-đun không tự cấp quyền truy cập dữ liệu.</p></details>`;
   }
+  async function getProjects() {
+    projects =
+      state.user && ["operator", "quan-tri"].includes(state.user.role)
+        ? (await tool("du_an.danh_sach")).projects.filter((p) => !p.archived)
+        : [];
+    draft.project_id = window.BDSGProjects?.getSelected() || "";
+    if (!projects.some((p) => p.id === draft.project_id)) {
+      draft.project_id = "";
+      window.BDSGProjects?.clearSelected();
+    }
+    draft.allow_module_reads = false;
+  }
+  function scopePicker() {
+    return `<div class="bdsg-project-scope"><label>Dự án công việc<select id="bdsg-task-project"><option value="">Công việc độc lập</option>${projects.map((p) => `<option value="${esc(p.id)}" ${draft.project_id === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><a href="#projects">Quản lý dự án →</a><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-reads" disabled><span>Cho phép agent đọc MCP từ những mô-đun đã chọn. Nội dung đọc được có thể gửi tới nhà cung cấp AI đã cấu hình.</span></label><small id="bdsg-read-note"></small></div>`;
+  }
+  function refreshConsent() {
+    const box = $("#bdsg-allow-reads"),
+      note = $("#bdsg-read-note");
+    if (!box) return;
+    const granted = moduleCache.some(
+      (m) =>
+        draft.module_ids.includes(m.id) &&
+        m.mcp?.state === "da-xac-minh" &&
+        m.mcp?.read_tools?.length,
+    );
+    box.disabled = !(
+      state.user?.role === "quan-tri" &&
+      latestModel.configured &&
+      granted
+    );
+    if (box.disabled) draft.allow_module_reads = false;
+    box.checked = draft.allow_module_reads;
+    note.textContent = box.disabled
+      ? "Cần chủ quản, mô hình AI và mô-đun có công cụ đọc MCP đã xác minh. Mặc định không đọc dữ liệu bên ngoài."
+      : "Chỉ cấp cho tác vụ này; không cấp công cụ ghi. Quyền được kiểm lại trước mỗi lần gọi.";
+  }
   async function home() {
     const ticket = ++revision;
     main.innerHTML = `<section class="bdsg-work-home"><div class="bdsg-work-intro"><span class="bdsg-work-kicker">BDSG THANH HOÁ · KHÔNG GIAN THỰC THI</span><h1>Bạn muốn phát triển điều gì<br>ở <em>Thanh Hoá?</em></h1><p>Giao một mục tiêu. Kết nối đúng mô-đun. Theo dõi công việc đến kết quả.</p></div><div id="bdsg-composer-slot" class="bdsg-composer-loading">Đang mở không gian giao việc…</div></section>`;
     try {
-      const [, model] = await Promise.all([getModules(), getModel()]);
+      const [, model] = await Promise.all([
+        getModules(),
+        getModel(),
+        getProjects(),
+      ]);
       if (ticket !== revision || !routeIs("work")) return;
       main.innerHTML = `<section class="bdsg-work-home"><div class="bdsg-work-intro"><span class="bdsg-work-kicker">BDSG THANH HOÁ · KHÔNG GIAN THỰC THI</span><h1>Bạn muốn phát triển điều gì<br>ở <em>Thanh Hoá?</em></h1><p>Giao một mục tiêu. Kết nối đúng mô-đun. Theo dõi công việc đến kết quả.</p></div><form id="bdsg-task-create" class="bdsg-task-composer"><label class="sr-only" for="bdsg-task-prompt">Mục tiêu công việc</label><textarea id="bdsg-task-prompt" name="prompt" minlength="10" maxlength="4000" rows="3" required placeholder="Ví dụ: Phối hợp các nền tảng BDSG để phát triển kinh doanh tại Thanh Hoá…">${esc(draft.prompt)}</textarea><div class="bdsg-composer-bottom">${modulePicker()}<button class="bdsg-run-button" type="submit" aria-label="Bắt đầu công việc">${icon("arrow")}<span>Bắt đầu</span></button></div><div class="bdsg-composer-mode">${icon("lock")}<span>${modeLabel(model)}</span><small>Thực thi trong phạm vi quyền được cấp</small></div></form><div class="bdsg-task-templates">${templates.map((t) => `<button type="button" data-bdsg-template="${t.id}" class="bdsg-task-template">${icon(t.icon)}<strong>${t.title}</strong><span>${t.text}</span>${icon("arrow")}</button>`).join("")}</div><div class="bdsg-work-footnote"><span class="bdsg-work-live-dot"></span>${moduleCache.length} mô-đun trong hệ sinh thái<a href="#modules">Khám phá mô-đun ${icon("arrow")}</a></div><section class="bdsg-work-recent"><div class="bdsg-work-section-heading"><h2>Công việc gần đây</h2><a href="#tasks">Xem tất cả ${icon("arrow")}</a></div><div id="bdsg-recent-jobs">${state.user ? "Đang tải công việc…" : `<div class="bdsg-work-login-note">${icon("lock")}<p>Công việc và kết quả của bạn được lưu trong không gian riêng.</p><button type="button" class="button" data-bdsg-login>Đăng nhập để làm việc</button></div>`}</div></section></section>`;
       main
         .querySelector(".bdsg-work-footnote")
         .insertAdjacentHTML("beforeend", setupButton());
+      $("#bdsg-task-create").insertAdjacentHTML("beforeend", scopePicker());
+      refreshConsent();
       if (state.user) {
         const data = unwrap(await api("/api/tasks"));
         const slot = $("#bdsg-recent-jobs");
@@ -284,6 +333,19 @@
     $("#bdsg-task-results").innerHTML = artifactMarkup(task);
     $("#bdsg-task-conversation").innerHTML = conversationMarkup(task);
     $("#bdsg-task-status").innerHTML = status(task.status);
+    let scope = $("#bdsg-task-scope");
+    if (!scope) {
+      $("#bdsg-task-status").parentElement.insertAdjacentHTML(
+        "beforeend",
+        '<span id="bdsg-task-scope"></span>',
+      );
+      scope = $("#bdsg-task-scope");
+    }
+    scope.textContent =
+      (task.project ? "Dự án: " + task.project.name + " · " : "") +
+      (task.allow_module_reads
+        ? "Đã cấp đọc MCP theo phạm vi tác vụ"
+        : "Không cấp đọc MCP bên ngoài");
     const stop = $("#bdsg-task-stop");
     if (stop) {
       stop.hidden = !activeStates.has(task.status);
@@ -385,12 +447,22 @@
       $("#bdsg-module-grid").innerHTML = modulesMarkup(e.target.value);
   });
   document.addEventListener("change", (e) => {
+    if (e.target.id === "bdsg-task-project") {
+      draft.project_id = e.target.value;
+      window.BDSGProjects?.setSelected(draft.project_id);
+      draft.allow_module_reads = false;
+      refreshConsent();
+    }
+    if (e.target.id === "bdsg-allow-reads")
+      draft.allow_module_reads = !e.target.disabled && e.target.checked;
     if (e.target.id === "bdsg-model-provider")
       $("#bdsg-model-base-label").hidden = e.target.value !== "bdsg";
     if (e.target.name === "bdsg-module") {
       draft.module_ids = Array.from(
         document.querySelectorAll('[name="bdsg-module"]:checked'),
       ).map((e) => e.value);
+      draft.allow_module_reads = false;
+      refreshConsent();
       const label = $(".bdsg-module-picker summary span");
       if (label)
         label.textContent =
@@ -515,6 +587,8 @@
         prompt: draft.prompt.trim(),
         module_ids: [...draft.module_ids],
         template: draft.template,
+        project_id: draft.project_id,
+        allow_module_reads: draft.allow_module_reads,
       };
       if (args.prompt.length < 10)
         return toast("Mô tả công việc cần ít nhất 10 ký tự.");

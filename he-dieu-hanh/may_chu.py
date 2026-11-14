@@ -17,6 +17,7 @@ from dieu_phoi import DieuPhoi
 from cong_viec import CongViec
 from cau_hinh_mo_hinh import CauHinhMoHinh
 from cau_hinh_ket_noi import CauHinhKetNoi
+from du_an import DuAn
 
 
 class UngDung:
@@ -26,9 +27,11 @@ class UngDung:
         self.kho = Kho(data)
         self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
         self.tasks = CongViec(self.kho, self.core)
+        self.projects = DuAn(self.kho)
+        self.tasks.projects = self.projects
         self.model_settings = CauHinhMoHinh(self.kho, self.tasks)
         self.connectors = CauHinhKetNoi(self.kho, self.core.connections, self.catalogue, self.origin)
-        self.core.dang_ky_cong_viec(self.tasks, self.model_settings.save, self.connectors, self.model_settings.disable)
+        self.core.dang_ky_cong_viec(self.tasks, self.model_settings.save, self.connectors, self.model_settings.disable, self.projects)
 
     def catalog(self):
         p = self.kho.root / "web-status.json"
@@ -82,7 +85,8 @@ def tao_may_chu(app, port=8766):
             if self.headers.get("Transfer-Encoding") or self.headers.get_content_type() != "application/json":
                 raise ValueError("Cần nội dung JSON với Content-Length")
             length = int(self.headers.get("Content-Length", "0"))
-            if not 0 < length <= 16384:
+            limit = 65536 if urlsplit(self.path).path == "/api/tools" else 16384
+            if not 0 < length <= limit:
                 raise ValueError("Yêu cầu vượt giới hạn hoặc thiếu nội dung")
             obj = json.loads(self.rfile.read(length))
             if not isinstance(obj, dict):

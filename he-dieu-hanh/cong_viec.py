@@ -95,6 +95,10 @@ class CongViec:
         if not isinstance(args, dict):
             raise ValueError("Thông tin tác vụ không hợp lệ")
         prompt = _text(args.get("prompt"), 10)
+        project_id = args.get("project_id", "")
+        if not isinstance(project_id, str):
+            raise ValueError("Dự án không hợp lệ")
+        project = self.projects.context_for(actor, project_id) if project_id else None
         template = args.get("template", "de-xuat-giai-phap")
         if template not in TEMPLATES:
             raise ValueError("Quy trình chưa được hỗ trợ")
@@ -102,12 +106,26 @@ class CongViec:
         valid = {p["id"] for p in self.core.catalogue}
         if not isinstance(ids, list) or len(ids) > len(valid) or any(not isinstance(x, str) or x not in valid for x in ids) or len(set(ids)) != len(ids):
             raise ValueError("Mô-đun không tồn tại hoặc bị lặp")
+        allow_reads = args.get("allow_module_reads", False)
+        if not isinstance(allow_reads, bool):
+            raise ValueError("Quyền đọc mô-đun phải là giá trị bật hoặc tắt")
+        allowed_tools = {}
+        if allow_reads:
+            if actor["role"] != "quan-tri":
+                raise PermissionError("Chỉ chủ quản được cấp quyền đọc dữ liệu mô-đun cho tác vụ")
+            if not ids or not self.model.configured:
+                raise ValueError("Cần chọn mô-đun cụ thể và cấu hình mô hình trước khi cho đọc dữ liệu")
+            allowed_tools = MoHinhBDSG.module_read_tools(self.core, actor, ids)
+            if not allowed_tools:
+                raise ValueError("Mô-đun đã chọn chưa có công cụ đọc được xác minh và cấp quyền")
         now = time.time()
         task = {"id": secrets.token_hex(12), "owner": actor["id"], "title": prompt[:100], "prompt": prompt,
                 "status": "queued", "created": now, "updated": now, "mode": self.model.public_status()["mode"], "template": template,
-                "module_ids": ids, "run": 1, "steps": [], "events": [], "artifacts": [],
+                "module_ids": ids, "project": project, "project_id": project_id,
+                "allow_module_reads": allow_reads, "allowed_module_tools": allowed_tools,
+                "run": 1, "steps": [], "events": [], "artifacts": [],
                 "messages": [{"role": "user", "content": prompt, "created": now}], "cancel_requested": False}
-        self._event(task, "queued", "Đã nhận tác vụ. " + ("Dùng API mô hình BDSG đã cấu hình." if self.model.configured else "Chạy quy trình có kịch bản, không phải mô hình AI tự suy luận."))
+        self._event(task, "queued", "Đã nhận tác vụ. " + ("Dùng API mô hình đã cấu hình." if self.model.configured else "Chạy quy trình có kịch bản, không phải mô hình AI tự suy luận."))
         with self.lock:
             self._capacity(actor, True)
             with self.kho.ket_noi() as db:
@@ -125,7 +143,7 @@ class CongViec:
                 params = (actor["id"],)
             rows = db.execute(query + " ORDER BY created DESC LIMIT 100", params).fetchall()
         keys = ("id", "owner", "title", "prompt", "status", "created", "updated", "mode", "template", "module_ids", "run")
-        return {"tasks": [{**{k: t[k] for k in keys}, "artifact_count": len(t["artifacts"])} for t in (json.loads(r[0]) for r in rows)]}
+        return {"tasks": [{**{k: t[k] for k in keys}, "project_id": t.get("project_id", ""), "project_name": (t.get("project") or {}).get("name", ""), "allow_module_reads": t.get("allow_module_reads", False), "artifact_count": len(t["artifacts"])} for t in (json.loads(r[0]) for r in rows)]}
 
     def detail(self, actor, task_id):
         task_id = _text(task_id, 1, 80)
@@ -218,6 +236,9 @@ class CongViec:
         mapping = {c["platform_id"]: c for c in connections}
         heading = {"de-xuat-giai-phap": "Đề xuất triển khai", "kiem-tra-ket-noi": "Đối chiếu cấu hình kết nối", "tong-quan": "Tổng quan hệ sinh thái"}[task["template"]]
         lines = ["# " + heading + " BDSG Thanh Hoá", "", "## Nhu cầu", task["prompt"], ""]
+        if task.get("project"):
+            p = task["project"]
+            lines += ["## Dự án: " + p["name"], "### Chỉ dẫn của dự án", p["instructions"], "### Ngữ cảnh đã chụp khi giao việc", p["context"], ""]
         if task["run"] > 1:
             lines += ["## Yêu cầu bổ sung", task["messages"][-1]["content"], ""]
         lines += ["## Phạm vi thực hiện", "Đây là kết quả của quy trình có kịch bản, dựa trên danh mục và cấu hình hiện tại. Không phải phản hồi từ mô hình AI. Không thực hiện thay đổi trên nền tảng bên ngoài.", "",
@@ -259,7 +280,10 @@ class CongViec:
             if model.configured:
                 prompt = "\n\n".join(m["content"] for m in task["messages"] if m["role"] == "user")
                 context = {"products": self._choose(task, products), "connections": connections,
+                           "project": task.get("project"),
                            "previous_artifacts": [a["content"] for a in task["artifacts"][-2:]], "template": task["template"]}
+                context["module_scope"] = {"allow_reads": task.get("allow_module_reads", False),
+                                           "selected_ids": task["module_ids"], "read_tools": task.get("allowed_module_tools", {})}
 
                 def on_event(kind, message, **extra):
                     with self.lock:

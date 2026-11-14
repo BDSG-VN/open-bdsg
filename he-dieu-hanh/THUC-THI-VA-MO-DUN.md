@@ -14,7 +14,27 @@ bốn công cụ đọc danh mục, đầu nối, mô-đun và yêu cầu kinh d
 danh tính. Không có công cụ shell hoặc trình duyệt từ xa; không tự ghi CRM,
 gửi email hay chạy mã do mô hình sinh. Công cụ MCP đọc bên ngoài có thể được
 chủ quản gọi rõ ràng từ trang mô-đun khi đã khai báo và cấp quyền. Adapter
-hiện chưa cho mô hình tự gọi các công cụ bên ngoài này.
+cho mô hình đọc bên ngoài khi chủ quản chọn rõ quyền cho tác vụ, như mô tả dưới đây.
+
+## Dự án và phạm vi đọc MCP — bản v5
+
+Trang **Dự án** lưu tên, chỉ dẫn và ngữ cảnh văn bản riêng theo người tạo;
+chủ quản xem được mọi dự án. Có tạo, sửa, lưu trữ và khôi phục, không xóa dữ liệu.
+Mỗi danh tính tối đa 100 dự án. Chọn dự án khi giao việc sẽ chụp lại ngữ cảnh;
+cập nhật hoặc lưu trữ sau đó không thay ngữ cảnh của tác vụ và các lượt tiếp theo.
+Tạo tác vụ mới trong dự án đã lưu trữ bị từ chối. Chưa hỗ trợ tệp đính kèm,
+chia sẻ dự án, cộng tác đồng thời hoặc bộ nhớ tự học. Ngữ cảnh gửi mô hình vẫn
+chịu giới hạn tổng 48 KiB; cần rút gọn nội dung nếu vượt giới hạn.
+
+**Cho phép agent đọc MCP** mặc định tắt. Chỉ chủ quản có mô hình đã cấu hình,
+chọn mô-đun có đầu nối đã xác minh và công cụ đọc được cấp mới bật được.
+Tác vụ lưu đúng tập nền tảng/tên công cụ được duyệt lúc tạo. Thêm quyền sau
+đó không tự mở rộng tác vụ cũ; mỗi lần gọi kiểm lại trạng thái và quyền hiện tại.
+Ngắt kết nối hoặc thu hồi công cụ chặn lần đọc tiếp theo. Không cấp công cụ ghi.
+Mô hình và dữ liệu công cụ đều đi qua nhân với danh tính người giao việc;
+chứng thư nằm ngoài ngữ cảnh. Nội dung công việc, dự án và dữ liệu đọc được
+có thể gửi tới nhà cung cấp AI đã chọn. Kiểm thử dùng mô hình/MCP giả, chưa
+chứng minh kết nối nghiệp vụ thật khi chưa có endpoint, chứng thư và khóa API.
 
 ## Cấu hình OpenAI, Claude hoặc BDSG
 
@@ -101,6 +121,7 @@ python3 he-dieu-hanh/thu_cong_viec.py -v
 python3 he-dieu-hanh/thu_mo_hinh_bdsg.py -v
 python3 he-dieu-hanh/thu_may_chu.py -v
 python3 he-dieu-hanh/thu_ket_noi.py -v
+python3 he-dieu-hanh/thu_du_an.py -v
 python3 trien-khai/thu_giao_dien.py -v
 ```
 

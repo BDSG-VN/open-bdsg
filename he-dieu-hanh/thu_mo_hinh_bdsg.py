@@ -1,7 +1,14 @@
 """Kiểm agent đọc BDSG bằng transport giả; không chạm API thật hoặc dùng khóa thật."""
 import json
 import unittest
+import tempfile
+import sys
+from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from dieu_phoi import DieuPhoi
+from kho import Kho
 from mo_hinh_bdsg import MoHinhBDSG, LoiMoHinhBDSG
 
 
@@ -51,6 +58,7 @@ class Transport:
 class Core:
     def __init__(self):
         self.calls = []
+        self.connections = SimpleNamespace(config=[{"platform_id": "bdsg_crm", "state": "da-xac-minh", "roles": ["quan-tri"], "read_tools": ["crm.list"]}])
         self.nhan = SimpleNamespace(danh_sach_cong_cu=lambda actor: [{"ten": name, "ghi": write, "mo_ta": "test", "luoc_do": {"type": "object", "properties": {}}} for name, write in [("nen_tang.danh_sach", False), ("mo_dun.danh_sach", False), ("kinh_doanh.tao_yeu_cau", True), ("ket_noi.doc", False)]])
 
     def danh_tinh(self, actor):
@@ -62,6 +70,65 @@ class Core:
 
 
 class ThuMoHinh(unittest.TestCase):
+    def test_module_read_crosses_real_core_policy_and_audit(self):
+        actor = {"id": "chu-quan", "name": "Chu", "role": "quan-tri"}
+        args = {"platform_id": "bdsg_crm", "tool": "crm.list", "arguments": {"limit": 1}}
+        scope = {"allow_reads": True, "selected_ids": ["bdsg_crm"], "read_tools": {"bdsg_crm": ["crm.list"]}}
+        transport = Transport([answer(calls=[call("ket_noi__doc", json.dumps(args))]), answer("# Báo cáo đã đọc dữ liệu thử")])
+        with tempfile.TemporaryDirectory() as directory:
+            core = DieuPhoi(Kho(directory), [{"id": "bdsg_crm"}])
+            try:
+                core.connections.config = [{"platform_id": "bdsg_crm", "state": "da-xac-minh", "read_tools": ["crm.list"]}]
+                with patch.object(core.connections, "_phien", return_value={"items": [{"id": "du-lieu-gia"}]}) as mcp:
+                    result = MoHinhBDSG(environ=ENV, opener=transport).run("test", {"module_scope": scope}, core, actor)
+                self.assertIn("Báo cáo", result)
+                self.assertEqual(mcp.call_count, 1)
+                self.assertEqual(mcp.call_args.args[1:], ("tools/call", {"name": "crm.list", "arguments": {"limit": 1}}))
+                self.assertIn("du-lieu-gia", json.loads(transport.requests[1][0].data)["messages"][-1]["content"])
+                audit = (core.kho.root / "nhat-ky-nhan.jsonl").read_text()
+                self.assertIn("ket_noi.doc", audit)
+                self.assertNotIn("du-lieu-gia", audit)
+            finally:
+                core.audit.close()
+
+    def test_opted_in_module_read_and_exact_scope(self):
+        scope = {"allow_reads": True, "selected_ids": ["bdsg_crm"], "read_tools": {"bdsg_crm": ["crm.list"]}}
+        actor = {"id": "chu-quan", "role": "quan-tri"}
+        args = {"platform_id": "bdsg_crm", "tool": "crm.list", "arguments": {}}
+        transport = Transport([answer(calls=[call("ket_noi__doc", json.dumps(args))]), answer("Báo cáo từ dữ liệu công cụ")])
+        core = Core()
+        result = MoHinhBDSG(environ=ENV, opener=transport).run("test", {"module_scope": scope}, core, actor)
+        self.assertIn("Báo cáo", result)
+        self.assertEqual(core.calls, [(actor, "ket_noi.doc", args)])
+        self.assertIn("ket_noi__doc", str(json.loads(transport.requests[0][0].data)["tools"]))
+        for change in (lambda c: c.connections.config.clear(), lambda c: c.connections.config[0].update(state="da-khai-bao"), lambda c: c.connections.config[0].update(roles=["operator"]), lambda c: c.connections.config[0].update(read_tools=[])):
+            core = Core()
+            change(core)
+            with self.assertRaises(LoiMoHinhBDSG):
+                MoHinhBDSG(environ=ENV, opener=Transport([answer(calls=[call("ket_noi__doc", json.dumps(args))])])).run("test", {"module_scope": scope}, core, actor)
+            self.assertEqual(core.calls, [])
+
+    def test_module_scope_cannot_expand_or_be_used_by_operator(self):
+        scope = {"allow_reads": True, "selected_ids": ["bdsg_crm"], "read_tools": {"bdsg_crm": ["crm.list"]}}
+        for platform, tool, role in [("bdsg_land", "crm.list", "quan-tri"), ("bdsg_crm", "crm.new", "quan-tri"), ("bdsg_crm", "crm.list", "operator")]:
+            core = Core()
+            core.connections.config[0]["read_tools"].append("crm.new")
+            args = {"platform_id": platform, "tool": tool, "arguments": {}}
+            with self.assertRaises(LoiMoHinhBDSG):
+                MoHinhBDSG(environ=ENV, opener=Transport([answer(calls=[call("ket_noi__doc", json.dumps(args))])])).run("test", {"module_scope": scope}, core, {"id": "test", "role": role})
+            self.assertEqual(core.calls, [])
+
+    def test_module_revocation_between_model_response_and_execution(self):
+        core = Core()
+        scope = {"allow_reads": True, "selected_ids": ["bdsg_crm"], "read_tools": {"bdsg_crm": ["crm.list"]}}
+        args = {"platform_id": "bdsg_crm", "tool": "crm.list", "arguments": {}}
+        def revoke(kind, *a, **kw):
+            if kind == "tool-start":
+                core.connections.config.clear()
+        with self.assertRaises(LoiMoHinhBDSG):
+            MoHinhBDSG(environ=ENV, opener=Transport([answer(calls=[call("ket_noi__doc", json.dumps(args))])])).run("test", {"module_scope": scope}, core, {"role": "quan-tri"}, revoke)
+        self.assertEqual(core.calls, [])
+
     def test_empty_and_partial_configuration_fail_closed(self):
         empty = MoHinhBDSG(environ={})
         self.assertFalse(empty.configured)
