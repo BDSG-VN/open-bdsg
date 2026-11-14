@@ -39,13 +39,16 @@ def dung(cau_hinh, thu_muc_ra):
         p.write_text(noi_dung, encoding="utf-8")
 
     goc_url = "https://" + cau_hinh["ten_mien"]
-    dau = doc_tep("bang-dieu-khien/index.html")
+    dau = doc_tep("khong-gian/index.html")
     dau = dau.replace("<title>Bảng điều khiển — Open BDSG</title>",
                        "<title>" + html.escape(cau_hinh["ten"]) + " — Open BDSG</title>")
     dau = dau.replace("<span class=\"ten\">Open BDSG</span>",
                        '<span class="ten">' + html.escape(cau_hinh["ten"]) + "</span>")
     dau = dau.replace("</head>", '<link rel="canonical" href="' + goc_url + '/">\n</head>')
     ghi("index.html", dau)
+    ghi("portal.css", doc_tep("khong-gian/giao-dien.css"))
+    ghi("portal.js", doc_tep("khong-gian/ung-dung.js"))
+    ghi("bdsg-mark.svg", doc_tep("khong-gian/bdsg-mark.svg"))
     ghi("bang-dieu-khien.js", doc_tep("bang-dieu-khien/bang-dieu-khien.js"))
     # Chỉ xuất các trường công khai đã chọn, không chép cấu hình tuỳ ý vào docroot.
     cong_khai = {k: cau_hinh[k] for k in ("ma", "ten", "ten_mien", "mo_ta", "thong_bao")}
