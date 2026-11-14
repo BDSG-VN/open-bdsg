@@ -21,8 +21,8 @@ from cau_hinh_ket_noi import CauHinhKetNoi
 from du_an import DuAn
 from tai_lieu import TaiLieu
 from runtime_tac_vu import RuntimeTacVu
-from trinh_duyet import TrinhDuyet
-from hanh_dong import HanhDong
+from trinh_duyet import TrinhDuyet, revoke_browser
+from hanh_dong import HanhDong, active_actor
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 
@@ -38,6 +38,14 @@ class UngDung:
         )
         self.kho = Kho(data)
         self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
+
+        def verify(actor):
+            try:
+                return active_actor(self.kho, actor["id"])["role"] == actor["role"]
+            except (ValueError, PermissionError, KeyError, TypeError):
+                return False
+
+        self.core.verify_actor = verify
         self.tasks = CongViec(self.kho, self.core)
         self.projects = DuAn(self.kho)
         self.tasks.projects = self.projects
@@ -45,6 +53,13 @@ class UngDung:
         self.tasks.documents = self.documents
         self.runtime = RuntimeTacVu(self.kho, self.tasks)
         self.browser = TrinhDuyet(self.kho, self.tasks)
+        self.tasks.on_cancel = lambda owner, task_id: revoke_browser(owner, task_id)
+
+        def revoke(identity):
+            self.tasks.cancel_owner(identity)
+            revoke_browser(identity)
+
+        self.core.on_revoke = revoke
         self.actions = HanhDong(self.kho, self.core, self.tasks)
         self.schedules = LichCongViec(self.kho, self.core, self.tasks)
         self.delegation = PhoiHop(self.kho, self.core, self.tasks)
@@ -272,7 +287,7 @@ def tao_may_chu(app, port=8766):
                                 else "Thông tin đăng nhập chưa đúng"
                             },
                         )
-                    app.kho.su_kien("chu-quan", "dang-nhap")
+                    app.kho.su_kien(user, "dang-nhap")
                     return self.send(
                         200,
                         {"ok": True},
@@ -400,6 +415,7 @@ def main():
         return
     if args.action == "revoke-agent":
         kho.thu_hoi_agent(args.id)
+        revoke_browser(args.id)
         return
     app = UngDung(
         args.data,

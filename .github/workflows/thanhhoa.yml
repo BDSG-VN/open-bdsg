@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Verify Python interfaces
         run: |
-          python3 -m unittest discover -s nhan -p 'thu_*.py' -v
+          for check in nhan/thu_*.py; do python3 "$check"; done
           python3 -m unittest discover -s he-dieu-hanh -p 'thu_*.py' -v
           python3 trien-khai/thu_giao_dien.py -v
       - name: Verify browser source

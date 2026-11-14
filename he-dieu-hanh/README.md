@@ -34,7 +34,8 @@ Proxy `/api/` và `/mcp` tới `http://127.0.0.1:8766`, giữ nguyên đường 
 ghi đè `X-BDSG-Client-IP` bằng IP kết nối đáng tin, không nhận trực tiếp tiêu đề
 do khách khai. Đặt `client_max_body_size 16k`, giới hạn tốc độ đăng nhập và gọi
 API; riêng `location = /api/tools` đặt 64k cho ngữ cảnh dự án Unicode, các
-đường khác giữ 16k. Không ghi Authorization, cookie hoặc thân yêu cầu vào nhật ký. Origin
+riêng `/api/upload` đặt 1500k cho tệp base64, các đường khác giữ 16k.
+Không ghi Authorization, cookie hoặc thân yêu cầu vào nhật ký. Origin
 trong `BDSG_ORIGIN` phải khớp chính xác tên miền HTTPS của giao diện.
 
 ## Nghiệp vụ thật

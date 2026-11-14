@@ -5,6 +5,29 @@ import os
 import socket
 
 
+def revoke_browser(owner, task_id=None):
+    path = os.environ.get("BDSG_BROWSER_SOCKET", "/run/bdsg-browser/worker.sock")
+    if not os.path.exists(path):
+        return
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.settimeout(2)
+            s.connect(path)
+            s.sendall(
+                json.dumps(
+                    {
+                        "owner": owner,
+                        "task_id": task_id,
+                        "action": "revoke-task" if task_id else "revoke-owner",
+                    }
+                ).encode()
+                + b"\n"
+            )
+            s.recv(2048)
+    except (OSError, ValueError):
+        pass
+
+
 class TrinhDuyet:
     def __init__(self, kho, tasks):
         self.kho, self.tasks = kho, tasks
@@ -29,7 +52,11 @@ class TrinhDuyet:
             for k in ("url", "action", "nonce", "node", "text", "image")
             if k in args
         }
-        data.update(owner=actor["id"], task_id=task["id"], hosts=task["browser_hosts"])
+        data.update(
+            owner=actor["id"],
+            task_id=task["id"] + ":" + str(task["run"]),
+            hosts=task["browser_hosts"],
+        )
         raw = json.dumps(data, ensure_ascii=False).encode()
         if len(raw) > 60000:
             raise ValueError("Thao tác quá lớn")

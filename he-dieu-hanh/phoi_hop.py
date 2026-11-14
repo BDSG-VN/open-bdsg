@@ -37,6 +37,10 @@ class PhoiHop:
         return {"children": result}
 
     def delegate(self, actor, args):
+        with self.core.lock:
+            return self._delegate(actor, args)
+
+    def _delegate(self, actor, args):
         parent = self.tasks.detail(actor, args.get("task_id", ""))
         if (
             actor["role"] != "quan-tri"
@@ -66,7 +70,11 @@ class PhoiHop:
             "allow_python": parent.get("allow_python", False),
             "browser_hosts": parent.get("browser_hosts", []),
         }
-        response = self.core.goi(recipient, "cong_viec.tao", task_args)
+        token = self.tasks.context_override.set(parent)
+        try:
+            response = self.core.goi(recipient, "cong_viec.tao", task_args)
+        finally:
+            self.tasks.context_override.reset(token)
         if not response.get("ok"):
             raise ValueError("Agent chưa có quyền hoặc chưa nhận được tác vụ")
         identifier = response["ket_qua"]["id"]

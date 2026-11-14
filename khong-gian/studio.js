@@ -104,7 +104,7 @@
               "",
             )}</select></label><label>Mục tiêu phần việc<textarea name="prompt" required minlength="10" maxlength="4000" rows="3"></textarea></label><p class="studio-note">Tối đa ba tác vụ con. Agent cần được chia sẻ dự án/tài liệu trước khi nhận việc; không tự được cấp quyền đọc MCP hoặc điều phối tiếp.</p><button class="button primary">Giao phần việc</button></form>`;
       } else if (tab === "runtime") {
-        markup = `<div class="studio-section-heading"><h2>Từ dữ liệu đến tệp kết quả.</h2><p>Chọn công việc đã cấp quyền Python. Chạy tối đa 15 giây trong vùng riêng, không mạng và không quyền vào dữ liệu máy chủ. Tệp văn bản tạo ra được lưu vào kết quả công việc.</p></div><form id="studio-python" class="studio-form"><label>Công việc<select name="task_id" required>${taskOptions((t) => t.allow_python)}</select></label><label>Mã Python<textarea name="code" spellcheck="false" rows="8" required maxlength="16000" placeholder="print(1 + 2)"></textarea></label><p class="studio-note">Tài liệu đã chọn trong tác vụ có tên input-1.txt, input-2.txt… Đầu ra tối đa 8 tệp UTF-8; xem và tải ở trang công việc.</p><button class="button primary" type="submit">Chạy trong vùng riêng</button></form><pre id="studio-python-result" aria-live="polite"></pre>`;
+        markup = `<div class="studio-section-heading"><h2>Từ dữ liệu đến tệp kết quả.</h2><p>Chọn công việc đã cấp quyền Python. Chạy tối đa 15 giây trong vùng riêng, không mạng và không quyền vào dữ liệu máy chủ. Tệp văn bản tạo ra được lưu vào kết quả công việc.</p></div><form id="studio-python" class="studio-form"><label>Công việc<select name="task_id" required>${taskOptions((t) => t.allow_python)}</select></label><label>Mã Python<textarea name="code" spellcheck="false" rows="8" required maxlength="16000" placeholder="print(1 + 2)"></textarea></label><p class="studio-note">Tài liệu đã chọn trong tác vụ có tên input-1.txt, input-2.txt… Tên tệp mặc định: ket-qua.csv, ket-qua.txt, ket-qua.md. Tối đa 8 tệp UTF-8 khi khai rõ tên đầu ra; xem và tải ở trang công việc.</p><button class="button primary" type="submit">Chạy trong vùng riêng</button></form><pre id="studio-python-result" aria-live="polite"></pre>`;
       } else if (tab === "browser") {
         browserState = null;
         markup = `<div class="studio-section-heading"><h2>Cùng agent nhìn vào công việc.</h2><p>Chọn công việc đã cấp tên miền trình duyệt. Agent đọc và mở liên kết HTTPS trong phạm vi đó; bạn tiếp quản khi cần nhập liệu hay đăng nhập. Phiên tự đóng sau 15 phút.</p></div><form id="studio-browser-open" class="studio-inline"><label>Công việc<select name="task_id" required>${taskOptions((t) => t.browser_hosts?.length)}</select></label><label>Địa chỉ được cấp<input type="url" name="url" required placeholder="https://…"></label><button class="button primary">Mở trình duyệt</button></form><div id="studio-browser-view"></div>`;
@@ -123,7 +123,7 @@
           return;
         target.insertAdjacentHTML(
           "afterbegin",
-          `<section class="studio-card"><h3>Kết quả kinh doanh trong phạm vi của bạn</h3><p>${summary.business.request_count} yêu cầu · Tư vấn ${summary.business.stages["tu-van"]} · Triển khai ${summary.business.stages["trien-khai"]} · Vận hành ${summary.business.stages["van-hanh"]} · Kinh doanh ${summary.business.stages["kinh-doanh"]}</p><p>${summary.reserved_api_calls_today} lượt API đã giữ trong ngày (giờ Việt Nam). Hạn 100 lượt/danh tính, 200 lượt/toàn hệ thống; tính cả lần gọi lỗi để giữ hạn mức thận trọng. Chưa có số liệu doanh thu.</p></section>`,
+          `<section class="studio-card"><h3>Kết quả kinh doanh trong phạm vi của bạn</h3><p>${summary.business.request_count} yêu cầu · Tư vấn ${summary.business.stages["tu-van"]} · Triển khai ${summary.business.stages["trien-khai"]} · Vận hành ${summary.business.stages["van-hanh"]} · Kinh doanh ${summary.business.stages["kinh-doanh"]}</p><p>${summary.reserved_api_calls_today} lượt API đã giữ trong ngày (giờ Việt Nam). Hạn 100 lượt/danh tính, 200 lượt/toàn hệ thống và ngân sách đầu ra 65.536 token/danh tính/ngày (giữ trước 4096 token/request); tính cả lần gọi lỗi để giữ hạn mức thận trọng. Chưa có số liệu doanh thu.</p></section>`,
         );
       }
       if ($("#studio-project")) $("#studio-project").value = activeProject;
@@ -133,12 +133,14 @@
     }
   }
   async function browserCommand(args) {
+    const token = revision;
     const task_id = args.task_id || browserState?.task_id;
     const value = await tool("trinh_duyet.tiep_quan", {
       ...args,
       task_id,
       image: true,
     });
+    if (token !== revision || !state.user || !$("#studio-browser-view")) return;
     if (value.closed) {
       browserState = null;
       $("#studio-browser-view").textContent = "Phiên đã đóng.";
@@ -199,6 +201,7 @@
   });
   document.addEventListener("change", (e) => {
     if (e.target.id === "studio-project") {
+      revision++;
       activeProject = e.target.value;
       draw();
     }
@@ -209,6 +212,7 @@
     e.preventDefault();
     if (busy) return;
     const form = e.target,
+      uploadProject = activeProject,
       values = Object.fromEntries(new FormData(form)),
       button = form.querySelector("button[type=submit],button:not([type])");
     busy = true;
@@ -225,7 +229,7 @@
         const response = await api("/api/upload", {
           method: "POST",
           body: JSON.stringify({
-            project_id: activeProject,
+            project_id: uploadProject,
             name: file.name,
             content_base64: btoa(binary),
           }),
@@ -278,5 +282,14 @@
       if (button) button.disabled = false;
     }
   });
-  window.BDSGStudio = { open };
+  window.BDSGStudio = {
+    open,
+    reset() {
+      revision++;
+      projects = [];
+      tasks = [];
+      browserState = null;
+      activeProject = "";
+    },
+  };
 })();

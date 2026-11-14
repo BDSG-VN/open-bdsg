@@ -635,6 +635,9 @@ $("#profile").addEventListener("click", async () => {
     await api("/api/logout", { method: "POST", body: "{}" });
     state.user = null;
     window.BDSGProjects?.clearSelected();
+    window.BDSGTasks?.reset();
+    window.BDSGStudio?.reset();
+    window.BDSGConnectors?.reset();
     state.requests = [];
     state.agents = [];
     state.messages = [];

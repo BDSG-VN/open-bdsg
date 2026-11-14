@@ -724,5 +724,22 @@
       pollBusy = false;
     }
   }, 2000);
-  window.BDSGTasks = { home, tasks, modules, renderTask };
+  function reset() {
+    revision++;
+    currentTask = null;
+    projects = [];
+    moduleCache = [];
+    Object.assign(draft, {
+      prompt: "",
+      module_ids: [],
+      project_id: "",
+      document_ids: [],
+      allow_python: false,
+      allow_action_drafts: false,
+      allow_delegation: false,
+      allow_module_reads: false,
+      browser_hosts: [],
+    });
+  }
+  window.BDSGTasks = { home, tasks, modules, renderTask, reset };
 })();

@@ -6,12 +6,24 @@ import os
 import re
 import secrets
 import time
+import threading
+from functools import wraps
 from urllib.parse import urlsplit
+
+
+def serial(method):
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self.lock:
+            return method(self, *args, **kwargs)
+
+    return call
 
 
 class CauHinhKetNoi:
     def __init__(self, kho, client, catalogue, origin=None):
         self.kho, self.client = kho, client
+        self.lock = threading.RLock()
         self.ids = {p["id"] for p in catalogue}
         self.own_host = urlsplit(origin).hostname if origin else None
         self.path = kho.root / "connections-private.json"
@@ -76,6 +88,7 @@ class CauHinhKetNoi:
         self._auth(actor)
         return {"connections": [self._public(c) for c in self._all().values()]}
 
+    @serial
     def save(self, actor, data):
         self._auth(actor)
         if not isinstance(data, dict) or set(data) - {
@@ -178,6 +191,7 @@ class CauHinhKetNoi:
         self.kho.su_kien(actor["id"], "khai-bao-dau-noi", platform_id)
         return self._public(config)
 
+    @serial
     def probe(self, actor, platform_id):
         self._auth(actor)
         config = copy.deepcopy(self._all().get(platform_id))
@@ -209,6 +223,7 @@ class CauHinhKetNoi:
         self.kho.su_kien(actor["id"], "kiem-tra-dau-noi", platform_id)
         return self._public(config)
 
+    @serial
     def disconnect(self, actor, platform_id):
         self._auth(actor)
         config = copy.deepcopy(self._all().get(platform_id))

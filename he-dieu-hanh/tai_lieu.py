@@ -60,7 +60,7 @@ class TaiLieu:
                         (Path(folder) / "stderr").open("w+b") as err,
                     ):
                         subprocess.run(
-                            command_for(work),
+                            command_for(),
                             input=json.dumps(
                                 {"mode": "pdf", "data": base64.b64encode(raw).decode()}
                             ).encode(),

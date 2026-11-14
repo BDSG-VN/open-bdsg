@@ -16,6 +16,7 @@ from nhan.dinh_tuyen import BanKhaiCongCu, Nhan, TrinhDieuKhien
 from nhan.nhat_ky import NhatKy
 from nhan.quyen import ChinhSach, CongGhi
 from nhan.mcp import MayChuMCP
+from nhan_dong_thoi import HanMucDongThoi, NhatKyDongThoi
 
 
 class KhongChuyenHuong(HTTPRedirectHandler):
@@ -195,6 +196,7 @@ class DieuPhoi:
         self.catalogue = catalogue
         self.actor = contextvars.ContextVar("bdsg_actor", default=None)
         self.lock = threading.RLock()
+        self.verify_actor = None
         self.connections = CongMCP(connections, catalogue)
         self.audit = (kho.root / "nhat-ky-nhan.jsonl").open(
             "a", encoding="utf-8", buffering=1
@@ -209,7 +211,8 @@ class DieuPhoi:
                     nguoi_mo="van-hanh",
                 )
             ),
-            nhat_ky=NhatKy(
+            bo_han_muc=HanMucDongThoi(),
+            nhat_ky=NhatKyDongThoi(
                 dong_ra=self.audit,
                 ham_lam_mo=lambda p: (
                     {"fields": sorted(p), "bytes": len(json.dumps(p))},
@@ -682,7 +685,11 @@ class DieuPhoi:
                     "python",
                     lambda a: app.runtime.run(actor(), a),
                     True,
-                    {"task_id": text, "code": text},
+                    {
+                        "task_id": text,
+                        "code": text,
+                        "output_names": {"type": "array", "items": text},
+                    },
                     ["task_id", "code"],
                 )
             ],
@@ -851,6 +858,9 @@ class DieuPhoi:
         if actor.get("role") != "quan-tri":
             raise PermissionError("Cần chủ quản")
         self.kho.thu_hoi_agent(args.get("id", ""))
+        callback = getattr(self, "on_revoke", None)
+        if callback:
+            callback(args.get("id", ""))
         return {"revoked": True}
 
     def danh_tinh(self, actor):
@@ -862,27 +872,50 @@ class DieuPhoi:
         )
 
     def goi(self, actor, name, args):
-        with self.lock:
-            token = self.actor.set(actor)
-            try:
-                return self.nhan.goi(self.danh_tinh(actor), name, args).thanh_dict()
-            finally:
-                self.actor.reset(token)
+        if self.verify_actor and not self.verify_actor(actor):
+            return {
+                "ok": False,
+                "ly_do": "Danh tính đã bị thu hồi",
+                "loai_loi": "xac-thuc",
+            }
+        token = self.actor.set(actor)
+        try:
+            result = self.nhan.goi(self.danh_tinh(actor), name, args).thanh_dict()
+            if self.verify_actor and not self.verify_actor(actor):
+                return {
+                    "ok": False,
+                    "ly_do": "Danh tính đã bị thu hồi",
+                    "loai_loi": "xac-thuc",
+                }
+            return result
+        finally:
+            self.actor.reset(token)
 
     def mcp(self, actor, payload):
-        with self.lock:
-            token = self.actor.set(actor)
-            try:
-                identity = self.danh_tinh(actor)
-                server = MayChuMCP(
-                    self.nhan,
-                    giai_danh_tinh=lambda p: identity,
-                    ten_may="bdsg-thanhhoa",
-                    phien_ban="0.2.0",
-                )
-                # HTTP không giữ phiên MCP. Mỗi yêu cầu đều xác thực lại Bearer riêng.
-                server.danh_tinh = identity
-                server.da_bat_tay = True
-                return server.xu_ly(payload)
-            finally:
-                self.actor.reset(token)
+        if self.verify_actor and not self.verify_actor(actor):
+            return {
+                "jsonrpc": "2.0",
+                "id": payload.get("id"),
+                "error": {"code": -32001, "message": "Danh tính đã bị thu hồi"},
+            }
+        token = self.actor.set(actor)
+        try:
+            identity = self.danh_tinh(actor)
+            server = MayChuMCP(
+                self.nhan,
+                giai_danh_tinh=lambda p: identity,
+                ten_may="bdsg-thanhhoa",
+                phien_ban="0.2.0",
+            )
+            server.danh_tinh = identity
+            server.da_bat_tay = True
+            result = server.xu_ly(payload)
+            if self.verify_actor and not self.verify_actor(actor):
+                return {
+                    "jsonrpc": "2.0",
+                    "id": payload.get("id"),
+                    "error": {"code": -32001, "message": "Danh tính đã bị thu hồi"},
+                }
+            return result
+        finally:
+            self.actor.reset(token)

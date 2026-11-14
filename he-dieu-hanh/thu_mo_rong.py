@@ -8,6 +8,8 @@ import time
 import unittest
 import sqlite3
 import shutil
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from may_chu import UngDung
 from trinh_duyet_worker import check_url, public_addresses
@@ -187,6 +189,14 @@ class ThuMoRong(unittest.TestCase):
             allow_delegation=True,
             allow_python=True,
         )
+        self.app.projects.update(
+            OWNER,
+            {
+                "id": project["id"],
+                "name": "Du an da doi",
+                "context": "NEW_CONTEXT_NOT_GRANTED_TO_PARENT",
+            },
+        )
         args = {
             "task_id": parent["id"],
             "recipient": A["id"],
@@ -199,6 +209,7 @@ class ThuMoRong(unittest.TestCase):
         )
         child = self.app.delegation.delegate(OWNER, args)
         detail = self.app.tasks.detail(A, child["id"])
+        self.assertEqual(detail["project"], parent["project"])
         self.assertEqual(detail["parent_id"], parent["id"])
         self.assertFalse(detail["allow_delegation"])
         self.assertFalse(detail["allow_module_reads"])
@@ -229,14 +240,25 @@ class ThuMoRong(unittest.TestCase):
         self.assertNotIn("test-token-only", str(result))
 
     def test_daily_api_reservation_is_enforced_before_provider(self):
-        for _ in range(100):
-            self.app.tasks.reserve_model(A)
+        actors = [A, B, OWNER]
+        for i in range(6):
+            identity = "quota-test-" + str(i)
+            self.app.kho.tao_agent(identity, identity, "operator")
+            actors.append({"id": identity, "name": identity, "role": "operator"})
+        for actor in actors[:8]:
+            for _ in range(16):
+                self.app.tasks.reserve_model(actor)
+            with self.assertRaises(LoiMoHinhBDSG):
+                self.app.tasks.reserve_model(actor)
         with self.assertRaises(LoiMoHinhBDSG):
-            self.app.tasks.reserve_model(A)
-        for _ in range(100):
-            self.app.tasks.reserve_model(B)
+            self.app.tasks.reserve_model(actors[8])
+
+    def test_project_output_budget_is_shared_and_missing_usage_is_conservative(self):
+        for actor in (A, B):
+            for _ in range(16):
+                self.app.tasks.reserve_model(actor, self.project["id"])
         with self.assertRaises(LoiMoHinhBDSG):
-            self.app.tasks.reserve_model(OWNER)
+            self.app.tasks.reserve_model(OWNER, self.project["id"])
 
     def test_restore_preserves_documents_and_completed_tasks(self):
         doc = self.upload()
@@ -313,6 +335,103 @@ class ThuMoRong(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 public_addresses("example.com")
+
+    def test_revocation_stops_running_model_before_next_tool(self):
+        entered = threading.Event()
+        release = threading.Event()
+        from thu_mo_hinh_bdsg import Response, call
+
+        class SlowTransport:
+            def open(self, request, timeout):
+                entered.set()
+                release.wait(3)
+                return Response(answer(calls=[call("kinh_doanh__danh_sach")]))
+
+        self.app.tasks.model = MoHinhBDSG(environ=ENV, opener=SlowTransport())
+        created = self.app.tasks.create(
+            A, {"prompt": "Tong hop thong tin yeu cau thu nghiem"}
+        )
+        self.assertTrue(entered.wait(2))
+        result = self.app.core.goi(OWNER, "nguoi_dung.thu_hoi", {"id": A["id"]})
+        self.assertTrue(result["ok"])
+        release.set()
+        for _ in range(100):
+            task = self.app.tasks._load(created["id"])
+            if task["status"] in ("cancelled", "failed"):
+                break
+            time.sleep(0.01)
+        self.assertEqual(task["status"], "cancelled")
+        self.assertEqual(task["artifacts"], [])
+        self.assertFalse(self.app.core.goi(A, "kinh_doanh.danh_sach", {})["ok"])
+
+    @unittest.skipUnless(
+        os.environ.get("BDSG_TEST_RUNTIME") == "1", "Requires Linux runtime"
+    )
+    def test_python_quota_inode_creation_and_api_cancel(self):
+        task = self.task(allow_python=True)
+        code = "import os\nfor name in ['/work/unbounded-file','/tmp/unbounded-file','/dev/unbounded-file','/unbounded-file']:\n try:os.open(name,os.O_CREAT|os.O_WRONLY);raise AssertionError('create bypass')\n except (PermissionError,OSError):pass\nprint('FILES_BOUNDED')"
+        import platform
+
+        if platform.machine() == "x86_64":
+            code += "\nimport ctypes\nlibc=ctypes.CDLL(None,use_errno=True)\nfor number,args in [(425,(0,0)),(29,(0,4096,384)),(319,(b'x',0))]:\n ctypes.set_errno(0)\n assert libc.syscall(number,*args)==-1 and ctypes.get_errno()==1, 'kernel bypass'\nprint('KERNEL_BYPASSES_DENIED')"
+        value = self.app.runtime.run(A, {"task_id": task["id"], "code": code})
+        self.assertTrue(value["ok"], value)
+        self.assertIn("FILES_BOUNDED", value["stdout"])
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(
+                self.app.core.goi,
+                A,
+                "runtime.python",
+                {"task_id": task["id"], "code": "while True: pass"},
+            )
+            for _ in range(100):
+                if self.app.tasks._load(task["id"]).get("runtime_running"):
+                    break
+                time.sleep(0.01)
+            started = time.monotonic()
+            cancel = self.app.core.goi(A, "cong_viec.dung", {"id": task["id"]})
+            self.assertLess(time.monotonic() - started, 1)
+            self.assertTrue(cancel["ok"])
+            self.assertFalse(future.result(timeout=3)["ok"])
+
+    @unittest.skipUnless(
+        os.environ.get("BDSG_TEST_RUNTIME") == "1", "Requires isolated PDF parser"
+    )
+    def test_pdf_text_extraction_in_isolated_runtime(self):
+        stream = b"BT /F1 12 Tf 30 100 Td (BDSG PDF TEST) Tj ET"
+        objects = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            b"<< /Length "
+            + str(len(stream)).encode()
+            + b" >>\nstream\n"
+            + stream
+            + b"\nendstream",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        ]
+        raw = b"%PDF-1.4\n"
+        offsets = [0]
+        for index, obj in enumerate(objects, 1):
+            offsets.append(len(raw))
+            raw += str(index).encode() + b" 0 obj\n" + obj + b"\nendobj\n"
+        xref = len(raw)
+        raw += b"xref\n0 6\n0000000000 65535 f \n"
+        raw += b"".join(f"{offset:010d} 00000 n \n".encode() for offset in offsets[1:])
+        raw += (
+            b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n"
+            + str(xref).encode()
+            + b"\n%%EOF\n"
+        )
+        doc = self.app.documents.upload(
+            A,
+            {
+                "project_id": self.project["id"],
+                "name": "kiem-tra.pdf",
+                "content_base64": base64.b64encode(raw).decode(),
+            },
+        )
+        self.assertIn("BDSG PDF TEST", self.app.documents.get(A, doc["id"])["text"])
 
     @unittest.skipUnless(
         os.environ.get("BDSG_TEST_RUNTIME") == "1",

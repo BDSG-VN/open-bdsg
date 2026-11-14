@@ -106,6 +106,8 @@ class BrowserWorker:
         self.requests = queue.Queue(maxsize=8)
         self.ready = threading.Event()
         self.healthy = False
+        self.revoked_owners = set()
+        self.revoked_tasks = set()
 
         def run():
             try:
@@ -118,6 +120,12 @@ class BrowserWorker:
         self.thread.start()
 
     def call(self, data):
+        if data.get("action") in ("revoke-owner", "revoke-task"):
+            if data["action"] == "revoke-owner":
+                self.revoked_owners.add(data.get("owner"))
+            else:
+                self.revoked_tasks.add((data.get("owner"), data.get("task_id")))
+            return {"ok": True, "result": {"revoked": True}}
         if not self.ready.wait(10) or not self.healthy:
             raise RuntimeError("Browser unavailable")
         answer = queue.Queue(maxsize=1)
@@ -143,7 +151,11 @@ class BrowserWorker:
             self.ready.set()
             while True:
                 for key in list(sessions):
-                    if time.monotonic() > sessions[key]["expires"]:
+                    if (
+                        time.monotonic() > sessions[key]["expires"]
+                        or sessions[key]["owner"] in self.revoked_owners
+                        or (sessions[key]["owner"], key) in self.revoked_tasks
+                    ):
                         sessions.pop(key)["context"].close()
                 try:
                     data, answer = self.requests.get(timeout=2)
@@ -166,6 +178,10 @@ class BrowserWorker:
         if not isinstance(key, str) or not isinstance(owner, str):
             raise ValueError()
         action = data.get("action")
+        if action != "close" and (
+            owner in self.revoked_owners or (owner, key) in self.revoked_tasks
+        ):
+            raise PermissionError("Phiên đã thu hồi")
         s = sessions.get(key)
         if action == "open" and s is None:
             hosts = data.get("hosts")
@@ -189,6 +205,11 @@ class BrowserWorker:
 
             def guard(route):
                 try:
+                    if (
+                        owner in self.revoked_owners
+                        or (owner, key) in self.revoked_tasks
+                    ):
+                        raise PermissionError()
                     check_url(route.request.url, hosts)
                     route.continue_()
                 except Exception:
@@ -239,7 +260,7 @@ class BrowserWorker:
                 raise ValueError()
             node = s["nodes"][index]
             if action == "link":
-                href = node.get_attribute("href")
+                href = node.evaluate("(e)=>e.href")
                 # Agent navigation only follows a verified HTTPS link; it never submits forms.
                 page.goto(
                     check_url(href, s["hosts"]),

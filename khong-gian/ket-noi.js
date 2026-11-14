@@ -149,5 +149,12 @@
         });
     }
   });
-  window.BDSGConnectors = { open };
+  window.BDSGConnectors = {
+    open,
+    reset() {
+      epoch++;
+      rows = [];
+      selected = "";
+    },
+  };
 })();

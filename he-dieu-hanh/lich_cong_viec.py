@@ -104,6 +104,10 @@ class LichCongViec:
         return {"id": identifier, "next_run": now + interval}
 
     def toggle(self, actor, data):
+        with self.core.lock:
+            return self._toggle(actor, data)
+
+    def _toggle(self, actor, data):
         self.tasks._auth(actor, True)
         if type(data.get("enabled")) is not bool:
             raise ValueError("Trạng thái bật/tắt không hợp lệ")

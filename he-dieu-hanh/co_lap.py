@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 
 
-def command_for(work):
+def command_for():
     if os.name != "posix" or os.geteuid() == 0:
         raise ValueError(
             "Vùng thực thi yêu cầu tài khoản dịch vụ Linux không phải root"
@@ -31,14 +31,23 @@ def command_for(work):
         "/proc",
         "--dev",
         "/dev",
+        "--size",
+        "1048576",
         "--tmpfs",
         "/tmp",
-        "--bind",
-        str(work),
+        "--size",
+        "4194304",
+        "--tmpfs",
         "/work",
         "--ro-bind",
         str(helper),
         "/runtime.py",
+        "--remount-ro",
+        "/",
+        "--remount-ro",
+        "/dev",
+        "--remount-ro",
+        "/proc",
         "--chdir",
         "/work",
         "--clearenv",

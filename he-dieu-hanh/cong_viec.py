@@ -6,6 +6,7 @@ import threading
 import time
 import unicodedata
 import re
+import contextvars
 from concurrent.futures import ThreadPoolExecutor
 from mo_hinh_bdsg import MoHinhBDSG, LoiMoHinhBDSG
 
@@ -39,11 +40,23 @@ class CongViec:
         self.kho, self.core = kho, core
         self.lock = threading.RLock()
         self.closed = False
+        self.context_override = contextvars.ContextVar(
+            "bdsg_delegated_context", default=None
+        )
         self.model = MoHinhBDSG()
         with kho.ket_noi() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS model_calls(owner TEXT,created REAL)"
             )
+            columns = {r[1] for r in db.execute("PRAGMA table_info(model_calls)")}
+            if "project_id" not in columns:
+                db.execute(
+                    "ALTER TABLE model_calls ADD COLUMN project_id TEXT DEFAULT ''"
+                )
+            if "output_reserved" not in columns:
+                db.execute(
+                    "ALTER TABLE model_calls ADD COLUMN output_reserved INTEGER DEFAULT 4096"
+                )
             db.execute(
                 "CREATE INDEX IF NOT EXISTS model_calls_time ON model_calls(created)"
             )
@@ -79,7 +92,8 @@ class CongViec:
                 )
         self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="bdsg-task")
 
-    def reserve_model(self, actor):
+    def reserve_model(self, actor, project_id=""):
+        self._auth(actor, True)
         now = time.time()
         day = ((now + 25200) // 86400) * 86400 - 25200
         with self.kho.ket_noi() as db:
@@ -95,9 +109,39 @@ class CongViec:
                 raise LoiMoHinhBDSG(
                     "Đã chạm giới hạn API trong ngày: 100 lượt/danh tính, 200 lượt/toàn hệ thống theo giờ Việt Nam."
                 )
-            db.execute("INSERT INTO model_calls VALUES (?,?)", (actor["id"], now))
+            own_budget = db.execute(
+                "SELECT coalesce(sum(output_reserved),0) FROM model_calls WHERE owner=? AND created>=?",
+                (actor["id"], day),
+            ).fetchone()[0]
+            total_budget = db.execute(
+                "SELECT coalesce(sum(output_reserved),0) FROM model_calls WHERE created>=?",
+                (day,),
+            ).fetchone()[0]
+            project_budget = (
+                db.execute(
+                    "SELECT coalesce(sum(output_reserved),0) FROM model_calls WHERE project_id=? AND created>=?",
+                    (project_id, day),
+                ).fetchone()[0]
+                if project_id
+                else 0
+            )
+            if (
+                own_budget + 4096 > 65536
+                or total_budget + 4096 > 524288
+                or (project_id and project_budget + 4096 > 131072)
+            ):
+                raise LoiMoHinhBDSG(
+                    "Đã chạm ngân sách token đầu ra ngày. Giữ trước 4096 token/request, kể cả khi API thiếu usage."
+                )
+            db.execute(
+                "INSERT INTO model_calls(owner,created,project_id,output_reserved) VALUES (?,?,?,?)",
+                (actor["id"], now, project_id, 4096),
+            )
 
     def _auth(self, actor, write=False):
+        verify = getattr(self.core, "verify_actor", None)
+        if verify and not verify(actor):
+            raise PermissionError("Danh tính đã bị thu hồi")
         if (
             not isinstance(actor, dict)
             or not isinstance(actor.get("id"), str)
@@ -179,6 +223,14 @@ class CongViec:
             if args.get("document_ids")
             else []
         )
+        inherited = self.context_override.get()
+        if inherited is not None:
+            if inherited.get("project_id", "") != project_id or [
+                d["id"] for d in documents
+            ] != [d["id"] for d in inherited.get("documents", [])]:
+                raise ValueError("Phạm vi tác vụ con không khớp tác vụ cha")
+            project = json.loads(json.dumps(inherited.get("project")))
+            documents = json.loads(json.dumps(inherited.get("documents", [])))
         allow_python = args.get("allow_python", False)
         allow_drafts = args.get("allow_action_drafts", False)
         allow_delegation = args.get("allow_delegation", False)
@@ -336,7 +388,7 @@ class CongViec:
         text = _text(text, 10)
         with self.lock:
             task = self.detail(actor, task_id)
-            if task["status"] not in FINAL:
+            if task["status"] not in FINAL or task.get("runtime_running"):
                 raise ValueError("Đợi tác vụ kết thúc trước khi bổ sung yêu cầu")
             if task["run"] >= 10:
                 raise ValueError("Tác vụ đã đạt giới hạn 10 lượt")
@@ -358,7 +410,7 @@ class CongViec:
         self._auth(actor, True)
         with self.lock:
             task = self.detail(actor, task_id)
-            if task["status"] not in FINAL:
+            if task["status"] not in FINAL or task.get("runtime_running"):
                 task["cancel_requested"] = True
                 task["status"] = (
                     "cancelled" if task["status"] == "queued" else "cancelling"
@@ -369,7 +421,30 @@ class CongViec:
                     "Đã yêu cầu dừng. Lời gọi đang chạy chỉ kết thúc theo giới hạn của công cụ.",
                 )
                 self._save(task)
-            return task
+        callback = getattr(self, "on_cancel", None)
+        if callback:
+            callback(task["owner"], task["id"] + ":" + str(task["run"]))
+        return task
+
+    def cancel_owner(self, identity):
+        with self.lock:
+            with self.kho.ket_noi() as db:
+                rows = db.execute(
+                    "SELECT document FROM cong_viec_tasks WHERE owner=? AND (status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1)",
+                    (identity,),
+                ).fetchall()
+            for row in rows:
+                task = json.loads(row[0])
+                task["cancel_requested"] = True
+                task["status"] = (
+                    "cancelled" if task["status"] == "queued" else "cancelling"
+                )
+                self._event(
+                    task,
+                    "identity-revoked",
+                    "Đã dừng quyền tác vụ do danh tính bị thu hồi.",
+                )
+                self._save(task)
 
     def _read(self, actor, name):
         response = self.core.goi(actor, name, {})
@@ -608,7 +683,7 @@ class CongViec:
 
                 def on_event(kind, message, **extra):
                     if kind == "model-reserve":
-                        self.reserve_model(actor)
+                        self.reserve_model(actor, task.get("project_id", ""))
                     with self.lock:
                         current = self._load(task_id)
                         if kind == "model-usage":
@@ -632,7 +707,12 @@ class CongViec:
 
                 def cancelled():
                     with self.lock:
-                        return self.closed or self._load(task_id)["cancel_requested"]
+                        verify = getattr(self.core, "verify_actor", None)
+                        return (
+                            self.closed
+                            or self._load(task_id)["cancel_requested"]
+                            or bool(verify and not verify(actor))
+                        )
 
                 content = model.run(
                     prompt, context, self.core, actor, on_event, cancelled
