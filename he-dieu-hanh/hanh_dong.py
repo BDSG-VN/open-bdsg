@@ -4,6 +4,7 @@ import hashlib
 import json
 import secrets
 import time
+from contextlib import nullcontext
 
 
 def active_actor(kho, identifier):
@@ -175,18 +176,16 @@ class HanhDong:
                     action["payload"],
                     self.tasks.detail(original, action["task_id"]),
                 )
-                if action["payload"]["tool"] == "trinh_duyet.hanh_dong":
-                    with self.browser.authorization(
+                permit = (
+                    self.browser.authorization(
                         original,
                         action["payload"]["arguments"],
                         action["payload"]["browser_target"]["signature"],
-                    ):
-                        response = self.core.goi(
-                            original,
-                            action["payload"]["tool"],
-                            action["payload"]["arguments"],
-                        )
-                else:
+                    )
+                    if action["payload"]["tool"] == "trinh_duyet.hanh_dong"
+                    else nullcontext()
+                )
+                with permit:
                     response = self.core.goi(
                         original,
                         action["payload"]["tool"],

@@ -28,6 +28,8 @@ tạo lại đề xuất từ quan sát mới. Agent chỉ được gọi `hanh_
   tên trường và autocomplete sẽ bị chặn. Đây là nhận diện theo thuộc tính,
   **không bảo đảm phát hiện mọi biểu mẫu nhạy cảm**. Người dùng cần tự tiếp quản
   đăng nhập, xác minh và thanh toán; không đưa bí mật vào nội dung đề xuất.
+  Biểu mẫu có nút đổi đích gửi cũng chặn đề xuất phím, tránh Enter gửi tới một
+  đích khác với địa chỉ của biểu mẫu; người dùng tự tiếp quản trường hợp này.
 - Ảnh xem trước chỉ trả qua API có xác thực, không lưu vào cơ sở dữ liệu hay web.
   Ảnh vẫn có thể chứa thông tin hiển thị trên trang. Đóng tab hoặc đăng xuất để
   xóa nội dung khỏi giao diện. Phiên và đề xuất giữ thời hạn của V11.

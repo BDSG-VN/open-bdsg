@@ -9,7 +9,7 @@ from trinh_duyet_worker import BrowserWorker
 
 @unittest.skipUnless(
     os.environ.get("BDSG_TEST_BROWSER") == "1",
-    "Requires isolated Chromium test environment",
+    "Cần môi trường Chromium cách ly",
 )
 class ThuBieuMau(unittest.TestCase):
     @classmethod
@@ -97,6 +97,8 @@ class ThuBieuMau(unittest.TestCase):
             'autocomplete="one-time-code"',
             'name="card_number"',
             'type="file"',
+            'name="csrf" id="otp"',
+            'name="OTP"',
         ):
             with self.subTest(attributes=attributes):
                 self.page.set_content(
@@ -148,6 +150,46 @@ class ThuBieuMau(unittest.TestCase):
         self.assertEqual(self.page.locator("select").input_value(), "b")
         self.assertEqual(self.page.locator("button").get_attribute("data-clicked"), "1")
         self.assertEqual(self.page.locator("input").get_attribute("data-key"), "Enter")
+
+    def test_external_submitter_changes_invalidate_form(self):
+        self.page.set_content(
+            '<form id="f" action="/submit"><input name="need"></form><button form="f" formaction="/a">Save</button>'
+        )
+        observed = self.command(action="observe")
+        args = {
+            "node": 0,
+            "intent": "fill",
+            "text": "Synthetic need",
+            "nonce": observed["nonce"],
+        }
+        target = self.command(action="inspect", **args)["target"]
+        self.page.locator("button").evaluate("e=>e.formAction='/b'")
+        with self.assertRaises(ValueError):
+            self.command(action="approved", expected_target=target["signature"], **args)
+        self.assertEqual(self.page.url, "https://example.com/form")
+
+    def test_preview_does_not_consume_last_action(self):
+        self.sessions["task:1"]["count"] = 149
+        target = self.command(action="inspect", image=True, **self.args)["target"]
+        self.command(
+            action="approved", expected_target=target["signature"], **self.args
+        )
+        self.assertEqual(self.page.locator("input").input_value(), self.args["text"])
+
+    def test_implicit_submit_with_destination_override_requires_takeover(self):
+        self.page.set_content(
+            '<form action="/safe"><input name="need"><button formaction="/danger">Save</button></form>'
+        )
+        observed = self.command(action="observe")
+        with self.assertRaises(PermissionError):
+            self.command(
+                action="inspect",
+                node=0,
+                nonce=observed["nonce"],
+                intent="key",
+                text="Enter",
+            )
+        self.assertEqual(self.page.url, "https://example.com/form")
 
 
 if __name__ == "__main__":

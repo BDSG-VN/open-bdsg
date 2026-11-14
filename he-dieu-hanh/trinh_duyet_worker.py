@@ -61,18 +61,24 @@ def target_snapshot(session, node, intent):
         raise ValueError("Thành phần chưa sẵn sàng")
     state = node.evaluate("""(e)=>{
       const form=e.form||e.closest('form');
-      const fields=form?Array.from(form.elements):[e];
+      const fields=form?Array.from(new Set([...form.elements,...Array.from(document.querySelectorAll('input[type=image]')).filter(n=>n.form===form)])):[e];
       if(fields.length>100||e.outerHTML.length>8192)throw Error('form too large');
-      const values=fields.map(n=>({tag:n.tagName,type:(n.type||'').toLowerCase(),name:n.name||'',id:n.id||'',value:n.value||'',selected:n.selectedOptions?Array.from(n.selectedOptions).map(o=>o.value):[],checked:!!n.checked,disabled:!!n.disabled,autocomplete:(n.autocomplete||'').toLowerCase()}));
-      const sensitive=values.some(n=>['password','file'].includes(n.type)||/password|one-time|cc-|transaction/.test(n.autocomplete)||(/password|passwd|secret|api.?key|otp|verification.?code|one.?time|card.?number|cvc|cvv|token/.test(n.name+' '+n.id)&&!/^(_token|csrf.*|.*csrf.*)$/.test(n.name)));
+      const values=fields.map(n=>({tag:n.tagName,type:(n.type||'').toLowerCase(),name:n.name||'',id:n.id||'',value:n.value||'',selected:n.selectedOptions?Array.from(n.selectedOptions).map(o=>o.value):[],checked:!!n.checked,disabled:!!n.disabled,autocomplete:(n.autocomplete||'').toLowerCase(),html:n.outerHTML}));
+      const sensitiveName=s=>/password|passwd|secret|api.?key|otp|verification.?code|one.?time|card.?number|cvc|cvv|token/.test(s.toLowerCase())&&!/^(_token|_?csrf|_?csrf_token)$/.test(s.toLowerCase());
+      const sensitive=values.some(n=>['password','file'].includes(n.type)||/password|one-time|cc-|transaction/.test(n.autocomplete)||sensitiveName(n.name)||sensitiveName(n.id));
       const info={tag:e.tagName.toLowerCase(),type:(e.type||'').toLowerCase(),label:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||(['BUTTON','A'].includes(e.tagName)?e.innerText:'')||e.name||'').slice(0,120),form_action:e.hasAttribute('formaction')?e.formAction:(form?.action||''),method:e.hasAttribute('formmethod')?e.formMethod:(form?.method||''),href:e.tagName==='A'?e.href:''};
-      const result={info,values,html:e.outerHTML,form_html:form?.outerHTML||'',sensitive};
+      const overrides=fields.some(n=>['formaction','formmethod','formenctype','formtarget'].some(a=>n.hasAttribute(a)));
+      const result={info,values,html:e.outerHTML,form_html:form?.outerHTML||'',sensitive,overrides};
       if(JSON.stringify(result).length>65536)throw Error('state too large');
       return result;
     }""")
     if state.get("sensitive"):
         raise PermissionError(
             "Mật khẩu, xác minh, thanh toán hoặc tệp cần người dùng tiếp quản"
+        )
+    if intent == "key" and state.get("overrides"):
+        raise PermissionError(
+            "Biểu mẫu có nút đổi đích gửi; cần tự tiếp quản thay vì đề xuất phím"
         )
     page_url = check_url(session["page"].url, session["hosts"])
     if state["info"]["form_action"]:
@@ -290,7 +296,8 @@ class BrowserWorker:
             return {"closed": True}
         if time.monotonic() > s["expires"]:
             raise ValueError("Phiên đã hết hạn")
-        s["count"] += 1
+        if action != "inspect":
+            s["count"] += 1
         if s["count"] > 150:
             raise ValueError("Đã hết hạn lượt của phiên")
         page = s["page"]
