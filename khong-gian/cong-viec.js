@@ -6,6 +6,11 @@
     template: "de-xuat-giai-phap",
     project_id: "",
     allow_module_reads: false,
+    allow_delegation: false,
+    document_ids: [],
+    allow_python: false,
+    allow_action_drafts: false,
+    browser_hosts: [],
   };
   let projects = [];
   let revision = 0;
@@ -187,6 +192,38 @@
       ? "Cần chủ quản, mô hình AI và mô-đun có công cụ đọc MCP đã xác minh. Mặc định không đọc dữ liệu bên ngoài."
       : "Chỉ cấp cho tác vụ này; không cấp công cụ ghi. Quyền được kiểm lại trước mỗi lần gọi.";
   }
+  function executionPicker() {
+    return `<div class="bdsg-project-scope"><div id="bdsg-task-documents"></div><details><summary>Công cụ và quyền cho công việc</summary><div class="bdsg-execution-options"><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-python" ${draft.allow_python ? "checked" : ""}><span>Cho phép xử lý dữ liệu bằng Python trong vùng riêng, tạo tệp kết quả. Không có mạng hoặc quyền vào máy chủ.</span></label><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-drafts" ${draft.allow_action_drafts ? "checked" : ""}><span>Cho agent chuẩn bị dự thảo hành động. Chủ quản vẫn cần duyệt nội dung trước khi thực hiện.</span></label><label>Tên miền cho trình duyệt (tùy chọn)<input id="bdsg-browser-hosts" maxlength="1000" value="${esc(draft.browser_hosts.join(", "))}" placeholder="Ví dụ: example.com, crm.bdsg.vn"></label><small>Chỉ HTTPS, đúng tên miền đã nhập. Agent chỉ đọc và mở liên kết; bạn tiếp quản thao tác biểu mẫu. Phiên tự đóng sau 15 phút. Nội dung được đọc có thể gửi tới nhà cung cấp AI đã chọn.</small>${state.user?.role === "quan-tri" ? `<label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-delegation" ${draft.allow_delegation ? "checked" : ""}><span>Cho phép điều phối tối đa ba tác vụ con cho agent vận hành đang được cấp quyền dự án.</span></label>` : ""}<a href="#studio">Mở xưởng công việc →</a></div></details></div>`;
+  }
+  async function refreshDocuments() {
+    const slot = $("#bdsg-task-documents"),
+      pid = draft.project_id;
+    if (!slot) return;
+    if (!pid || !state.user) {
+      draft.document_ids = [];
+      slot.innerHTML =
+        "<small>Chọn dự án để đính kèm tài liệu vào công việc.</small>";
+      return;
+    }
+    slot.textContent = "Đang mở tài liệu dự án…";
+    try {
+      const { documents } = await tool("tai_lieu.danh_sach", {
+        project_id: pid,
+      });
+      if (
+        !routeIs("work") ||
+        draft.project_id !== pid ||
+        $("#bdsg-task-documents") !== slot
+      )
+        return;
+      draft.document_ids = draft.document_ids.filter((id) =>
+        documents.some((d) => d.id === id),
+      );
+      slot.innerHTML = `<strong>Tài liệu tham khảo (tối đa 5)</strong><div class="bdsg-document-options">${documents.map((d) => `<label class="bdsg-read-consent"><input type="checkbox" name="bdsg-document" value="${esc(d.id)}" ${draft.document_ids.includes(d.id) ? "checked" : ""}><span>${esc(d.name)} · v${d.version}${d.truncated ? " · Văn bản rút gọn" : ""}</span></label>`).join("") || "<small>Chưa có tài liệu. Tải lên tại Xưởng công việc.</small>"}</div>`;
+    } catch (e) {
+      slot.textContent = e.message;
+    }
+  }
   async function home() {
     const ticket = ++revision;
     main.innerHTML = `<section class="bdsg-work-home"><div class="bdsg-work-intro"><span class="bdsg-work-kicker">BDSG THANH HOÁ · KHÔNG GIAN THỰC THI</span><h1>Bạn muốn phát triển điều gì<br>ở <em>Thanh Hoá?</em></h1><p>Giao một mục tiêu. Kết nối đúng mô-đun. Theo dõi công việc đến kết quả.</p></div><div id="bdsg-composer-slot" class="bdsg-composer-loading">Đang mở không gian giao việc…</div></section>`;
@@ -202,7 +239,9 @@
         .querySelector(".bdsg-work-footnote")
         .insertAdjacentHTML("beforeend", setupButton());
       $("#bdsg-task-create").insertAdjacentHTML("beforeend", scopePicker());
+      $("#bdsg-task-create").insertAdjacentHTML("beforeend", executionPicker());
       refreshConsent();
+      refreshDocuments();
       if (state.user) {
         const data = unwrap(await api("/api/tasks"));
         const slot = $("#bdsg-recent-jobs");
@@ -442,13 +481,30 @@
     }
   }
   document.addEventListener("input", (e) => {
+    if (e.target.id === "bdsg-browser-hosts")
+      draft.browser_hosts = e.target.value
+        .split(",")
+        .map((x) => x.trim().toLowerCase())
+        .filter(Boolean);
     if (e.target.id === "bdsg-task-prompt") draft.prompt = e.target.value;
     if (e.target.id === "bdsg-module-search")
       $("#bdsg-module-grid").innerHTML = modulesMarkup(e.target.value);
   });
   document.addEventListener("change", (e) => {
+    if (e.target.id === "bdsg-allow-delegation")
+      draft.allow_delegation = e.target.checked;
+    if (e.target.id === "bdsg-allow-python")
+      draft.allow_python = e.target.checked;
+    if (e.target.id === "bdsg-allow-drafts")
+      draft.allow_action_drafts = e.target.checked;
+    if (e.target.name === "bdsg-document")
+      draft.document_ids = Array.from(
+        document.querySelectorAll('[name="bdsg-document"]:checked'),
+      ).map((x) => x.value);
     if (e.target.id === "bdsg-task-project") {
       draft.project_id = e.target.value;
+      draft.document_ids = [];
+      refreshDocuments();
       window.BDSGProjects?.setSelected(draft.project_id);
       draft.allow_module_reads = false;
       refreshConsent();
@@ -589,6 +645,12 @@
         template: draft.template,
         project_id: draft.project_id,
         allow_module_reads: draft.allow_module_reads,
+        allow_delegation:
+          state.user?.role === "quan-tri" && draft.allow_delegation,
+        document_ids: [...draft.document_ids],
+        allow_python: draft.allow_python,
+        allow_action_drafts: draft.allow_action_drafts,
+        browser_hosts: [...draft.browser_hosts],
       };
       if (args.prompt.length < 10)
         return toast("Mô tả công việc cần ít nhất 10 ký tự.");

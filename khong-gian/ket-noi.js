@@ -26,6 +26,18 @@
   function draw() {
     if (!current()) return;
     main.innerHTML = `<section class="bdsg-work-page"><div class="bdsg-work-page-heading"><div><span class="eyebrow">KẾT NỐI CÓ QUẢN TRỊ</span><h1>Đưa nền tảng vào công việc.</h1><p>Khai báo, kiểm tra và quản lý quyền kết nối MCP của từng mô-đun BDSG.</p></div><a class="button" href="#modules">Thư viện mô-đun ${icon("grid")}</a></div>${state.user?.role === "quan-tri" ? `<div class="connector-layout">${form()}${list()}</div>` : `<section class="panel connector-intro"><div class="app-icon">${icon("lock")}</div><h2>Chủ quản quản lý đầu nối.</h2><p>Endpoint, chứng thư và quyền công cụ được cấu hình trong không gian riêng. Danh mục mô-đun vẫn có thể xem công khai.</p><button class="button primary" type="button" data-connector-login>Đăng nhập để quản lý kết nối</button><div class="connector-principles"><span>HTTPS trong miền BDSG</span><span>Chứng thư không hiển thị lại</span><span>Quyền đọc cụ thể theo công cụ</span></div></section>`}</section>`;
+    writeFields();
+  }
+  function writeFields() {
+    const target = document.querySelector("#connector-form");
+    if (!target || target.elements.write_tools) return;
+    const record = rows.find((r) => r.platform_id === selected);
+    target
+      .querySelector('button[type="submit"]')
+      .insertAdjacentHTML(
+        "beforebegin",
+        `<label>Công cụ ghi được chủ quản cấp rõ<textarea name="write_tools" rows="3" placeholder="Để trống nếu chỉ đọc">${esc((record?.write_tools || []).join("\n"))}</textarea></label><label class="connector-write-consent"><input type="checkbox" name="allow_writes" ${record?.write_tools?.length ? "checked" : ""}>Tôi cấp những công cụ ghi trên. Agent cần tạo dự thảo và được duyệt trước khi thực hiện.</label>`,
+      );
   }
   async function open() {
     const ticket = ++epoch;
@@ -104,6 +116,11 @@
     event.preventDefault();
     if (pending) return;
     const data = Object.fromEntries(new FormData(event.target));
+    data.write_tools = (data.write_tools || "")
+      .split(/[\n,]/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    data.allow_writes = data.allow_writes === "on";
     data.read_tools = data.read_tools
       .split(/[\n,]/)
       .map((x) => x.trim())

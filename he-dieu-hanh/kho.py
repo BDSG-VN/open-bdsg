@@ -1,4 +1,5 @@
 """Lưu dữ liệu vận hành riêng; không để CSDL hoặc chứng thư trong thư mục web."""
+
 import hashlib
 import hmac
 import json
@@ -33,6 +34,7 @@ class Kho:
               CREATE TABLE IF NOT EXISTS su_kien(id INTEGER PRIMARY KEY, actor TEXT, action TEXT, target TEXT, created REAL);
               CREATE TABLE IF NOT EXISTS thu_dang_nhap(ip TEXT, created REAL);
               CREATE INDEX IF NOT EXISTS thu_dang_nhap_ip ON thu_dang_nhap(ip,created);
+              CREATE TABLE IF NOT EXISTS web_users(ma TEXT PRIMARY KEY,salt TEXT,hash TEXT);
             """)
         os.chmod(self.db, 0o600)
 
@@ -50,7 +52,9 @@ class Kho:
 
     def tao_chu(self, password):
         salt = secrets.token_hex(16)
-        digest = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1).hex()
+        digest = hashlib.scrypt(
+            password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1
+        ).hex()
         with self.ket_noi() as c:
             if c.execute("SELECT 1 FROM chu").fetchone():
                 raise ValueError("Đã có chủ quản; không ghi đè thông tin đăng nhập")
@@ -60,37 +64,109 @@ class Kho:
         now = time.time()
         with self.ket_noi() as c:
             c.execute("DELETE FROM thu_dang_nhap WHERE created<?", (now - 600,))
-            count = c.execute("SELECT count(*) FROM thu_dang_nhap WHERE ip=? AND created>?", (ip, now - 300)).fetchone()[0]
+            count = c.execute(
+                "SELECT count(*) FROM thu_dang_nhap WHERE ip=? AND created>?",
+                (ip, now - 300),
+            ).fetchone()[0]
             total = c.execute("SELECT count(*) FROM thu_dang_nhap").fetchone()[0]
             if count >= 8 or total >= 100:
                 return None, "tam-khoa"
             c.execute("INSERT INTO thu_dang_nhap VALUES (?,?)", (ip, now))
             user = c.execute("SELECT * FROM chu WHERE ma=?", (username,)).fetchone()
+            if not user:
+                user = c.execute(
+                    "SELECT w.* FROM web_users w JOIN agents a ON a.ma=w.ma WHERE w.ma=? AND a.active=1 AND a.role='operator'",
+                    (username,),
+                ).fetchone()
             salt = user["salt"] if user else "00" * 16
-            digest = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1).hex()
+            digest = hashlib.scrypt(
+                password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1
+            ).hex()
             if not user or not hmac.compare_digest(digest, user["hash"]):
                 return None, "sai-thong-tin"
             token = secrets.token_urlsafe(36)
             c.execute("DELETE FROM phien WHERE expires<?", (now,))
-            c.execute("INSERT INTO phien VALUES (?,?,?)", (bam(token), username, now + 8 * 3600))
+            c.execute(
+                "INSERT INTO phien VALUES (?,?,?)",
+                (bam(token), username, now + 8 * 3600),
+            )
             c.execute("DELETE FROM thu_dang_nhap WHERE ip=?", (ip,))
             return token, "ok"
 
     def tu_phien(self, token):
         with self.ket_noi() as c:
-            row = c.execute("SELECT ma FROM phien WHERE hash=? AND expires>?", (bam(token), time.time())).fetchone()
-        return {"id": row["ma"], "role": "quan-tri", "name": "Chủ quản Thanh Hoá"} if row else None
+            row = c.execute(
+                "SELECT ma FROM phien WHERE hash=? AND expires>?",
+                (bam(token), time.time()),
+            ).fetchone()
+        if not row:
+            return None
+        if row["ma"] == "chu-quan":
+            return {"id": row["ma"], "role": "quan-tri", "name": "Chủ quản Thanh Hoá"}
+        with self.ket_noi() as c:
+            person = c.execute(
+                "SELECT ma,ten,role FROM agents WHERE ma=? AND active=1 AND role='operator'",
+                (row["ma"],),
+            ).fetchone()
+        return (
+            {"id": person["ma"], "name": person["ten"], "role": person["role"]}
+            if person
+            else None
+        )
+
+    def tao_nguoi_dung(self, actor, args):
+        if actor.get("role") != "quan-tri":
+            raise PermissionError("Chỉ chủ quản tạo người dùng")
+        identifier, name, password = (
+            args.get("id"),
+            args.get("name"),
+            args.get("password"),
+        )
+        if (
+            not isinstance(identifier, str)
+            or not MA.fullmatch(identifier)
+            or identifier == "chu-quan"
+            or not isinstance(name, str)
+            or not 1 <= len(name) <= 100
+            or not isinstance(password, str)
+            or not 16 <= len(password) <= 256
+        ):
+            raise ValueError("Cần mã người dùng, tên và mật khẩu 16–256 ký tự")
+        salt = secrets.token_hex(16)
+        digest = hashlib.scrypt(
+            password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1
+        ).hex()
+        with self.ket_noi() as c:
+            c.execute("BEGIN IMMEDIATE")
+            if c.execute("SELECT 1 FROM agents WHERE ma=?", (identifier,)).fetchone():
+                raise ValueError("Danh tính đã tồn tại")
+            c.execute(
+                "INSERT INTO agents(ma,ten,role,token_hash) VALUES (?,?,?,?)",
+                (identifier, name, "operator", bam(secrets.token_urlsafe(40))),
+            )
+            c.execute(
+                "INSERT INTO web_users VALUES (?,?,?)", (identifier, salt, digest)
+            )
+        self.su_kien(actor["id"], "tao-nguoi-dung", identifier)
+        return {"id": identifier, "name": name, "role": "operator"}
 
     def dang_xuat(self, token):
         with self.ket_noi() as c:
             c.execute("DELETE FROM phien WHERE hash=?", (bam(token),))
 
     def tao_agent(self, ma, ten, role="agent"):
-        if not MA.fullmatch(ma) or role not in ("agent", "operator") or not 1 <= len(ten) <= 100:
+        if (
+            not MA.fullmatch(ma)
+            or role not in ("agent", "operator")
+            or not 1 <= len(ten) <= 100
+        ):
             raise ValueError("Thông tin agent không hợp lệ")
         token = secrets.token_urlsafe(40)
         with self.ket_noi() as c:
-            c.execute("INSERT INTO agents(ma,ten,role,token_hash) VALUES (?,?,?,?)", (ma, ten, role, bam(token)))
+            c.execute(
+                "INSERT INTO agents(ma,ten,role,token_hash) VALUES (?,?,?,?)",
+                (ma, ten, role, bam(token)),
+            )
         return token
 
     def thu_hoi_agent(self, ma):
@@ -99,25 +175,46 @@ class Kho:
 
     def tu_token(self, token):
         with self.ket_noi() as c:
-            row = c.execute("SELECT ma,ten,role FROM agents WHERE token_hash=? AND active=1", (bam(token),)).fetchone()
-        return {"id": row["ma"], "name": row["ten"], "role": row["role"]} if row else None
+            row = c.execute(
+                "SELECT ma,ten,role FROM agents WHERE token_hash=? AND active=1",
+                (bam(token),),
+            ).fetchone()
+        return (
+            {"id": row["ma"], "name": row["ten"], "role": row["role"]} if row else None
+        )
 
     def agents(self):
         with self.ket_noi() as c:
-            return [dict(r) for r in c.execute("SELECT ma AS id,ten AS name,role,active FROM agents ORDER BY ma")]
+            return [
+                dict(r)
+                for r in c.execute(
+                    "SELECT ma AS id,ten AS name,role,active FROM agents ORDER BY ma"
+                )
+            ]
 
     def su_kien(self, actor, action, target=""):
         with self.ket_noi() as c:
-            c.execute("INSERT INTO su_kien(actor,action,target,created) VALUES (?,?,?,?)", (actor, action, target, time.time()))
+            c.execute(
+                "INSERT INTO su_kien(actor,action,target,created) VALUES (?,?,?,?)",
+                (actor, action, target, time.time()),
+            )
 
     def gui(self, sender, recipient, body):
         if not isinstance(body, str) or not 1 <= len(body.strip()) <= 4000:
             raise ValueError("Thông điệp cần từ 1 đến 4000 ký tự")
         with self.ket_noi() as c:
-            if recipient != "chu-quan" and not c.execute("SELECT 1 FROM agents WHERE ma=? AND active=1", (recipient,)).fetchone():
+            if (
+                recipient != "chu-quan"
+                and not c.execute(
+                    "SELECT 1 FROM agents WHERE ma=? AND active=1", (recipient,)
+                ).fetchone()
+            ):
                 raise ValueError("Agent nhận không tồn tại hoặc đã bị thu hồi")
             ma = secrets.token_hex(12)
-            c.execute("INSERT INTO tin VALUES (?,?,?,?,?)", (ma, sender, recipient, body.strip(), time.time()))
+            c.execute(
+                "INSERT INTO tin VALUES (?,?,?,?,?)",
+                (ma, sender, recipient, body.strip(), time.time()),
+            )
         self.su_kien(sender, "gui-thong-diep", recipient)
         return {"id": ma, "status": "da-giao-hop-thu", "recipient": recipient}
 
@@ -137,29 +234,57 @@ class Kho:
         description = args.get("description", "")
         if not isinstance(title, str) or not 3 <= len(title.strip()) <= 160:
             raise ValueError("Tên yêu cầu cần từ 3 đến 160 ký tự")
-        if not isinstance(description, str) or not 10 <= len(description.strip()) <= 4000:
+        if (
+            not isinstance(description, str)
+            or not 10 <= len(description.strip()) <= 4000
+        ):
             raise ValueError("Mô tả cần từ 10 đến 4000 ký tự")
-        if sector not in ("bat-dong-san", "thuong-mai", "van-hanh", "cong-nghe", "nong-nghiep", "tri-thuc"):
+        if sector not in (
+            "bat-dong-san",
+            "thuong-mai",
+            "van-hanh",
+            "cong-nghe",
+            "nong-nghiep",
+            "tri-thuc",
+        ):
             raise ValueError("Lĩnh vực không hợp lệ")
         ma = secrets.token_hex(8)
         with self.ket_noi() as c:
-            c.execute("INSERT INTO yeu_cau VALUES (?,?,?,?,?,?,?)", (ma, owner, title.strip(), sector, description.strip(), "tu-van", time.time()))
+            c.execute(
+                "INSERT INTO yeu_cau VALUES (?,?,?,?,?,?,?)",
+                (
+                    ma,
+                    owner,
+                    title.strip(),
+                    sector,
+                    description.strip(),
+                    "tu-van",
+                    time.time(),
+                ),
+            )
         self.su_kien(owner, "tao-yeu-cau", ma)
         return {"id": ma, "stage": "tu-van"}
 
     def yeu_cau(self, owner, admin=False):
         with self.ket_noi() as c:
             if admin:
-                rows = c.execute("SELECT * FROM yeu_cau ORDER BY created DESC LIMIT 200")
+                rows = c.execute(
+                    "SELECT * FROM yeu_cau ORDER BY created DESC LIMIT 200"
+                )
             else:
-                rows = c.execute("SELECT * FROM yeu_cau WHERE owner=? ORDER BY created DESC LIMIT 200", (owner,))
+                rows = c.execute(
+                    "SELECT * FROM yeu_cau WHERE owner=? ORDER BY created DESC LIMIT 200",
+                    (owner,),
+                )
             return [dict(r) for r in rows]
 
     def doi_chang(self, identity, ma, stage, admin=False):
         if stage not in ("tu-van", "trien-khai", "van-hanh", "kinh-doanh"):
             raise ValueError("Chặng không hợp lệ")
         with self.ket_noi() as c:
-            sql = "UPDATE yeu_cau SET stage=? WHERE id=?" + ("" if admin else " AND owner=?")
+            sql = "UPDATE yeu_cau SET stage=? WHERE id=?" + (
+                "" if admin else " AND owner=?"
+            )
             params = (stage, ma) if admin else (stage, ma, identity)
             if c.execute(sql, params).rowcount != 1:
                 raise ValueError("Không tìm thấy yêu cầu trong phạm vi quyền")
@@ -172,4 +297,7 @@ class Kho:
             params = () if admin else (identity,)
             if not admin:
                 sql += " WHERE actor=?"
-            return [dict(r) for r in c.execute(sql + " ORDER BY created DESC LIMIT 60", params)]
+            return [
+                dict(r)
+                for r in c.execute(sql + " ORDER BY created DESC LIMIT 60", params)
+            ]

@@ -95,6 +95,7 @@ const stages = [
 const titles = {
   integrations: "Quản lý kết nối",
   projects: "Dự án công việc",
+  studio: "Xưởng công việc",
   work: "Giao việc",
   tasks: "Công việc của tôi",
   modules: "Mô-đun BDSG",
@@ -399,6 +400,7 @@ function render() {
   ({
     integrations: () => window.BDSGConnectors?.open(),
     projects: () => window.BDSGProjects?.open(),
+    studio: () => window.BDSGStudio?.open(),
     work: () => window.BDSGTasks?.home(),
     tasks: () => window.BDSGTasks?.tasks(),
     modules: () => window.BDSGTasks?.modules(),

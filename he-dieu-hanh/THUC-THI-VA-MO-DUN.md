@@ -1,5 +1,8 @@
 # Không gian thực thi Thanh Hoá — thử nghiệm 14/11/2026
 
+Phần dưới mô tả nền v5. Các phần mở rộng tài liệu, runtime, trình duyệt,
+phê duyệt và cộng tác được ghi tại [V6–V11](V6-V11.md), kèm giới hạn nghiệm thu.
+
 ## Thiết kế và phạm vi
 
 Trang giao việc nhận mục tiêu, mô-đun được chọn và một trong ba quy trình.

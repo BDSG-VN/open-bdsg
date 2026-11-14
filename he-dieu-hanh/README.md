@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+Nâng cấp tích hợp thử nghiệm: [Xưởng công việc V6–V11](V6-V11.md).
+
 Bản thử nghiệm thực thi mới: [Tác vụ, mô-đun và cấu hình OpenAI/Claude](THUC-THI-VA-MO-DUN.md).
 Cơ sở tham khảo và giới hạn phép phân tích REA: [Đối chiếu Manus](DOI-CHIEU-MANUS.md).
 

@@ -54,6 +54,8 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("ket-noi.css", doc_tep("khong-gian/ket-noi.css"))
     ghi("du-an.js", doc_tep("khong-gian/du-an.js"))
     ghi("du-an.css", doc_tep("khong-gian/du-an.css"))
+    ghi("studio.js", doc_tep("khong-gian/studio.js"))
+    ghi("studio.css", doc_tep("khong-gian/studio.css"))
     ghi("bdsg-mark.svg", doc_tep("khong-gian/bdsg-mark.svg"))
     ghi("bang-dieu-khien.js", doc_tep("bang-dieu-khien/bang-dieu-khien.js"))
     # Chỉ xuất các trường công khai đã chọn, không chép cấu hình tuỳ ý vào docroot.
