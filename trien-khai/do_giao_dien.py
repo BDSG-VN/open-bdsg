@@ -92,8 +92,9 @@ def do(goc, docroot, host=None, ip_origin=None):
     for duong in ("/.git/config", "/.env", "/phuc-vu/may_chu.py", "/so-tay/", "/khong-ton-tai"):
         ma, _ = tai(goc, duong, host, ip_origin)
         kiem_bao_ve.append({"duong_dan": duong, "ma": ma, "dat": ma == 404})
-    ma_api, _ = tai(goc, "/api/toi", host, ip_origin)
-    kiem_bao_ve.append({"duong_dan": "/api/toi", "ma": ma_api, "dat": ma_api == 503})
+    for duong in ("/api/requests", "/mcp"):
+        ma_api, _ = tai(goc, duong, host, ip_origin)
+        kiem_bao_ve.append({"duong_dan": duong, "ma": ma_api, "dat": ma_api == 401})
     bao_cao = {"do_luc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                "goc_da_goi": urlsplit(goc).scheme + "://" + host if host else goc,
                "cach_do": "HTTP trực tiếp origin; so HTML và tài nguyên với tệp đóng gói. --ip-origin giữ kiểm chứng TLS theo tên miền; không đo các biến đổi HTML của CDN.",
