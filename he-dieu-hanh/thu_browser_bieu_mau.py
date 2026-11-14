@@ -129,7 +129,7 @@ class ThuBieuMau(unittest.TestCase):
 
     def test_select_click_and_key_require_matching_snapshot(self):
         self.page.set_content(
-            '<form><select name="kind"><option value="a">A</option><option value="b">B</option></select><button type="button" onclick="this.dataset.clicked=1">Save</button><input name="note" onkeydown="this.dataset.key=event.key"></form>'
+            '<form><select name="kind"><option value="a">A</option><option value="b">B</option></select><button type="button" onclick="this.dataset.clicked=1">Save</button><input name="note" onkeydown="event.preventDefault();this.dataset.key=event.key"></form>'
         )
         for node, intent, text in (
             (0, "select", "b"),
