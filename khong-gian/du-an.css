@@ -343,7 +343,7 @@
 .bdsg-project-scope {
   border-top: 1px solid var(--line, #e5e7eb);
   margin-top: 18px;
-  padding-top: 18px;
+  padding: 18px 20px 20px;
   display: grid;
   gap: 12px;
   text-align: left;
