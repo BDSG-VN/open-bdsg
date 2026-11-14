@@ -60,7 +60,7 @@ class UngDung:
             revoke_browser(identity)
 
         self.core.on_revoke = revoke
-        self.actions = HanhDong(self.kho, self.core, self.tasks)
+        self.actions = HanhDong(self.kho, self.core, self.tasks,self.browser)
         self.schedules = LichCongViec(self.kho, self.core, self.tasks)
         self.delegation = PhoiHop(self.kho, self.core, self.tasks)
         self.model_settings = CauHinhMoHinh(self.kho, self.tasks)

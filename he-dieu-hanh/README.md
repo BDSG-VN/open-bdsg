@@ -1,6 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
 Nâng cấp tích hợp thử nghiệm: [Xưởng công việc V6–V11](V6-V11.md).
+Tiếp nối ngày 15/11/2026: [V12 — phê duyệt thao tác trình duyệt](V12-PHE-DUYET-TRINH-DUYET.md).
 
 Bản thử nghiệm thực thi mới: [Tác vụ, mô-đun và cấu hình OpenAI/Claude](THUC-THI-VA-MO-DUN.md).
 Cơ sở tham khảo và giới hạn phép phân tích REA: [Đối chiếu Manus](DOI-CHIEU-MANUS.md).
@@ -33,7 +34,7 @@ proxy; cookie Secure không hoạt động qua HTTP. Cổng Python chỉ nghe lo
 Proxy `/api/` và `/mcp` tới `http://127.0.0.1:8766`, giữ nguyên đường dẫn;
 ghi đè `X-BDSG-Client-IP` bằng IP kết nối đáng tin, không nhận trực tiếp tiêu đề
 do khách khai. Đặt `client_max_body_size 16k`, giới hạn tốc độ đăng nhập và gọi
-API; riêng `location = /api/tools` đặt 64k cho ngữ cảnh dự án Unicode, các
+API; riêng `location = /api/tools` đặt 64k cho ngữ cảnh dự án Unicode;
 riêng `/api/upload` đặt 1500k cho tệp base64, các đường khác giữ 16k.
 Không ghi Authorization, cookie hoặc thân yêu cầu vào nhật ký. Origin
 trong `BDSG_ORIGIN` phải khớp chính xác tên miền HTTPS của giao diện.

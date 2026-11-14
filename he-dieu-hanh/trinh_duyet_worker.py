@@ -12,6 +12,8 @@ import socket
 import socketserver
 import threading
 import time
+import hashlib
+import hmac
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
@@ -48,6 +50,52 @@ def public_url(value):
         )
     except ValueError:
         return None
+
+
+def target_snapshot(session, node, intent):
+    if (
+        intent not in ("click", "fill", "select", "key")
+        or not node.is_visible()
+        or not node.is_enabled()
+    ):
+        raise ValueError("Thành phần chưa sẵn sàng")
+    state = node.evaluate("""(e)=>{
+      const form=e.form||e.closest('form');
+      const fields=form?Array.from(form.elements):[e];
+      if(fields.length>100||e.outerHTML.length>8192)throw Error('form too large');
+      const values=fields.map(n=>({tag:n.tagName,type:(n.type||'').toLowerCase(),name:n.name||'',id:n.id||'',value:n.value||'',selected:n.selectedOptions?Array.from(n.selectedOptions).map(o=>o.value):[],checked:!!n.checked,disabled:!!n.disabled,autocomplete:(n.autocomplete||'').toLowerCase()}));
+      const sensitive=values.some(n=>['password','file'].includes(n.type)||/password|one-time|cc-|transaction/.test(n.autocomplete)||(/password|passwd|secret|api.?key|otp|verification.?code|one.?time|card.?number|cvc|cvv|token/.test(n.name+' '+n.id)&&!/^(_token|csrf.*|.*csrf.*)$/.test(n.name)));
+      const info={tag:e.tagName.toLowerCase(),type:(e.type||'').toLowerCase(),label:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||(['BUTTON','A'].includes(e.tagName)?e.innerText:'')||e.name||'').slice(0,120),form_action:e.hasAttribute('formaction')?e.formAction:(form?.action||''),method:e.hasAttribute('formmethod')?e.formMethod:(form?.method||''),href:e.tagName==='A'?e.href:''};
+      const result={info,values,html:e.outerHTML,form_html:form?.outerHTML||'',sensitive};
+      if(JSON.stringify(result).length>65536)throw Error('state too large');
+      return result;
+    }""")
+    if state.get("sensitive"):
+        raise PermissionError(
+            "Mật khẩu, xác minh, thanh toán hoặc tệp cần người dùng tiếp quản"
+        )
+    page_url = check_url(session["page"].url, session["hosts"])
+    if state["info"]["form_action"]:
+        check_url(state["info"]["form_action"], session["hosts"])
+    if state["info"]["href"]:
+        check_url(state["info"]["href"], session["hosts"])
+    if intent == "fill" and state["info"]["tag"] not in ("input", "textarea"):
+        raise ValueError("Không phải ô nhập")
+    if intent == "select" and state["info"]["tag"] != "select":
+        raise ValueError("Không phải danh sách chọn")
+    secret = session.setdefault("binding_secret", secrets.token_bytes(32))
+    encoded = json.dumps(
+        [page_url, intent, state], ensure_ascii=False, sort_keys=True
+    ).encode()
+    signature = hmac.new(secret, encoded, hashlib.sha256).hexdigest()
+    info = state["info"]
+    return {
+        **info,
+        "url": public_url(page_url),
+        "href": public_url(info["href"]) if info["href"] else "",
+        "form_action": public_url(info["form_action"]) if info["form_action"] else "",
+        "signature": signature,
+    }
 
 
 class Tunnel(socketserver.StreamRequestHandler):
@@ -240,10 +288,34 @@ class BrowserWorker:
             s["context"].close()
             del sessions[key]
             return {"closed": True}
+        if time.monotonic() > s["expires"]:
+            raise ValueError("Phiên đã hết hạn")
         s["count"] += 1
         if s["count"] > 150:
             raise ValueError("Đã hết hạn lượt của phiên")
         page = s["page"]
+        if action in ("inspect", "approved"):
+            if data.get("nonce") != s["nonce"]:
+                raise ValueError("Quan sát đã cũ")
+            index = data.get("node")
+            if type(index) is not int or not 0 <= index < len(s["nodes"]):
+                raise ValueError("Thành phần không hợp lệ")
+            node = s["nodes"][index]
+            target = target_snapshot(s, node, data.get("intent"))
+            if action == "inspect":
+                result = {"target": target}
+                if data.get("image"):
+                    result["screenshot"] = base64.b64encode(
+                        page.screenshot(
+                            type="jpeg", quality=55, timeout=5000, caret="initial"
+                        )
+                    ).decode()
+                return result
+            if not isinstance(
+                data.get("expected_target"), str
+            ) or not hmac.compare_digest(data["expected_target"], target["signature"]):
+                raise ValueError("Trạng thái biểu mẫu đã thay đổi")
+            action = data["intent"]
         if action == "open":
             page.goto(
                 check_url(data.get("url"), s["hosts"]),
@@ -320,7 +392,7 @@ class BrowserWorker:
         }
         if data.get("image"):
             result["screenshot"] = base64.b64encode(
-                page.screenshot(type="jpeg", quality=55, timeout=5000)
+                page.screenshot(type="jpeg", quality=55, timeout=5000, caret="initial")
             ).decode()
         return result
 

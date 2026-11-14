@@ -695,6 +695,19 @@ class DieuPhoi:
             ],
             "trinh_duyet": [
                 (
+                    "hanh_dong",
+                    lambda a: app.browser.approved_action(actor(), a),
+                    True,
+                    {
+                        "task_id": text,
+                        "action": text,
+                        "node": integer,
+                        "nonce": text,
+                        "text": text,
+                    },
+                    ["task_id", "action", "node", "nonce"],
+                ),
+                (
                     "doc",
                     lambda a: app.browser.call(actor(), a),
                     True,
@@ -724,6 +737,13 @@ class DieuPhoi:
                 ),
             ],
             "hanh_dong": [
+                (
+                    "xem_trinh_duyet",
+                    lambda a: app.actions.preview(actor(), a.get("id")),
+                    False,
+                    {"id": text},
+                    ["id"],
+                ),
                 ("danh_sach", lambda a: app.actions.list(actor()), False, {}, []),
                 (
                     "de_xuat",
@@ -802,7 +822,11 @@ class DieuPhoi:
                             name,
                             func,
                             ghi=write,
-                            mo_ta=namespace + "." + name,
+                            mo_ta=(
+                                "Lập dự thảo, chưa thực hiện. Thao tác trình duyệt dùng tool=trinh_duyet.hanh_dong; arguments gồm task_id, action (fill/select/click/key), node và nonce từ quan sát mới nhất, text nếu cần. Chỉ dữ liệu nghiệp vụ thông thường; không gửi mật khẩu, OTP hoặc thanh toán. Chủ quản duyệt riêng."
+                                if namespace == "hanh_dong" and name == "de_xuat"
+                                else namespace + "." + name
+                            ),
                             luoc_do=schema(fields, required),
                         )
                         for name, func, write, fields, required in entries

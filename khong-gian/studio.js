@@ -30,6 +30,12 @@
   const blank = (text) =>
     `<section class="studio-empty">${icon("briefcase")}<p>${esc(text)}</p></section>`;
   const stamp = (n) => (n ? date(n) : "Chưa chạy");
+  function actionCard(a) {
+    const target = a.payload.browser_target;
+    const pending = a.status === "awaiting";
+    const live = pending && a.expires * 1000 > Date.now();
+    return `<article class="studio-card"><div class="studio-section-heading"><h3>${target ? "Thao tác trình duyệt" : esc(a.payload.tool)}</h3><span class="mini-tag">${esc(a.status)}</span></div><p>Người giao: ${esc(a.owner)} · Hết hạn ${esc(stamp(a.expires))}</p>${target ? `<p><strong>${esc(target.label || target.tag)}</strong> · ${esc(a.payload.arguments.action)}</p><p>Trang: ${esc(target.url)}<br>Đích biểu mẫu: ${esc(target.form_action || target.href || "Trang hiện tại")}</p>` : ""}<pre>${esc(JSON.stringify(a.payload.arguments, null, 2))}</pre><code>${esc(a.digest)}</code>${a.status === "unknown" ? '<p class="form-error">Chưa rõ tác động bên ngoài. Cần đối chiếu nền tảng trước khi đề xuất lại.</p>' : ""}${target && live ? `<button class="button" data-studio-preview="${esc(a.id)}">Xem màn hình trước khi duyệt</button><div data-studio-preview-result="${esc(a.id)}" aria-live="polite"></div>` : ""}${pending && state.user.role === "quan-tri" ? `<div class="studio-actions">${live ? `<button class="button primary" data-studio-approve="${esc(a.id)}" data-digest="${esc(a.digest)}">Duyệt và thực hiện</button>` : ""}<button class="button" data-studio-reject="${esc(a.id)}" data-digest="${esc(a.digest)}">Từ chối</button></div>` : ""}</article>`;
+  }
   async function open() {
     const token = ++revision;
     main.innerHTML = `<section class="bdsg-work-page studio-page"><div class="bdsg-work-page-heading"><div><span class="eyebrow">TỪ MỤC TIÊU ĐẾN KẾT QUẢ</span><h1>Xưởng công việc Thanh Hoá.</h1><p>Tài liệu, công cụ và những quyết định cần bạn ở cùng một nơi.</p></div><a class="button primary" href="#work">${icon("plus")}Giao việc mới</a></div>${
@@ -78,7 +84,7 @@
         markup = `<div class="studio-section-heading"><h2>Tài liệu của dự án</h2><p>Tệp tối đa 1 MiB. Mỗi lần tải tạo một phiên bản riêng; tải xuống cần quyền dự án.</p></div>${projects.length ? `<label>Dự án<select id="studio-project">${projectOptions()}</select></label><form id="studio-upload" class="studio-inline"><label>Chọn tài liệu<input name="file" type="file" accept=".txt,.md,.csv,.pdf" required></label><button class="button primary" type="submit">Tải vào dự án</button></form><p class="studio-note">TXT, Markdown, CSV cần UTF-8. PDF cần có văn bản, không mã hóa, tối đa 50 trang; chưa hỗ trợ ảnh quét. Văn bản trích xuất có giới hạn và được ghi rõ khi rút gọn.</p><div class="studio-list">${docs.map((d) => `<article class="studio-row"><span>${icon("briefcase")}</span><div><strong>${esc(d.name)}</strong><small>Phiên bản ${d.version} · ${d.size} byte · ${esc(stamp(d.created))}${d.truncated ? " · Văn bản rút gọn" : ""}</small><code>${esc(d.sha256)}</code></div><a class="button small" href="/api/document?id=${encodeURIComponent(d.id)}">Tải xuống</a></article>`).join("") || blank("Chưa có tài liệu. Tải một tệp để bắt đầu.")}</div>` : blank("Tạo dự án trước khi tải tài liệu.") + `<a href="#projects" class="button">Mở dự án</a>`}`;
       } else if (tab === "actions") {
         const rows = (await tool("hanh_dong.danh_sach")).actions || [];
-        markup = `<div class="studio-section-heading"><h2>Quyết định nằm ở bạn.</h2><p>Đề xuất chưa làm thay đổi nghiệp vụ. Kiểm đúng nơi nhận và nội dung trước khi duyệt. Mỗi đề xuất có hiệu lực 15 phút.</p></div><form id="studio-propose" class="studio-form"><h3>Chuẩn bị hành động</h3><label>Công việc<select name="task_id" required>${taskOptions(() => true)}</select></label><label>Loại hành động<select name="tool"><option value="kinh_doanh.tao_yeu_cau">Ghi nhận yêu cầu kinh doanh</option><option value="kinh_doanh.doi_chang">Đổi chặng yêu cầu</option><option value="ket_noi.ghi">Công cụ ghi MCP đã được cấp</option></select></label><label>Nội dung JSON cần xem trước<textarea name="arguments" rows="5" required placeholder='{"title":"Yêu cầu thử","sector":"cong-nghe","description":"Mô tả nhu cầu cụ thể"}'></textarea></label><button class="button" type="submit">Lưu dự thảo để duyệt</button></form><div class="studio-list">${rows.map((a) => `<article class="studio-card"><div class="studio-section-heading"><h3>${esc(a.payload.tool)}</h3><span class="mini-tag">${esc(a.status)}</span></div><p>Người giao: ${esc(a.owner)} · Hết hạn ${esc(stamp(a.expires))}</p><pre>${esc(JSON.stringify(a.payload.arguments, null, 2))}</pre><code>${esc(a.digest)}</code>${a.status === "unknown" ? '<p class="form-error">Chưa rõ tác động bên ngoài. Cần đối chiếu nền tảng trước khi đề xuất lại.</p>' : ""}${a.status === "awaiting" && state.user.role === "quan-tri" && a.expires * 1000 > Date.now() ? `<div class="studio-actions"><button class="button primary" data-studio-approve="${esc(a.id)}" data-digest="${esc(a.digest)}">Duyệt và thực hiện</button><button class="button" data-studio-reject="${esc(a.id)}" data-digest="${esc(a.digest)}">Từ chối</button></div>` : ""}</article>`).join("") || blank("Không có hành động chờ duyệt.")}</div>`;
+        markup = `<div class="studio-section-heading"><h2>Quyết định nằm ở bạn.</h2><p>Đề xuất chưa làm thay đổi nghiệp vụ. Kiểm đúng nơi nhận và nội dung trước khi duyệt. Mỗi đề xuất có hiệu lực 15 phút.</p></div><form id="studio-propose" class="studio-form"><h3>Chuẩn bị hành động</h3><label>Công việc<select name="task_id" required>${taskOptions(() => true)}</select></label><label>Loại hành động<select name="tool"><option value="kinh_doanh.tao_yeu_cau">Ghi nhận yêu cầu kinh doanh</option><option value="kinh_doanh.doi_chang">Đổi chặng yêu cầu</option><option value="ket_noi.ghi">Công cụ ghi MCP đã được cấp</option></select></label><label>Nội dung JSON cần xem trước<textarea name="arguments" rows="5" required placeholder='{"title":"Yêu cầu thử","sector":"cong-nghe","description":"Mô tả nhu cầu cụ thể"}'></textarea></label><button class="button" type="submit">Lưu dự thảo để duyệt</button></form><div class="studio-list">${rows.map(actionCard).join("") || blank("Không có hành động chờ duyệt.")}</div>`;
       } else if (tab === "schedules") {
         const rows = (await tool("lich.danh_sach")).schedules || [];
         markup = `<div class="studio-section-heading"><h2>Công việc có nhịp riêng.</h2><p>Lịch chỉ tổng hợp danh mục và ngữ cảnh dự án; không tự ghi nghiệp vụ, chạy mã hoặc đọc MCP bên ngoài. Khi có AI, mỗi lượt có thể phát sinh phí API.</p></div><form id="studio-schedule" class="studio-form"><label>Tên lịch<input name="name" required minlength="3" maxlength="100"></label><label>Mục tiêu<textarea name="prompt" required minlength="10" maxlength="4000" rows="3"></textarea></label><label>Dự án<select name="project_id"><option value="">Công việc độc lập</option>${projectOptions()}</select></label><label>Chu kỳ (phút)<input name="minutes" type="number" min="15" max="10080" value="1440" required></label><p class="studio-note">Lượt đầu sau một chu kỳ; bỏ qua lượt bị lỡ, không chạy bù hàng loạt. Thời điểm hiển thị theo giờ Việt Nam.</p><button class="button primary" type="submit">Tạo và bật lịch</button></form><div class="studio-list">${rows.map((s) => `<article class="studio-row"><div><strong>${esc(s.name)}</strong><small>${s.enabled ? "Đang bật" : "Đã tạm dừng"} · Chu kỳ ${s.interval / 60} phút · Lượt kế ${esc(stamp(s.next_run))}</small><small>Lần gần nhất: ${esc(s.last_status)} ${s.last_task ? `· <a href="#task/${encodeURIComponent(s.last_task)}">Mở công việc</a>` : ""}</small></div><button class="button" data-studio-schedule-toggle="${esc(s.id)}" data-enabled="${!s.enabled}">${s.enabled ? "Tạm dừng" : "Bật lại"}</button></article>`).join("") || blank("Bạn chưa đặt lịch công việc.")}</div>`;
@@ -107,7 +113,7 @@
         markup = `<div class="studio-section-heading"><h2>Từ dữ liệu đến tệp kết quả.</h2><p>Chọn công việc đã cấp quyền Python. Chạy tối đa 15 giây trong vùng riêng, không mạng và không quyền vào dữ liệu máy chủ. Tệp văn bản tạo ra được lưu vào kết quả công việc.</p></div><form id="studio-python" class="studio-form"><label>Công việc<select name="task_id" required>${taskOptions((t) => t.allow_python)}</select></label><label>Mã Python<textarea name="code" spellcheck="false" rows="8" required maxlength="16000" placeholder="print(1 + 2)"></textarea></label><p class="studio-note">Tài liệu đã chọn trong tác vụ có tên input-1.txt, input-2.txt… Tên tệp mặc định: ket-qua.csv, ket-qua.txt, ket-qua.md. Tối đa 8 tệp UTF-8 khi khai rõ tên đầu ra; xem và tải ở trang công việc.</p><button class="button primary" type="submit">Chạy trong vùng riêng</button></form><pre id="studio-python-result" aria-live="polite"></pre>`;
       } else if (tab === "browser") {
         browserState = null;
-        markup = `<div class="studio-section-heading"><h2>Cùng agent nhìn vào công việc.</h2><p>Chọn công việc đã cấp tên miền trình duyệt. Agent đọc và mở liên kết HTTPS trong phạm vi đó; bạn tiếp quản khi cần nhập liệu hay đăng nhập. Phiên tự đóng sau 15 phút.</p></div><form id="studio-browser-open" class="studio-inline"><label>Công việc<select name="task_id" required>${taskOptions((t) => t.browser_hosts?.length)}</select></label><label>Địa chỉ được cấp<input type="url" name="url" required placeholder="https://…"></label><button class="button primary">Mở trình duyệt</button></form><div id="studio-browser-view"></div>`;
+        markup = `<div class="studio-section-heading"><h2>Cùng agent nhìn vào công việc.</h2><p>Chọn công việc đã cấp tên miền trình duyệt. Agent đọc, mở liên kết và chuẩn bị thao tác chờ duyệt trong phạm vi được giao; bạn tiếp quản khi cần đăng nhập. Phiên tự đóng sau 15 phút.</p></div><form id="studio-browser-open" class="studio-inline"><label>Công việc<select name="task_id" required>${taskOptions((t) => t.browser_hosts?.length)}</select></label><label>Địa chỉ được cấp<input type="url" name="url" required placeholder="https://…"></label><button class="button primary">Mở trình duyệt</button></form><div id="studio-browser-view"></div>`;
       } else {
         const summary = await tool("van_hanh.tong_quan");
         summaryForUsage = summary;
@@ -148,7 +154,7 @@
     }
     browserState = { ...value, task_id };
     $("#studio-browser-view").innerHTML =
-      `<section class="studio-card"><h3>${esc(value.title)}</h3><p>${esc(value.url)} · Còn ${value.expires_in} giây</p><div class="studio-actions"><button class="button" data-studio-browser="observe">Cập nhật màn hình</button><button class="button" data-studio-browser="close">Đóng và xóa phiên</button></div>${value.screenshot ? `<img class="studio-browser-image" alt="Màn hình trình duyệt công việc" src="data:image/jpeg;base64,${value.screenshot}">` : ""}<details><summary>Nội dung trang</summary><pre>${esc(value.text)}</pre></details><form id="studio-browser-control" class="studio-form"><h3>Bạn đang tiếp quản</h3><label>Thành phần<select name="node">${value.nodes.map((n) => `<option value="${n.id}">${n.id}: ${esc(n.tag)} ${esc(n.type)} — ${esc(n.label || n.href || "Không nhãn")}</option>`).join("")}</select></label><label>Thao tác<select name="action"><option value="click">Bấm thành phần</option><option value="fill">Nhập văn bản/mật khẩu</option><option value="select">Chọn giá trị</option><option value="key">Nhấn Enter/Tab/Escape</option></select></label><label>Nội dung nhập (không lưu lại trong giao diện)<input name="text" type="password" autocomplete="off" maxlength="4000"></label><p class="studio-note">Thao tác này tác động trực tiếp lên trang đang mở. Kiểm màn hình và đích nhận trước khi bấm gửi, mua, xóa hoặc cấp quyền.</p><button class="button primary">Thực hiện thao tác đã chọn</button></form></section>`;
+      `<section class="studio-card"><h3>${esc(value.title)}</h3><p>${esc(value.url)} · Còn ${value.expires_in} giây</p><div class="studio-actions"><button class="button" data-studio-browser="observe">Cập nhật màn hình</button><button class="button" data-studio-browser="close">Đóng và xóa phiên</button></div>${value.screenshot ? `<img class="studio-browser-image" alt="Màn hình trình duyệt công việc" src="data:image/jpeg;base64,${value.screenshot}">` : ""}<details><summary>Nội dung trang</summary><pre>${esc(value.text)}</pre></details><form id="studio-browser-control" class="studio-form"><h3>Bạn đang tiếp quản</h3><label>Thành phần<select name="node">${value.nodes.map((n) => `<option value="${n.id}">${n.id}: ${esc(n.tag)} ${esc(n.type)} — ${esc(n.label || n.href || "Không nhãn")}</option>`).join("")}</select></label><label>Thao tác<select name="action"><option value="click">Bấm thành phần</option><option value="fill">Nhập văn bản/mật khẩu</option><option value="select">Chọn giá trị</option><option value="key">Nhấn Enter/Tab/Escape</option></select></label><label>Nội dung nhập (không lưu lại trong giao diện)<input name="text" type="password" autocomplete="off" maxlength="4000"></label><p class="studio-note">Thao tác này tác động trực tiếp lên trang đang mở. Kiểm màn hình và đích nhận trước khi bấm gửi, mua, xóa hoặc cấp quyền.</p><button class="button primary" type="submit" value="manual">Thực hiện thao tác đã chọn</button><button class="button" type="submit" value="propose">Lưu đề xuất để chủ quản duyệt</button><p class="studio-note">Đề xuất lưu nội dung đã nhập trong sổ hành động. Chỉ dùng dữ liệu nghiệp vụ thông thường; mật khẩu, mã xác minh và thanh toán cần tự tiếp quản, không đưa vào đề xuất.</p></form></section>`;
   }
   document.addEventListener("click", async (e) => {
     if (e.target.closest("[data-studio-login]")) return auth(open);
@@ -164,7 +170,8 @@
     const toggle = e.target.closest("[data-studio-schedule-toggle]");
     const revoke = e.target.closest("[data-studio-revoke]");
     const browser = e.target.closest("[data-studio-browser]");
-    if (!approve && !toggle && !revoke && !browser) return;
+    const preview = e.target.closest("[data-studio-preview]");
+    if (!approve && !toggle && !revoke && !browser && !preview) return;
     if (
       approve?.dataset.studioApprove &&
       !confirm("Duyệt và thực hiện đúng nội dung đang hiển thị?")
@@ -177,6 +184,18 @@
       return;
     busy = true;
     try {
+      if (preview) {
+        const token = revision;
+        const id = preview.dataset.studioPreview;
+        const result = await tool("hanh_dong.xem_trinh_duyet", { id });
+        if (token !== revision || !state.user || tab !== "actions") return;
+        const view = document.querySelector(`[data-studio-preview-result="${id}"]`);
+        if (!view) return;
+        view.innerHTML = `<p>${result.matches ? "Biểu mẫu còn khớp với đề xuất. Hệ thống kiểm lại khi duyệt." : "Biểu mẫu đã thay đổi. Hãy từ chối và tạo đề xuất mới."}</p>${result.screenshot ? `<img class="studio-browser-image" alt="Màn hình hiện tại của đề xuất" src="data:image/jpeg;base64,${esc(result.screenshot)}">` : ""}`;
+        const approveButton = view.closest("article").querySelector("[data-studio-approve]");
+        if (approveButton) approveButton.disabled = !result.matches;
+        return;
+      }
       if (approve)
         await tool("hanh_dong.duyet", {
           id: approve.dataset.studioApprove || approve.dataset.studioReject,
@@ -270,6 +289,15 @@
           nonce: browserState.nonce,
         };
         form.reset();
+        if (e.submitter?.value === "propose") {
+          await tool("hanh_dong.de_xuat", {
+            task_id: browserState.task_id,
+            tool: "trinh_duyet.hanh_dong",
+            arguments: { ...args, task_id: browserState.task_id },
+          });
+          toast("Đã lưu đề xuất. Mở Chờ phê duyệt để kiểm tra và duyệt.");
+          return;
+        }
         await browserCommand(args);
         return;
       } else return;
