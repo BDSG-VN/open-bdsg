@@ -93,6 +93,9 @@ const stages = [
   ["kinh-doanh", "Kinh doanh", "Mở rộng cơ hội tăng trưởng"],
 ];
 const titles = {
+  work: "Giao việc",
+  tasks: "Công việc của tôi",
+  modules: "Mô-đun BDSG",
   overview: "Tổng quan",
   platforms: "Nền tảng BDSG",
   sectors: "Lĩnh vực kinh doanh",
@@ -372,9 +375,12 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  const taskMatch = /^#task\/([a-f0-9]{24})$/.exec(location.hash);
   state.view = Object.hasOwn(titles, location.hash.slice(1))
     ? location.hash.slice(1)
-    : "overview";
+    : taskMatch
+      ? "tasks"
+      : "work";
   $("#view-title").textContent = titles[state.view];
   document.title = titles[state.view] + " — BDSG Thanh Hoá";
   document.querySelectorAll("nav [data-view]").forEach((a) => {
@@ -384,7 +390,14 @@ function render() {
       ? a.setAttribute("aria-current", "page")
       : a.removeAttribute("aria-current");
   });
+  if (taskMatch) {
+    window.BDSGTasks?.renderTask(taskMatch[1]);
+    return;
+  }
   ({
+    work: () => window.BDSGTasks?.home(),
+    tasks: () => window.BDSGTasks?.tasks(),
+    modules: () => window.BDSGTasks?.modules(),
     overview,
     platforms,
     sectors: sectorsPage,

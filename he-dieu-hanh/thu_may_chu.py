@@ -3,6 +3,7 @@ import http.client
 import json
 import tempfile
 import threading
+import time
 import unittest
 from may_chu import UngDung, tao_may_chu
 
@@ -22,6 +23,7 @@ class ThuCong(unittest.TestCase):
     def close(self):
         self.server.shutdown()
         self.server.server_close()
+        self.app.tasks.close()
         self.app.core.audit.close()
         self.tmp.cleanup()
 
@@ -119,6 +121,42 @@ class ThuCong(unittest.TestCase):
         for _ in range(8):
             self.assertEqual(self.request("/api/login", {"username": "chu-quan", "password": "sai"}, {"Origin": self.app.origin})[0], 401)
         self.assertEqual(self.request("/api/login", {"username": "chu-quan", "password": "sai"}, {"Origin": self.app.origin})[0], 429)
+
+    def test_task_via_mcp_and_scoped_http(self):
+        job = self.result(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Lap de xuat dung CRM tai Thanh Hoa", "module_ids": ["bdsg_crm"]}))
+        task = None
+        for _ in range(100):
+            task = self.result(self.rpc("operator-a", "cong_viec.chi_tiet", {"id": job["id"]}))
+            if task["status"] in ("completed", "failed"):
+                break
+            time.sleep(.01)
+        self.assertEqual(task["status"], "completed")
+        self.assertEqual(len(task["artifacts"]), 1)
+        self.assertEqual(task["mode"], "quy-trinh")
+        self.assertTrue(self.rpc("agent-a", "cong_viec.chi_tiet", {"id": job["id"]})["isError"])
+        self.assertEqual(self.request("/api/tasks")[0], 401)
+
+    def test_model_configuration_owner_only_private_and_no_echo(self):
+        self.assertEqual(self.request("/api/model-config", {"provider": "openai"}, {"Origin": self.app.origin})[0], 401)
+        args = {"provider": "openai", "model": "test-config-only-never-called", "api_key": "test-key-private-never-real-12345"}
+        self.assertTrue(self.rpc("operator-a", "cau_hinh.mo_hinh", args)["isError"])
+        status, _, headers = self.request("/api/login", {"username": "chu-quan", "password": "mat-khau-chi-trong-test"}, {"Origin": self.app.origin})
+        self.assertEqual(status, 200)
+        auth = {"Cookie": headers["Set-Cookie"].split(";")[0], "Origin": self.app.origin}
+        status, value, _ = self.request("/api/model-config", args, auth)
+        self.assertEqual(status, 200)
+        self.assertFalse(value["verified"])
+        self.assertEqual(value["provider"], "openai")
+        self.assertNotIn(args["api_key"], json.dumps(value))
+        self.assertNotIn(args["api_key"], json.dumps(self.request("/api/model")[1]))
+        self.assertNotIn(args["api_key"], (self.app.kho.root / "nhat-ky-nhan.jsonl").read_text())
+        private = self.app.kho.root / "model-private.json"
+        self.assertEqual(private.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(json.loads(private.read_text())["api_key"], args["api_key"])
+        from cau_hinh_mo_hinh import CauHinhMoHinh
+        self.app.tasks.model = None
+        CauHinhMoHinh(self.app.kho, self.app.tasks)
+        self.assertEqual(self.app.tasks.model.public_status()["provider"], "openai")
 
 
 if __name__ == "__main__":

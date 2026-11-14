@@ -136,6 +136,27 @@ class DieuPhoi:
         self.nhan.chinh_sach.khai_vai("operator", doc=reads + ["kinh_doanh.danh_sach"], ghi=writes + ["kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang"])
         self.nhan.chinh_sach.khai_vai("quan-tri", doc=reads + ["kinh_doanh.danh_sach", "ket_noi.doc"], ghi=writes + ["kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "ket_noi.ghi"])
 
+    def dang_ky_cong_viec(self, engine, configure_model):
+        text = {"type": "string"}
+        self.nhan.dang_ky("mo_dun", CongCu([
+            BanKhaiCongCu("danh_sach", lambda a: engine.modules(self.actor.get()), mo_ta="Mô-đun web và công cụ MCP đã khai báo, không suy diễn liên thông.", luoc_do=schema())]))
+        self.nhan.dang_ky("cong_viec", CongCu([
+            BanKhaiCongCu("danh_sach", lambda a: engine.list(self.actor.get()), mo_ta="Danh sách tác vụ trong phạm vi danh tính.", luoc_do=schema()),
+            BanKhaiCongCu("chi_tiet", lambda a: engine.detail(self.actor.get(), a.get("id")), mo_ta="Kế hoạch, tiến trình và sản phẩm của tác vụ có quyền xem.", luoc_do=schema({"id": text}, ["id"])),
+            BanKhaiCongCu("tao", lambda a: engine.create(self.actor.get(), a), ghi=True, mo_ta="Tạo tác vụ theo quy trình có giới hạn; không thực hiện ghi lên nền tảng bên ngoài.", luoc_do=schema({"prompt": text, "module_ids": {"type": "array", "items": text}, "template": text}, ["prompt"])),
+            BanKhaiCongCu("tiep_tuc", lambda a: engine.followup(self.actor.get(), a.get("id"), a.get("text")), ghi=True, mo_ta="Bổ sung ngữ cảnh và chạy tiếp một tác vụ đã dừng.", luoc_do=schema({"id": text, "text": text}, ["id", "text"])),
+            BanKhaiCongCu("dung", lambda a: engine.cancel(self.actor.get(), a.get("id")), ghi=True, mo_ta="Yêu cầu dừng hợp tác giữa các bước thực thi.", luoc_do=schema({"id": text}, ["id"]))]))
+        common = ["nen_tang.danh_sach", "nen_tang.ket_noi", "agent.danh_sach", "agent.doc_hop_thu", "nhat_ky.danh_sach", "mo_dun.danh_sach"]
+        jobs = ["cong_viec.danh_sach", "cong_viec.chi_tiet"]
+        self.nhan.dang_ky("cau_hinh", CongCu([
+            BanKhaiCongCu("mo_hinh", lambda a: configure_model(self.actor.get(), a), ghi=True,
+                          mo_ta="Chủ quản lưu chứng thư mô hình riêng trên máy chủ. Không trả khóa API trong kết quả.",
+                          luoc_do=schema({"provider": text, "model": text, "api_key": text, "base_url": text}, ["provider", "model", "api_key"]))]))
+        writes = ["agent.gui_tin", "kinh_doanh.tao_yeu_cau", "kinh_doanh.doi_chang", "cong_viec.tao", "cong_viec.tiep_tuc", "cong_viec.dung"]
+        self.nhan.chinh_sach.khai_vai("agent", doc=common, ghi=["agent.gui_tin"])
+        self.nhan.chinh_sach.khai_vai("operator", doc=common + jobs + ["kinh_doanh.danh_sach"], ghi=writes)
+        self.nhan.chinh_sach.khai_vai("quan-tri", doc=common + jobs + ["kinh_doanh.danh_sach", "ket_noi.doc"], ghi=writes + ["ket_noi.ghi", "cau_hinh.mo_hinh"])
+
     def danh_tinh(self, actor):
         return DanhTinh(ma=actor["id"], ten=actor["name"], vai=(actor["role"],), nguon="cong-thanhhoa")
 

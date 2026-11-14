@@ -8,12 +8,14 @@ import sys
 from http.cookies import SimpleCookie, CookieError
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 GOC = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(GOC))
 from kho import Kho
 from dieu_phoi import DieuPhoi
+from cong_viec import CongViec
+from cau_hinh_mo_hinh import CauHinhMoHinh
 
 
 class UngDung:
@@ -22,6 +24,9 @@ class UngDung:
         self.catalogue = catalogue or json.loads((GOC / "nen-tang/danh-muc.json").read_text(encoding="utf-8-sig"))["products"]
         self.kho = Kho(data)
         self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
+        self.tasks = CongViec(self.kho, self.core)
+        self.model_settings = CauHinhMoHinh(self.kho, self.tasks)
+        self.core.dang_ky_cong_viec(self.tasks, self.model_settings.save)
 
     def catalog(self):
         p = self.kho.root / "web-status.json"
@@ -93,17 +98,22 @@ def tao_may_chu(app, port=8766):
                 return self.send(405, {"error": "Dùng POST cho MCP; không hỗ trợ SSE chủ động"}, headers={"Allow": "POST"})
             if path == "/api/catalogue":
                 return self.send(200, app.catalog())
+            if path == "/api/modules":
+                return self.send(200, app.tasks.modules(None))
+            if path == "/api/model":
+                return self.send(200, app.tasks.model.public_status())
             if path == "/api/suc-khoe":
                 return self.send(200, {"status": "ok", "service": "bdsg-thanhhoa", "mcp": "xac-thuc-bat-buoc"})
             actor = self.actor()
             if path == "/api/me":
                 return self.send(200, {"authenticated": actor is not None, "user": actor})
-            routes = {"/api/agents": "agent.danh_sach", "/api/requests": "kinh_doanh.danh_sach", "/api/activity": "nhat_ky.danh_sach", "/api/connections": "nen_tang.ket_noi", "/api/messages": "agent.doc_hop_thu"}
+            routes = {"/api/agents": "agent.danh_sach", "/api/requests": "kinh_doanh.danh_sach", "/api/activity": "nhat_ky.danh_sach", "/api/connections": "nen_tang.ket_noi", "/api/messages": "agent.doc_hop_thu", "/api/tasks": "cong_viec.danh_sach", "/api/task": "cong_viec.chi_tiet"}
             if path not in routes:
                 return self.send(404, {"error": "Không tìm thấy"})
             if not actor:
                 return self.send(401, {"error": "Cần đăng nhập"})
-            return self.send(200, app.core.goi(actor, routes[path], {}))
+            arguments = {"id": parse_qs(urlsplit(self.path).query).get("id", [""])[0]} if path == "/api/task" else {}
+            return self.send(200, app.core.goi(actor, routes[path], arguments))
 
         def do_POST(self):
             self.connection.settimeout(12)
@@ -135,6 +145,11 @@ def tao_may_chu(app, port=8766):
                     if not isinstance(body.get("name"), str) or not isinstance(body.get("arguments", {}), dict):
                         return self.send(400, {"error": "Lời gọi công cụ không hợp lệ"})
                     return self.send(200, app.core.goi(actor, body["name"], body.get("arguments", {})))
+                if path == "/api/model-config":
+                    if actor["role"] != "quan-tri":
+                        return self.send(403, {"error": "Chỉ chủ quản được cấu hình mô hình"})
+                    result = app.core.goi(actor, "cau_hinh.mo_hinh", body)
+                    return self.send(200, result["ket_qua"]) if result["ok"] else self.send(400, {"error": "Không lưu được cấu hình. Kiểm tra nhà cung cấp, tên mô hình và khóa API."})
                 if path == "/mcp":
                     version = self.headers.get("MCP-Protocol-Version", "2025-03-26")
                     if version not in ("2025-03-26", "2025-06-18"):

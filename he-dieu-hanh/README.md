@@ -1,5 +1,8 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+Bản thử nghiệm thực thi mới: [Tác vụ, mô-đun và cấu hình OpenAI/Claude](THUC-THI-VA-MO-DUN.md).
+Cơ sở tham khảo và giới hạn phép phân tích REA: [Đối chiếu Manus](DOI-CHIEU-MANUS.md).
+
 Bản đóng góp ngày 14/11/2026 mở rộng giao diện Open BDSG thành không gian phát
 triển kinh doanh đa lĩnh vực. Danh mục có 38 mục sản phẩm, tương ứng 37 địa chỉ
 web riêng biệt; App và Messenger dùng chung địa chỉ. Nguồn công khai được ghi
@@ -39,8 +42,9 @@ trong `BDSG_ORIGIN` phải khớp chính xác tên miền HTTPS của giao diệ
   phiên và token chỉ lưu SHA-256. Phiên hết hạn sau tám giờ.
 - Mỗi agent có chứng thư riêng. Người gửi lấy từ xác thực. Hộp thư chỉ trả thông
   điệp do danh tính đó gửi hoặc nhận. Thu hồi bằng lệnh `revoke-agent --id ...`.
-- Đây là hộp thư và ranh giới công cụ. Chưa cài mô hình AI tự trả lời, chưa có
-  worker tự chạy công việc, retry hay bảo đảm thực hiện nghiệp vụ đúng một lần.
+- Hộp thư là kênh thông điệp, không tự trả lời. Worker tác vụ riêng đã có;
+  mô hình API chỉ hoạt động khi chủ quản cấu hình. Không có bảo đảm thực hiện
+  nghiệp vụ liên nền tảng đúng một lần hoặc retry tự động.
 
 ## MCP và kết nối nền tảng
 

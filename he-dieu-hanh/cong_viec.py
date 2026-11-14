@@ -1,0 +1,304 @@
+"""Tác vụ bền vững theo quy trình; không giả lập mô hình AI hoặc kết nối nghiệp vụ."""
+import json
+import secrets
+import threading
+import time
+import unicodedata
+from concurrent.futures import ThreadPoolExecutor
+from mo_hinh_bdsg import MoHinhBDSG
+
+
+TEMPLATES = {"de-xuat-giai-phap", "kiem-tra-ket-noi", "tong-quan"}
+FINAL = {"completed", "cancelled", "failed", "interrupted"}
+
+
+def _text(value, minimum=1, maximum=4000):
+    if not isinstance(value, str) or not minimum <= len(value.strip()) <= maximum:
+        raise ValueError("Nội dung không hợp lệ hoặc vượt giới hạn")
+    return value.strip()
+
+
+def _clean(value):
+    return "".join(c for c in unicodedata.normalize("NFD", value.lower().replace("đ", "d")) if not unicodedata.combining(c))
+
+
+def _cell(value):
+    return str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
+class CongViec:
+    """Hai worker, hàng đợi có giới hạn; chỉ gọi các công cụ đọc đã định trước."""
+
+    def __init__(self, kho, core):
+        self.kho, self.core = kho, core
+        self.lock = threading.RLock()
+        self.closed = False
+        self.model = MoHinhBDSG()
+        with kho.ket_noi() as db:
+            db.execute("CREATE TABLE IF NOT EXISTS cong_viec_tasks(id TEXT PRIMARY KEY, owner TEXT, created REAL, updated REAL, status TEXT, document TEXT)")
+            db.execute("CREATE INDEX IF NOT EXISTS cong_viec_owner ON cong_viec_tasks(owner,created)")
+            # Không tự chạy lại tác vụ sau khởi động: công cụ ngoài có thể đã chạy.
+            for row in db.execute("SELECT document FROM cong_viec_tasks WHERE status IN ('queued','running','cancelling')").fetchall():
+                task = json.loads(row[0])
+                task["status"] = "interrupted"
+                task["updated"] = time.time()
+                for step in task["steps"]:
+                    if step["status"] == "running":
+                        step.update(status="interrupted", finished=time.time())
+                self._event(task, "interrupted", "Tiến trình đã khởi động lại; cần yêu cầu tiếp tục rõ ràng.")
+                db.execute("UPDATE cong_viec_tasks SET status=?,updated=?,document=? WHERE id=?", (task["status"], task["updated"], json.dumps(task, ensure_ascii=False), task["id"]))
+        self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="bdsg-task")
+
+    def _auth(self, actor, write=False):
+        if not isinstance(actor, dict) or not isinstance(actor.get("id"), str) or actor.get("role") not in ("agent", "operator", "quan-tri"):
+            raise PermissionError("Cần danh tính đã xác thực")
+        if write and actor["role"] not in ("operator", "quan-tri"):
+            raise PermissionError("Danh tính này không có quyền điều phối tác vụ")
+
+    def _load(self, task_id):
+        with self.kho.ket_noi() as db:
+            row = db.execute("SELECT document FROM cong_viec_tasks WHERE id=?", (task_id,)).fetchone()
+        if not row:
+            raise ValueError("Không tìm thấy tác vụ trong phạm vi quyền")
+        return json.loads(row[0])
+
+    def _save(self, task):
+        task["updated"] = time.time()
+        with self.kho.ket_noi() as db:
+            db.execute("UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?", (task["updated"], task["status"], json.dumps(task, ensure_ascii=False), task["id"]))
+
+    def _event(self, task, kind, text, **extra):
+        task["events"].append({"id": secrets.token_hex(6), "kind": kind, "message": text, "created": time.time(), "run": task["run"], **extra})
+        task["events"] = task["events"][-200:]
+
+    def _visible(self, actor, task):
+        self._auth(actor)
+        if task["owner"] != actor["id"] and actor["role"] != "quan-tri":
+            raise ValueError("Không tìm thấy tác vụ trong phạm vi quyền")
+        return task
+
+    def _capacity(self, actor, creating=False):
+        if self.closed:
+            raise RuntimeError("Bộ điều phối đang dừng")
+        with self.kho.ket_noi() as db:
+            active = db.execute("SELECT count(*) FROM cong_viec_tasks WHERE status IN ('queued','running','cancelling')").fetchone()[0]
+            own = db.execute("SELECT count(*) FROM cong_viec_tasks WHERE owner=?", (actor["id"],)).fetchone()[0]
+        if active >= 16:
+            raise ValueError("Hàng đợi đã đầy; đợi tác vụ hiện tại hoàn tất")
+        if creating and own >= 100:
+            raise ValueError("Không gian đã đạt giới hạn 100 tác vụ cho danh tính này")
+
+    def create(self, actor, args):
+        self._auth(actor, True)
+        if self.model.configuration_error:
+            raise ValueError(self.model.configuration_error)
+        if not isinstance(args, dict):
+            raise ValueError("Thông tin tác vụ không hợp lệ")
+        prompt = _text(args.get("prompt"), 10)
+        template = args.get("template", "de-xuat-giai-phap")
+        if template not in TEMPLATES:
+            raise ValueError("Quy trình chưa được hỗ trợ")
+        ids = args.get("module_ids", [])
+        valid = {p["id"] for p in self.core.catalogue}
+        if not isinstance(ids, list) or len(ids) > len(valid) or any(not isinstance(x, str) or x not in valid for x in ids) or len(set(ids)) != len(ids):
+            raise ValueError("Mô-đun không tồn tại hoặc bị lặp")
+        now = time.time()
+        task = {"id": secrets.token_hex(12), "owner": actor["id"], "title": prompt[:100], "prompt": prompt,
+                "status": "queued", "created": now, "updated": now, "mode": self.model.public_status()["mode"], "template": template,
+                "module_ids": ids, "run": 1, "steps": [], "events": [], "artifacts": [],
+                "messages": [{"role": "user", "content": prompt, "created": now}], "cancel_requested": False}
+        self._event(task, "queued", "Đã nhận tác vụ. " + ("Dùng API mô hình BDSG đã cấu hình." if self.model.configured else "Chạy quy trình có kịch bản, không phải mô hình AI tự suy luận."))
+        with self.lock:
+            self._capacity(actor, True)
+            with self.kho.ket_noi() as db:
+                db.execute("INSERT INTO cong_viec_tasks VALUES (?,?,?,?,?,?)", (task["id"], task["owner"], now, now, task["status"], json.dumps(task, ensure_ascii=False)))
+            self.pool.submit(self._run, dict(actor), task["id"], self.model)
+        return {"id": task["id"], "status": "queued"}
+
+    def list(self, actor):
+        self._auth(actor)
+        with self.kho.ket_noi() as db:
+            query = "SELECT document FROM cong_viec_tasks"
+            params = ()
+            if actor["role"] != "quan-tri":
+                query += " WHERE owner=?"
+                params = (actor["id"],)
+            rows = db.execute(query + " ORDER BY created DESC LIMIT 100", params).fetchall()
+        keys = ("id", "owner", "title", "prompt", "status", "created", "updated", "mode", "template", "module_ids", "run")
+        return {"tasks": [{**{k: t[k] for k in keys}, "artifact_count": len(t["artifacts"])} for t in (json.loads(r[0]) for r in rows)]}
+
+    def detail(self, actor, task_id):
+        task_id = _text(task_id, 1, 80)
+        return self._visible(actor, self._load(task_id))
+
+    def followup(self, actor, task_id, text):
+        self._auth(actor, True)
+        if self.model.configuration_error:
+            raise ValueError(self.model.configuration_error)
+        text = _text(text, 10)
+        with self.lock:
+            task = self.detail(actor, task_id)
+            if task["status"] not in FINAL:
+                raise ValueError("Đợi tác vụ kết thúc trước khi bổ sung yêu cầu")
+            if task["run"] >= 10:
+                raise ValueError("Tác vụ đã đạt giới hạn 10 lượt")
+            self._capacity(actor)
+            task["run"] += 1
+            task["mode"] = self.model.public_status()["mode"]
+            task["messages"].append({"role": "user", "content": text, "created": time.time()})
+            task["status"], task["cancel_requested"] = "queued", False
+            self._event(task, "queued", "Đã nhận yêu cầu bổ sung; giữ lại các kết quả trước.")
+            self._save(task)
+            self.pool.submit(self._run, dict(actor), task_id, self.model)
+            return task
+
+    def cancel(self, actor, task_id):
+        self._auth(actor, True)
+        with self.lock:
+            task = self.detail(actor, task_id)
+            if task["status"] not in FINAL:
+                task["cancel_requested"] = True
+                task["status"] = "cancelled" if task["status"] == "queued" else "cancelling"
+                self._event(task, "cancel_requested", "Đã yêu cầu dừng. Lời gọi đang chạy chỉ kết thúc theo giới hạn của công cụ.")
+                self._save(task)
+            return task
+
+    def _read(self, actor, name):
+        response = self.core.goi(actor, name, {})
+        if not response.get("ok"):
+            raise RuntimeError("Công cụ đọc không sẵn sàng trong phạm vi quyền")
+        return response["ket_qua"]
+
+    def modules(self, actor):
+        if actor is None:
+            return {"modules": [{**p, "kind": "web", "mcp": {"state": "can-xac-thuc", "read_tools": [], "write_tools": []}} for p in self.core.catalogue]}
+        self._auth(actor)
+        products = self._read(actor, "nen_tang.danh_sach")["products"]
+        connections = {c["platform_id"]: c for c in self._read(actor, "nen_tang.ket_noi")["connections"]}
+        return {"modules": [{**p, "kind": "mcp-declared" if p["id"] in connections else "web",
+                             "mcp": connections.get(p["id"], {"state": "chua-cau-hinh", "read_tools": [], "write_tools": []})} for p in products]}
+
+    def _begin_step(self, task_id, name, tool=None):
+        with self.lock:
+            task = self._load(task_id)
+            if self.closed or task["cancel_requested"]:
+                task["status"] = "cancelled"
+                self._event(task, "cancelled", "Đã dừng trước bước tiếp theo.")
+                self._save(task)
+                return None
+            task["status"] = "running"
+            step = {"id": secrets.token_hex(6), "name": name, "status": "running", "started": time.time(), "finished": None, "tool": tool, "run": task["run"]}
+            task["steps"].append(step)
+            self._event(task, "step_started", name, step_id=step["id"])
+            self._save(task)
+            return step["id"]
+
+    def _finish_step(self, task_id, step_id, summary):
+        with self.lock:
+            task = self._load(task_id)
+            step = next(s for s in task["steps"] if s["id"] == step_id)
+            step.update(status="completed", finished=time.time(), summary=summary)
+            self._event(task, "step_completed", summary, step_id=step_id)
+            self._save(task)
+
+    def _choose(self, task, products):
+        if task["module_ids"]:
+            return [p for p in products if p["id"] in task["module_ids"]]
+        query = _clean(" ".join(m["content"] for m in task["messages"] if m["role"] == "user"))
+        groups = {"bat dong san": ["Bất động sản"], "thuong mai": ["Thương mại số"], "ban hang": ["Thương mại số", "Vận hành"],
+                  "nong nghiep": ["Nông nghiệp"], "trang trai": ["Nông nghiệp"], "du lich": ["Thương mại số"],
+                  "tri thuc": ["Tri thức", "Cộng đồng"], "dao tao": ["Tri thức"], "van hanh": ["Vận hành"],
+                  "cong nghe": ["AI", "AI & công nghệ", "Không gian số", "Hạ tầng dịch vụ"]}
+        picked = {g for term, values in groups.items() if term in query for g in values}
+        exact = [p for p in products if (_clean(p["name"]) != "bdsg" and _clean(p["name"]) in query) or p["group"] in picked]
+        return exact or products
+
+    def _report(self, task, products, connections):
+        selected = self._choose(task, products)
+        mapping = {c["platform_id"]: c for c in connections}
+        heading = {"de-xuat-giai-phap": "Đề xuất triển khai", "kiem-tra-ket-noi": "Đối chiếu cấu hình kết nối", "tong-quan": "Tổng quan hệ sinh thái"}[task["template"]]
+        lines = ["# " + heading + " BDSG Thanh Hoá", "", "## Nhu cầu", task["prompt"], ""]
+        if task["run"] > 1:
+            lines += ["## Yêu cầu bổ sung", task["messages"][-1]["content"], ""]
+        lines += ["## Phạm vi thực hiện", "Đây là kết quả của quy trình có kịch bản, dựa trên danh mục và cấu hình hiện tại. Không phải phản hồi từ mô hình AI. Không thực hiện thay đổi trên nền tảng bên ngoài.", "",
+                  "## Mô-đun phù hợp", "| Nền tảng | Vai trò | Liên kết | Kết nối MCP |", "|---|---|---|---|"]
+        for p in selected:
+            connection = mapping.get(p["id"])
+            state = "Đã khai báo, chưa được tác vụ kiểm tra" if connection else "Chưa cấu hình"
+            lines.append("| " + " | ".join(_cell(x) for x in (p["name"], p["purpose"], p["url"], state)) + " |")
+        lines += ["", "## Lộ trình đề xuất", "1. Tư vấn: xác định nhu cầu, người phụ trách và tiêu chí hoàn tất.",
+                  "2. Triển khai: mở các nền tảng đã chọn; quản trị nền tảng cấp endpoint MCP và quyền công cụ cần dùng.",
+                  "3. Vận hành: kiểm chứng bằng dữ liệu thử; theo dõi quyền, lỗi và nhật ký trước khi dùng dữ liệu thật.",
+                  "4. Kinh doanh: thống nhất cách bàn giao giữa các mô-đun và đo kết quả theo yêu cầu thực tế.", "",
+                  "## Bằng chứng và giới hạn", f"- Đọc danh mục qua nhân BDSG: {len(products)} mục.",
+                  f"- Đọc cấu hình đầu nối: {len(connections)} đã khai báo; số này không chứng minh kết nối thành công.",
+                  f"- Đề xuất {len(selected)} mô-đun dựa trên lựa chọn rõ ràng hoặc đối sánh từ khoá; chưa có tối ưu bằng AI.",
+                  "- Các liên kết web không tạo đăng nhập dùng chung hoặc đồng bộ dữ liệu.",
+                  "- Tác vụ chỉ đọc danh mục/cấu hình. Không gọi công cụ ghi, không gửi dữ liệu khách hàng ra ngoài."]
+        return "\n".join(lines)
+
+    def _run(self, actor, task_id, model=None):
+        # Giữ nguyên nhà cung cấp/chứng thư của lượt chạy khi chủ quản đổi cấu hình.
+        model = model or self.model
+        try:
+            step = self._begin_step(task_id, "Đọc danh mục nền tảng", "nen_tang.danh_sach")
+            if not step:
+                return
+            products = self._read(actor, "nen_tang.danh_sach")["products"]
+            self._finish_step(task_id, step, f"Đã đọc {len(products)} mục từ danh mục BDSG.")
+            step = self._begin_step(task_id, "Đối chiếu đầu nối MCP đã khai báo", "nen_tang.ket_noi")
+            if not step:
+                return
+            connections = self._read(actor, "nen_tang.ket_noi")["connections"]
+            self._finish_step(task_id, step, f"Có {len(connections)} đầu nối khai báo; chưa gọi nghiệp vụ bên ngoài.")
+            step = self._begin_step(task_id, "Mô hình AI xử lý yêu cầu" if model.configured else "Tổng hợp đề xuất và kết quả")
+            if not step:
+                return
+            with self.lock:
+                task = self._load(task_id)
+            if model.configured:
+                prompt = "\n\n".join(m["content"] for m in task["messages"] if m["role"] == "user")
+                context = {"products": self._choose(task, products), "connections": connections,
+                           "previous_artifacts": [a["content"] for a in task["artifacts"][-2:]], "template": task["template"]}
+
+                def on_event(kind, message, **extra):
+                    with self.lock:
+                        current = self._load(task_id)
+                        self._event(current, kind, message, **extra)
+                        self._save(current)
+
+                def cancelled():
+                    with self.lock:
+                        return self.closed or self._load(task_id)["cancel_requested"]
+
+                content = model.run(prompt, context, self.core, actor, on_event, cancelled)
+                if cancelled():
+                    raise RuntimeError("Tác vụ đã được yêu cầu dừng")
+            else:
+                content = self._report(task, products, connections)
+            with self.lock:
+                task = self._load(task_id)
+                task["artifacts"].append({"id": secrets.token_hex(8), "name": "de-xuat-thanhhoa-luot-" + str(task["run"]) + ".md", "title": "Báo cáo tác vụ", "mime_type": "text/markdown", "content": content, "created": time.time(), "run": task["run"]})
+                self._save(task)
+            self._finish_step(task_id, step, "Đã lưu báo cáo riêng tư cho tác vụ.")
+            with self.lock:
+                task = self._load(task_id)
+                task["status"] = "cancelled" if task["cancel_requested"] else "completed"
+                message = "Đã lưu kết quả do API mô hình đã cấu hình tạo; các công cụ đọc vẫn đi qua nhân và quyền hiện tại." if model.configured else "Đã tạo báo cáo từ danh mục và cấu hình thực tế. Chưa chạy mô hình AI hoặc thao tác nghiệp vụ bên ngoài."
+                task["messages"].append({"role": "assistant", "content": message, "created": time.time()})
+                self._event(task, task["status"], message)
+                self._save(task)
+        except Exception:
+            # Không ghi exception công cụ vào thông điệp công khai: có thể chứa endpoint/chứng thư.
+            with self.lock:
+                task = self._load(task_id)
+                task["status"] = "cancelled" if task["cancel_requested"] else "failed"
+                for s in task["steps"]:
+                    if s["status"] == "running":
+                        s.update(status=task["status"], finished=time.time())
+                self._event(task, task["status"], "Không hoàn tất bước hiện tại. Kiểm quyền và cấu hình rồi bổ sung yêu cầu để thử lại.")
+                self._save(task)
+
+    def close(self):
+        self.closed = True
+        self.pool.shutdown(wait=True, cancel_futures=False)

@@ -48,6 +48,8 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("index.html", dau)
     ghi("portal.css", doc_tep("khong-gian/giao-dien.css"))
     ghi("portal.js", doc_tep("khong-gian/ung-dung.js"))
+    ghi("cong-viec.css", doc_tep("khong-gian/cong-viec.css"))
+    ghi("cong-viec.js", doc_tep("khong-gian/cong-viec.js"))
     ghi("bdsg-mark.svg", doc_tep("khong-gian/bdsg-mark.svg"))
     ghi("bang-dieu-khien.js", doc_tep("bang-dieu-khien/bang-dieu-khien.js"))
     # Chỉ xuất các trường công khai đã chọn, không chép cấu hình tuỳ ý vào docroot.
