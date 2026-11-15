@@ -20,6 +20,7 @@ from cau_hinh_mo_hinh import CauHinhMoHinh
 from cau_hinh_ket_noi import CauHinhKetNoi
 from du_an import DuAn
 from tai_lieu import TaiLieu
+from van_phong import VanPhong
 from runtime_tac_vu import RuntimeTacVu
 from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
@@ -54,6 +55,7 @@ class UngDung:
         self.projects = DuAn(self.kho)
         self.tasks.projects = self.projects
         self.documents = TaiLieu(self.kho, self.projects)
+        self.office = VanPhong(self.kho, self.projects)
         self.tasks.documents = self.documents
         self.runtime = RuntimeTacVu(self.kho, self.tasks)
         self.browser = TrinhDuyet(self.kho, self.tasks)

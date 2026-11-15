@@ -43,15 +43,21 @@ class DuAn:
         return fields
 
     def _get(self, actor, identifier, write=False, owner=False):
+        return self.authorize(actor, identifier, write=write, owner=owner)
+
+    def authorize(self, actor, identifier, write=False, owner=False, db=None):
+        """Cho mô-đun dùng cùng giao dịch khi kiểm quyền và ghi dữ liệu dự án."""
         self._auth(actor)
         if not isinstance(identifier, str) or len(identifier) > 80:
             raise ValueError("Không tìm thấy dự án trong phạm vi quyền")
-        with self.kho.ket_noi() as db:
-            row = db.execute("SELECT * FROM du_an WHERE id=?", (identifier,)).fetchone()
-            member = db.execute(
-                "SELECT role FROM du_an_members WHERE project_id=? AND identity=?",
-                (identifier, actor["id"]),
-            ).fetchone()
+        if db is None:
+            with self.kho.ket_noi() as connection:
+                return self.authorize(actor, identifier, write, owner, connection)
+        row = db.execute("SELECT * FROM du_an WHERE id=?", (identifier,)).fetchone()
+        member = db.execute(
+            "SELECT role FROM du_an_members WHERE project_id=? AND identity=?",
+            (identifier, actor["id"]),
+        ).fetchone()
         privileged = row and (
             row["owner"] == actor["id"] or actor["role"] == "quan-tri"
         )

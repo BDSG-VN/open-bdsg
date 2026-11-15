@@ -632,6 +632,23 @@ class DieuPhoi:
         integer = {"type": "integer"}
         actor = lambda: self.actor.get()
         declarations = {
+            "van_phong": [
+                ("trang_thai", lambda a: app.office.status(actor(), a), False,
+                 {"project_id": text}, ["project_id"]),
+                ("danh_sach", lambda a: app.office.list(actor(), a), False,
+                 {"project_id": text, "trashed": boolean}, ["project_id"]),
+                ("tao", lambda a: app.office.create(actor(), a), True,
+                 {"project_id": text, "name": text, "content_base64": text},
+                 ["project_id", "name", "content_base64"]),
+                ("doc", lambda a: app.office.read(actor(), a), False,
+                 {"id": text, "version": integer}, ["id"]),
+                ("lich_su", lambda a: app.office.history(actor(), a), False,
+                 {"id": text}, ["id"]),
+                ("cap_nhat", lambda a: app.office.update(actor(), a), True,
+                 {"id": text, "expected_revision": integer, "action": text,
+                  "name": text, "content_base64": text, "version": integer},
+                 ["id", "expected_revision", "action"]),
+            ],
             "tai_lieu": [
                 (
                     "danh_sach",

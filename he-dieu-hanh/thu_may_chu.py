@@ -89,6 +89,32 @@ class ThuCong(unittest.TestCase):
         self.assertTrue(body["ok"],body)
         self.assertEqual(self.request("/mcp", {"x":"x"*17000}, self.mcp_headers("agent-a"))[0],400)
 
+    def test_office_web_upload_uses_authenticated_actor_and_existing_body_limit(self):
+        import base64
+        project = self.result(self.rpc("operator-a", "du_an.tao", {"name": "Office HTTP thu"}))
+        _, _, headers = self.request("/api/login", {
+            "username": "chu-quan", "password": "mat-khau-chi-trong-test",
+        }, {"Origin": self.app.origin})
+        hdr = {"Origin": self.app.origin, "Cookie": headers["Set-Cookie"].split(";")[0]}
+        raw = b"x" * 32768
+        payload = {"name": "van_phong.tao", "arguments": {
+            "project_id": project["id"], "name": "limit.txt",
+            "content_base64": base64.b64encode(raw).decode(),
+        }}
+        self.assertEqual(self.request("/api/tools", payload)[0], 403)
+        status, body, _ = self.request("/api/tools", payload, hdr)
+        self.assertEqual(status, 200)
+        self.assertTrue(body["ok"], body)
+        file = body["ket_qua"]
+        self.assertEqual(file["owner"], "chu-quan")
+        read = self.result(self.rpc("operator-a", "van_phong.doc", {"id": file["id"]}))
+        self.assertEqual(base64.b64decode(read["content_base64"]), raw)
+        self.assertTrue(self.rpc("agent-a", "van_phong.doc", {"id": file["id"]})["isError"])
+        payload["arguments"]["actor"] = {"id": "operator-a", "role": "quan-tri"}
+        forged = self.request("/api/tools", payload, hdr)[1]
+        self.assertTrue(forged["ok"], forged)
+        self.assertEqual(forged["ket_qua"]["owner"], "chu-quan")
+
     def test_web_session_csrf_logout(self):
         payload = {"username": "chu-quan", "password": "mat-khau-chi-trong-test"}
         self.assertEqual(self.request("/api/login", payload)[0], 403)
