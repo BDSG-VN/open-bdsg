@@ -11,7 +11,7 @@ async function render(projects) {
     main: {innerHTML: ''}, document: {addEventListener() {}},
     $: selector => selector === '#studio-content' ? content : null,
     esc: value => String(value ?? ''), icon: () => '', date: () => '',
-    tool: async name => name === 'du_an.danh_sach' ? {projects} : {tasks: []},
+    tool: async name => name === 'du_an.danh_sach' ? {projects} : name === 'tai_lieu.danh_sach' ? {documents: []} : {tasks: []},
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'studio.js'),'utf8'), context);
   await context.window.BDSGStudio.open();
