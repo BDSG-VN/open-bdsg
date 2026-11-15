@@ -64,6 +64,11 @@ class VanPhong:
                     UNIQUE(owner,request_key)
                 );
                 CREATE INDEX IF NOT EXISTS office_upload_project ON office_uploads(project_id,state,expires);
+                CREATE TABLE IF NOT EXISTS office_upload_parts(
+                    upload_id TEXT NOT NULL REFERENCES office_uploads(id) ON DELETE CASCADE,
+                    offset INTEGER NOT NULL, size INTEGER NOT NULL, sha256 TEXT NOT NULL,
+                    PRIMARY KEY(upload_id,offset)
+                );
                 CREATE TABLE IF NOT EXISTS office_checks(
                     file_id TEXT NOT NULL, version INTEGER NOT NULL, result TEXT NOT NULL,
                     PRIMARY KEY(file_id,version)
@@ -411,19 +416,31 @@ class VanPhong:
             with db.blobopen("office_uploads", "content", row["blob_id"]) as blob:
                 blob.seek(offset)
                 if offset < row["received"]:
+                    recorded = db.execute(
+                        "SELECT size,sha256 FROM office_upload_parts WHERE upload_id=? AND offset=?",
+                        (row["id"], offset),
+                    ).fetchone()
                     if (
-                        offset + len(raw) > row["received"]
+                        not recorded
+                        or recorded["size"] != len(raw)
+                        or recorded["sha256"] != hashlib.sha256(raw).hexdigest()
+                        or offset + len(raw) > row["received"]
                         or blob.read(len(raw)) != raw
                     ):
                         raise LoiXungDotVanPhong("Phần gửi lại không khớp")
                     return self._upload_public(row)
                 blob.write(raw)
+            db.execute(
+                "INSERT INTO office_upload_parts VALUES (?,?,?,?)",
+                (row["id"], offset, len(raw), hashlib.sha256(raw).hexdigest()),
+            )
             row["received"] += len(raw)
             row["expires"] = time.time() + self.UPLOAD_TTL
             db.execute(
                 "UPDATE office_uploads SET received=?,expires=? WHERE id=?",
                 (row["received"], row["expires"], row["id"]),
             )
+            self._audit(db, actor, "office-ghi-phan", row["id"] + ":" + str(offset))
             return self._upload_public(row)
 
     def finish_upload(self, actor, args):

@@ -203,6 +203,11 @@
   margin: 12px 0;
   line-height: 1.5;
 }
+.office-notice.form-error {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #9b2c2c;
+}
 .office-table {
   width: 100%;
   border-collapse: collapse;

@@ -15,6 +15,7 @@
     dirty = false;
   let transfers = [],
     transfer = null;
+  let retryUpload = null;
   const urls = new Set();
   const current = () => location.hash === "#office" && Boolean(state.user);
   const ticket = () => ({
@@ -35,17 +36,26 @@
         ? `${(n / 1024).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} KiB`
         : `${(n / 1048576).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} MiB`;
   async function call(name, args = {}) {
-    const result = await api(
-      name === "ghi_phan" ? "/api/upload" : "/api/tools",
-      {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    let result;
+    try {
+      result = await api(name === "ghi_phan" ? "/api/upload" : "/api/tools", {
         method: "POST",
+        signal: controller.signal,
         body: JSON.stringify(
           name === "ghi_phan"
             ? { destination: "office-part", ...args }
             : { name: "van_phong." + name, arguments: args },
         ),
-      },
-    );
+      });
+    } catch (error) {
+      if (error.name === "AbortError" || error instanceof TypeError)
+        throw new Error("Kết nối bị gián đoạn hoặc phản hồi quá chậm.");
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
     if (!result.ok) {
       const messages = {
         LoiXungDotVanPhong:
@@ -177,6 +187,7 @@
       .forEach((e) => (e.disabled = value));
   }
   function reset() {
+    retryUpload = null;
     generation++;
     closeDialog(true);
     projects = [];
@@ -203,6 +214,7 @@
         return false;
       }
       generation++;
+      retryUpload = null;
       closeDialog(true);
       files = [];
       access = null;
@@ -442,22 +454,42 @@
         }
         const inventory = await call("phien_tai", { project_id: selected });
         if (!valid(t)) return;
+        const previous =
+          retryUpload &&
+          retryUpload.user === t.user &&
+          retryUpload.project === t.project &&
+          retryUpload.name === file.name &&
+          retryUpload.total === file.size &&
+          retryUpload.sha256 === digest
+            ? retryUpload
+            : null;
         let session = inventory.uploads.find(
           (u) =>
+            ((previous?.id && u.id === previous.id) || u.state === "pending") &&
             u.name === file.name &&
             u.total === file.size &&
             u.sha256 === digest,
         );
+        retryUpload = {
+          user: t.user,
+          project: t.project,
+          name: file.name,
+          total: file.size,
+          sha256: digest,
+          key: previous?.key || crypto.randomUUID(),
+          id: session?.id || null,
+        };
         if (!session)
           session = await call("bat_dau_tai", {
             project_id: selected,
             name: file.name,
             total: file.size,
             sha256: digest,
-            request_key: crypto.randomUUID(),
+            request_key: retryUpload.key,
           });
         if (!valid(t)) return;
         operation.id = session.id;
+        retryUpload.id = session.id;
         if (session.state !== "complete") {
           progress("Đang tải lên", session.received, file.size);
           while (session.received < file.size) {
@@ -481,6 +513,7 @@
           if (operation.cancel) {
             const cancelled = await call("huy_tai", { id: session.id });
             if (!valid(t)) return;
+            retryUpload = null;
             busy = false;
             await load();
             if (valid(t))
@@ -496,6 +529,7 @@
         } else result = { file: { id: session.file_id }, completed: true };
       }
       if (!valid(t)) return;
+      retryUpload = null;
       busy = false;
       dirty = false;
       closeDialog(true);
@@ -545,6 +579,7 @@
     try {
       const result = await call("huy_tai", { id });
       if (!valid(t)) return;
+      if (retryUpload?.id === id) retryUpload = null;
       busy = false;
       await load();
       if (valid(t))
@@ -686,7 +721,12 @@
     if (event.target.closest("[data-office-close]")) return closeDialog();
     if (!current()) return;
     if (event.target.closest("[data-office-stop]")) {
-      if (transfer) transfer.cancel = true;
+      if (transfer) {
+        transfer.cancel = true;
+        const button = event.target.closest("[data-office-stop]");
+        button.disabled = true;
+        button.textContent = "Đang dừng…";
+      }
       return;
     }
     const cancelling = event.target.closest("[data-office-cancel]");

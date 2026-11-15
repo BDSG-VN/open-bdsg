@@ -114,6 +114,16 @@ class ThuTruyenTep(unittest.TestCase):
         self.assertEqual(self.part(upload, b"abc", 0)["received"], 3)
         self.denied(
             "van_phong.ghi_phan",
+            {"id": upload["id"], "offset": 1, "content_base64": "YmM="},
+        )
+        events = [
+            e
+            for e in self.app.kho.hoat_dong(A["id"])
+            if e["action"] == "office-ghi-phan"
+        ]
+        self.assertEqual(len(events), 1)
+        self.denied(
+            "van_phong.ghi_phan",
             {"id": upload["id"], "offset": 0, "content_base64": "eHl6"},
         )
         self.denied(
@@ -267,6 +277,42 @@ class ThuTruyenTep(unittest.TestCase):
 
 
 class ThuKiemDang(unittest.TestCase):
+    def test_content_xml_entities_depth_and_active_declarations_are_rejected(self):
+        declaration = '<!DOCTYPE x [<!ENTITY y "x">]><document>&y;</document>'
+        variants = [
+            office_fixture({"word/document.xml": declaration}),
+            office_fixture(
+                {
+                    "word/document.xml": (
+                        '<?xml version="1.0" encoding="UTF-16"?>' + declaration
+                    ).encode("utf-16")
+                }
+            ),
+            office_fixture({"word/extra.xml": declaration}),
+            office_fixture({"word/document.xml": "<x>" * 129 + "</x>" * 129}),
+            office_fixture(
+                {
+                    "word/a.bin": b"x",
+                    "[Content_Types].xml": '<Types><Override ContentType="application/vnd.ms-office.activeX"/></Types>',
+                }
+            ),
+            office_fixture(
+                {"word/a.bin": b"x"},
+                rels='<Relationships><Relationship Type="http://schemas.example/oleObject"/></Relationships>',
+            ),
+        ]
+        for raw in variants:
+            with self.subTest(size=len(raw)), self.assertRaises(LoiDinhDangVanPhong):
+                kiem_tep("test.docx", raw)
+
+    def test_large_content_xml_is_checked_without_a_dom(self):
+        value = office_fixture(
+            {"word/document.xml": "<document><p>" + "x" * 200000 + "</p></document>"}
+        )
+        self.assertEqual(
+            kiem_tep("test.docx", value)["format_state"], "cau-truc-co-ban"
+        )
+
     def test_three_formats_and_external_warning_without_fetch(self):
         for suffix, root in (
             ("docx", "word/document.xml"),

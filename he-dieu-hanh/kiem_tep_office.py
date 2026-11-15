@@ -1,16 +1,64 @@
 """Kiểm cấu trúc có giới hạn; không phải bộ quét virus hoặc trình chuyển đổi."""
 
 import io
-import re
 import struct
 import zipfile
 import zlib
 from pathlib import PurePosixPath
-from xml.etree import ElementTree
+from xml.parsers import expat
 
 
 class LoiDinhDangVanPhong(ValueError):
     """Tệp không đáp ứng điều kiện nhận của kho Office."""
+
+
+def _kiem_xml(archive, item, result, budget):
+    if item.file_size > 16 * 1024 * 1024:
+        raise ValueError("xml-size")
+    parser = expat.ParserCreate(namespace_separator="}")
+    depth = 0
+
+    def reject(*_args):
+        raise ValueError("xml-declaration")
+
+    def start(_name, attributes):
+        nonlocal depth
+        depth += 1
+        budget[0] += 1
+        if depth > 128 or budget[0] > 1000000:
+            raise ValueError("xml-complexity")
+        content_type = attributes.get("ContentType", "").lower()
+        relationship = attributes.get("Type", "").lower()
+        if any(
+            token in content_type or token in relationship
+            for token in ("macroenabled", "vbaproject", "activex", "oleobject")
+        ) or relationship.endswith("/package"):
+            raise ValueError("active-declaration")
+        if (
+            attributes.get("TargetMode", "").lower() == "external"
+            and "co-lien-ket-ngoai" not in result["warnings"]
+        ):
+            result["warnings"].append("co-lien-ket-ngoai")
+
+    def end(_name):
+        nonlocal depth
+        depth -= 1
+
+    # Callback chặn ngay ở khai báo, kể cả XML UTF-16; không xây DOM hay tải URL.
+    parser.StartDoctypeDeclHandler = reject
+    parser.EntityDeclHandler = reject
+    parser.ExternalEntityRefHandler = reject
+    parser.SetParamEntityParsing(expat.XML_PARAM_ENTITY_PARSING_NEVER)
+    parser.StartElementHandler = start
+    parser.EndElementHandler = end
+    consumed = 0
+    with archive.open(item) as source:
+        while data := source.read(65536):
+            consumed += len(data)
+            if consumed > 16 * 1024 * 1024:
+                raise ValueError("xml-size")
+            parser.Parse(data, False)
+    parser.Parse(b"", True)
 
 
 def kiem_tep(name, raw):
@@ -71,6 +119,7 @@ def kiem_tep(name, raw):
                     or ".." in path.parts
                     or "\\" in item.filename
                     or len(item.filename) > 512
+                    or any(ord(c) < 32 for c in item.orig_filename)
                 ):
                     raise ValueError("path")
                 names.add(item.filename)
@@ -91,38 +140,17 @@ def kiem_tep(name, raw):
                 raise ValueError("structure")
             if archive.testzip() is not None:
                 raise ValueError("crc")
+            budget = [0]
             for item in items:
-                if (
-                    item.filename != "[Content_Types].xml"
-                    and not item.filename.endswith(".rels")
-                ):
-                    continue
-                if item.file_size > 131072:
-                    raise ValueError("xml-size")
-                with archive.open(item) as source:
-                    xml = source.read(131073).decode("utf-8-sig")
-                if (
-                    len(xml) > 131072
-                    or "\0" in xml
-                    or re.search(r"<!\s*(DOCTYPE|ENTITY)", xml, re.IGNORECASE)
-                ):
-                    raise ValueError("xml")
-                tree = ElementTree.fromstring(xml)
-                for node in tree.iter():
-                    if "macroenabled" in node.attrib.get("ContentType", "").lower():
-                        raise ValueError("macro")
-                    if (
-                        node.attrib.get("TargetMode", "").lower() == "external"
-                        and "co-lien-ket-ngoai" not in result["warnings"]
-                    ):
-                        result["warnings"].append("co-lien-ket-ngoai")
+                if item.filename.lower().endswith((".xml", ".rels")):
+                    _kiem_xml(archive, item, result, budget)
     except (
         ValueError,
         UnicodeError,
         zipfile.BadZipFile,
         OSError,
         RuntimeError,
-        ElementTree.ParseError,
+        expat.ExpatError,
         struct.error,
         zlib.error,
     ):

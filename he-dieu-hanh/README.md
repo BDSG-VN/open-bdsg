@@ -6,6 +6,7 @@ xem [V15](V15-CHATGPT-VA-HO-TRO.md).
 
 Văn phòng bản đầu: [V17 — giao diện tệp, văn bản, quyền và phiên bản](V17-VAN-PHONG.md).
 Có sửa TXT/MD/CSV; chưa có editor DOCX/XLSX/PPTX hoặc kết nối Google.
+Tiếp nối: [V18 — tệp 8 MiB, truyền từng phần và tiếp tục sau gián đoạn](V18-TRUYEN-TEP.md).
 
 Nâng cấp tích hợp thử nghiệm: [Xưởng công việc V6–V11](V6-V11.md).
 Tiếp nối ngày 15/11/2026: [V12 — phê duyệt thao tác trình duyệt](V12-PHE-DUYET-TRINH-DUYET.md).
