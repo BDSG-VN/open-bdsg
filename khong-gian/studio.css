@@ -9,19 +9,19 @@
   margin: 16px 0 30px;
 }
 .studio-tabs button {
-  border: 1px solid #dce6e3;
+  border: 1px solid var(--line);
   background: #fff;
   padding: 11px 16px;
   border-radius: 100px;
   font: inherit;
   font-size: 13px;
-  color: #53645f;
+  color: var(--text);
   cursor: pointer;
 }
 .studio-tabs button[aria-pressed="true"] {
-  background: #124f48;
+  background: var(--action);
   color: #fff;
-  border-color: #124f48;
+  border-color: var(--focus);
 }
 .studio-section-heading {
   margin: 10px 0 22px;
@@ -29,11 +29,11 @@
 .studio-section-heading h2 {
   font-size: 28px;
   letter-spacing: -0.8px;
-  color: #183e38;
+  color: var(--ink);
 }
 .studio-section-heading p,
 .studio-note {
-  color: #6b7e77;
+  color: var(--text);
   line-height: 1.7;
   font-size: 13px;
   max-width: 820px;
@@ -41,7 +41,7 @@
 .studio-form,
 .studio-card {
   background: #fff;
-  border: 1px solid #e0e8e5;
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 24px;
   margin: 18px 0;
@@ -54,7 +54,7 @@
 .studio-page label {
   display: grid;
   gap: 8px;
-  color: #38564b;
+  color: var(--ink);
   font-size: 13px;
 }
 .studio-page input,
@@ -62,10 +62,10 @@
 .studio-page textarea {
   max-width: 100%;
   min-width: 0;
-  border: 1px solid #dce6e1;
+  border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
-  color: #26473c;
+  color: var(--ink);
   padding: 12px;
   font: inherit;
 }
@@ -99,7 +99,7 @@
   justify-content: space-between;
   padding: 20px;
   background: #fff;
-  border: 1px solid #e0e8e5;
+  border: 1px solid var(--line);
   border-radius: 14px;
   min-width: 0;
 }
@@ -116,16 +116,16 @@
 }
 .studio-row small {
   font-size: 12px;
-  color: #73867c;
+  color: var(--text);
 }
 .studio-row code,
 .studio-card code {
   font-size: 10px;
-  color: #7e9088;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .studio-page pre {
-  background: #f2f6f4;
+  background: var(--surface-subtle);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   padding: 18px;
@@ -139,23 +139,23 @@
   padding: 40px;
   text-align: center;
   background: #fff;
-  border: 1px dashed #cfddd7;
+  border: 1px dashed var(--line);
   border-radius: 16px;
-  color: #6b7e77;
+  color: var(--text);
 }
 .studio-browser-image {
   width: 100%;
   height: auto;
-  border: 1px solid #dce6e1;
+  border: 1px solid var(--line);
   border-radius: 12px;
   margin: 16px 0;
 }
 .studio-page h3 {
-  color: #254c3e;
+  color: var(--ink);
 }
 .studio-card > p {
   font-size: 13px;
-  color: #71867b;
+  color: var(--text);
 }
 .studio-page details > summary {
   cursor: pointer;
@@ -200,7 +200,7 @@
 }
 .bdsg-execution-options input[type="text"],
 #bdsg-browser-hosts {
-  border: 1px solid #dce6e1;
+  border: 1px solid var(--line);
   border-radius: 9px;
   padding: 12px;
   width: 100%;
@@ -213,7 +213,7 @@
 }
 .bdsg-project-scope summary {
   cursor: pointer;
-  color: #28594b;
+  color: var(--ink);
 }
 .bdsg-project-scope details[open] > summary {
   margin-bottom: 10px;

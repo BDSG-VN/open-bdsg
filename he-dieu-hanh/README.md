@@ -2,6 +2,10 @@
 
 Nâng cấp tích hợp thử nghiệm: [Xưởng công việc V6–V11](V6-V11.md).
 Tiếp nối ngày 15/11/2026: [V12 — phê duyệt thao tác trình duyệt](V12-PHE-DUYET-TRINH-DUYET.md).
+Giao diện V13 ngày 15/11/2026 áp dụng Impeccable và tham chiếu Manus theo yêu
+cầu chủ quản: nền trung tính, nút đen, tiêu đề serif tiếng Việt và ô giao việc
+làm trọng tâm. Quy chuẩn tại [DESIGN.md](../DESIGN.md), ngữ cảnh sản phẩm tại
+[PRODUCT.md](../PRODUCT.md). Phông Lora phục vụ cùng tên miền, kèm giấy phép OFL.
 
 Bản thử nghiệm thực thi mới: [Tác vụ, mô-đun và cấu hình OpenAI/Claude](THUC-THI-VA-MO-DUN.md).
 Cơ sở tham khảo và giới hạn phép phân tích REA: [Đối chiếu Manus](DOI-CHIEU-MANUS.md).

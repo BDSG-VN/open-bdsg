@@ -170,7 +170,7 @@ function date(value) {
     : "Chưa đo";
 }
 function heading(label, title, description, action = "") {
-  return `<div class="page-heading"><div><span class="eyebrow">${esc(label)}</span><h1>${esc(title)}</h1><p>${esc(description)}</p></div>${action}</div>`;
+  return `<div class="page-heading"><div><h1>${esc(title)}</h1><p>${esc(description)}</p></div>${action}</div>`;
 }
 function webState(p) {
   const s = p.web?.state;
@@ -230,7 +230,7 @@ function overview() {
       "Một không gian điều phối công nghệ và phát triển kinh doanh tại Thanh Hoá.",
       `<span class="date-label">${esc(new Intl.DateTimeFormat("vi-VN", { dateStyle: "long", timeZone: "Asia/Ho_Chi_Minh" }).format(new Date()))}</span>`,
     ) +
-    `<section class="hero"><div class="hero-copy"><span class="eyebrow">HỆ SINH THÁI BDSG · KHÔNG GIAN THANH HOÁ</span><h2>Công nghệ kết nối.<br><span>Kinh doanh rộng mở.</span></h2><p>Tiếp cận các nền tảng BDSG, kết nối đúng lĩnh vực và đưa nhu cầu của bạn đi từ ý tưởng đến hoạt động kinh doanh.</p><div class="hero-buttons"><a class="button white" href="#platforms">Khám phá nền tảng ${icon("arrow")}</a><button class="button outline-light" data-new-request>${icon("plus")} Tạo yêu cầu kinh doanh</button></div></div><div class="orbit" aria-hidden="true"><div class="orbit-circle"></div><div class="orbit-center"><img src="/bdsg-mark.svg" alt=""></div><span class="orbit-node a">${icon("briefcase")}Kinh doanh</span><span class="orbit-node b">${icon("grid")}Nền tảng</span><span class="orbit-node c">${icon("spark")}Agent</span><span class="orbit-node d">${icon("link")}Kết nối</span><span class="orbit-chip">BDSG THANH HOÁ</span></div></section>` +
+    `<section class="hero"><div class="hero-copy"><h2>Công nghệ kết nối.<br><span>Kinh doanh rộng mở.</span></h2><p>Tiếp cận các nền tảng BDSG, kết nối đúng lĩnh vực và đưa nhu cầu của bạn đi từ ý tưởng đến hoạt động kinh doanh.</p><div class="hero-buttons"><a class="button white" href="#platforms">Khám phá nền tảng ${icon("arrow")}</a><button class="button outline-light" data-new-request>${icon("plus")} Tạo yêu cầu kinh doanh</button></div></div></section>` +
     `<section class="stats" aria-label="Tổng quan không gian"><div class="stat"><div class="stat-top">Nền tảng trong danh mục ${icon("grid")}</div><strong>${state.products.length}</strong><small>Mở từ một không gian duy nhất</small></div><div class="stat"><div class="stat-top">Có phản hồi trang web ${icon("globe")}</div><strong>${state.checkedAt ? online : "—"}</strong><small>${state.checkedAt ? "Kiểm tra " + date(state.checkedAt) : "Chưa có lần đo kết nối"}</small></div><div class="stat"><div class="stat-top">Yêu cầu đang quản lý ${icon("briefcase")}</div><strong>${state.user ? state.requests.length : "—"}</strong><small>${state.user ? "Dữ liệu trong không gian của bạn" : "Đăng nhập để xem công việc"}</small></div><div class="stat"><div class="stat-top">Đầu nối MCP nghiệp vụ ${icon("link")}</div><strong>${state.user ? state.connections.length : "—"}</strong><small>${state.user ? "Số đầu nối đã khai báo" : "Đăng nhập để xem kết nối"}</small></div></section>` +
     section(
       state.saved.length ? "Nền tảng đã lưu" : "Bắt đầu cùng hệ sinh thái",

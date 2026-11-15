@@ -38,7 +38,7 @@
   }
   async function open() {
     const token = ++revision;
-    main.innerHTML = `<section class="bdsg-work-page studio-page"><div class="bdsg-work-page-heading"><div><span class="eyebrow">TỪ MỤC TIÊU ĐẾN KẾT QUẢ</span><h1>Xưởng công việc Thanh Hoá.</h1><p>Tài liệu, công cụ và những quyết định cần bạn ở cùng một nơi.</p></div><a class="button primary" href="#work">${icon("plus")}Giao việc mới</a></div>${
+    main.innerHTML = `<section class="bdsg-work-page studio-page"><div class="bdsg-work-page-heading"><div><h1>Xưởng công việc Thanh Hoá.</h1><p>Tài liệu, công cụ và những quyết định cần bạn ở cùng một nơi.</p></div><a class="button primary" href="#work">${icon("plus")}Giao việc mới</a></div>${
       state.user
         ? `<nav class="studio-tabs" aria-label="Công cụ làm việc">${Object.entries(
             tabs,

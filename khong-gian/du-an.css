@@ -18,8 +18,8 @@
   display: flex;
   gap: 6px;
   padding: 5px;
-  background: #eaf0ed;
-  border: 1px solid #e1e9e4;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
   border-radius: 10px;
 }
 .project-view-tabs button {
@@ -31,16 +31,16 @@
   border-radius: 7px;
   padding: 10px 13px;
   font-size: 13px;
-  color: #74877c;
+  color: var(--text);
   white-space: nowrap;
 }
 .project-view-tabs button.active {
   background: #fff;
-  color: #226354;
-  box-shadow: 0 2px 7px #173d2d0b;
+  color: var(--ink);
+  box-shadow: 0 2px 7px #0000000b;
 }
 .project-view-tabs span {
-  background: #e6eee8;
+  background: var(--surface-subtle);
   padding: 1px 6px;
   border-radius: 5px;
   font-size: 11px;
@@ -77,8 +77,8 @@
   width: 43px;
   height: 43px;
   border-radius: 12px;
-  background: #edf5ef;
-  color: #4f8065;
+  background: var(--surface-subtle);
+  color: var(--text);
 }
 .project-card-icon svg {
   width: 21px;
@@ -95,7 +95,7 @@
 .project-card-summary {
   font-size: 13px;
   line-height: 1.85;
-  color: #829187;
+  color: var(--muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   min-height: 48px;
@@ -106,7 +106,7 @@
   gap: 12px;
   flex-wrap: wrap;
   font-size: 11px;
-  color: #95a398;
+  color: var(--muted);
   padding-bottom: 17px;
   border-bottom: 1px solid var(--line);
 }
@@ -135,13 +135,13 @@
   align-items: center;
   gap: 7px;
   font-size: 12px;
-  color: #6d8a78;
+  color: var(--text);
   padding: 16px 0 0;
   cursor: pointer;
   list-style: none;
 }
 .project-context summary:focus-visible {
-  outline: 2px solid #6eb3a9;
+  outline: 2px solid var(--line);
   outline-offset: 4px;
 }
 .project-context summary::-webkit-details-marker {
@@ -156,21 +156,21 @@
 }
 .project-context > div {
   padding: 16px;
-  background: #f6f9f6;
+  background: var(--surface-subtle);
   border-radius: 9px;
-  border: 1px solid #e5ede5;
+  border: 1px solid var(--line);
 }
 .project-context strong {
   font-size: 12px;
   font-weight: 650;
-  color: #64806c;
+  color: var(--text);
 }
 .project-context p,
 .project-context pre {
   font-family: inherit;
   font-size: 13px;
   line-height: 1.8;
-  color: #7b8c7e;
+  color: var(--text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   max-height: 300px;
@@ -179,7 +179,7 @@
 }
 .project-context p.project-context-note {
   font-size: 11px;
-  border-top: 1px solid #e3eae2;
+  border-top: 1px solid var(--line);
   margin: 13px 0 0;
   padding-top: 12px;
 }
@@ -221,7 +221,7 @@
 }
 .project-dialog-description {
   font-size: 12px;
-  color: #88978d;
+  color: var(--muted);
   line-height: 1.85;
 }
 .project-dialog textarea {
@@ -341,7 +341,7 @@
   }
 }
 .bdsg-project-scope {
-  border-top: 1px solid var(--line, #e5e7eb);
+  border-top: 1px solid var(--line, var(--line));
   margin-top: 18px;
   padding: 18px 20px 20px;
   display: grid;
@@ -356,7 +356,7 @@
 .bdsg-project-scope select {
   width: 100%;
   padding: 11px;
-  border: 1px solid var(--line, #e5e7eb);
+  border: 1px solid var(--line, var(--line));
   border-radius: 10px;
   background: var(--surface, #fff);
   color: inherit;
@@ -373,11 +373,11 @@
   flex: 0 0 auto;
 }
 .bdsg-project-scope small {
-  color: var(--muted, #64748b);
+  color: var(--muted, var(--text));
   line-height: 1.6;
 }
 .bdsg-project-scope a {
-  color: var(--accent, #0f766e);
+  color: var(--accent, var(--ink));
 }
 @media (max-width: 600px) {
   .bdsg-project-scope select {

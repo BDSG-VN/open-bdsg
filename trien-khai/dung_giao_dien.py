@@ -10,11 +10,11 @@ GOC = Path(__file__).resolve().parents[1]
 TRANG = {"os": "trang-openos", "tac-nhan": "trang-agent", "web3": "trang-web3"}
 
 
-def doc_tep(duong_dan):
+def doc_tep(duong_dan, nhi_phan=False):
     p = GOC / duong_dan
     if p.is_symlink() or not p.is_file():
         raise ValueError("Tệp nguồn không phải tệp thường: " + str(p))
-    return p.read_text(encoding="utf-8")
+    return p.read_bytes() if nhi_phan else p.read_text(encoding="utf-8")
 
 
 def dung(cau_hinh, thu_muc_ra):
@@ -36,7 +36,10 @@ def dung(cau_hinh, thu_muc_ra):
     def ghi(ten, noi_dung):
         p = dich / ten
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(noi_dung, encoding="utf-8")
+        if isinstance(noi_dung, bytes):
+            p.write_bytes(noi_dung)
+        else:
+            p.write_text(noi_dung, encoding="utf-8")
 
     goc_url = "https://" + cau_hinh["ten_mien"]
     dau = doc_tep("khong-gian/index.html")
@@ -56,6 +59,10 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("du-an.css", doc_tep("khong-gian/du-an.css"))
     ghi("studio.js", doc_tep("khong-gian/studio.js"))
     ghi("studio.css", doc_tep("khong-gian/studio.css"))
+    ghi("dien-mao.css", doc_tep("khong-gian/dien-mao.css"))
+    for ten_font in ("lora-latin.woff2", "lora-vietnamese.woff2"):
+        ghi("fonts/" + ten_font, doc_tep("khong-gian/fonts/" + ten_font, nhi_phan=True))
+    ghi("fonts/OFL-Lora.txt", doc_tep("khong-gian/fonts/OFL-Lora.txt"))
     ghi("bdsg-mark.svg", doc_tep("khong-gian/bdsg-mark.svg"))
     ghi("bang-dieu-khien.js", doc_tep("bang-dieu-khien/bang-dieu-khien.js"))
     # Chỉ xuất các trường công khai đã chọn, không chép cấu hình tuỳ ý vào docroot.

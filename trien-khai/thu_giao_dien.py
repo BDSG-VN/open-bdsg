@@ -20,7 +20,10 @@ class ThuDongGoi(unittest.TestCase):
         files = [p for p in self.ra.rglob("*") if p.is_file()]
         self.assertTrue((self.ra / "index.html").is_file())
         self.assertFalse(any(p.suffix in (".py", ".db", ".env") for p in files))
-        self.assertFalse(any("khong-duoc-xuat" in p.read_text(encoding="utf-8") for p in files))
+        self.assertFalse(any(b"khong-duoc-xuat" in p.read_bytes() for p in files))
+        self.assertIn('/dien-mao.css', (self.ra / 'index.html').read_text(encoding='utf-8'))
+        for ten_font in ('lora-latin.woff2', 'lora-vietnamese.woff2'):
+            self.assertTrue((self.ra / 'fonts' / ten_font).read_bytes().startswith(b'wOF2'))
         self.assertNotIn("/chat.js", (self.ra / "tro-chuyen/index.html").read_text(encoding="utf-8"))
 
     def test_khong_ghi_de(self):
