@@ -276,6 +276,38 @@ class ThuVanPhong(unittest.TestCase):
         self.app.kho.thu_hoi_agent(A["id"])
         self.denied(A, "van_phong.doc", {"id": file["id"]})
 
+    def test_revocation_after_precheck_never_commits_content(self):
+        file = self.create()
+        verify = self.app.core.verify_actor
+        revoked = False
+
+        def revoke_after_first_check(actor):
+            nonlocal revoked
+            valid = verify(actor)
+            if actor["id"] == A["id"] and not revoked:
+                revoked = True
+                self.app.kho.thu_hoi_agent(A["id"])
+            return valid
+
+        # Chèn sự cố giữa lần xác thực ban đầu và giao dịch, không giả dữ liệu DB.
+        self.app.core.verify_actor = revoke_after_first_check
+        try:
+            self.denied(
+                A,
+                "van_phong.cap_nhat",
+                {
+                    "id": file["id"],
+                    "expected_revision": 1,
+                    "action": "save",
+                    "content_base64": encoded("Khong duoc luu"),
+                },
+            )
+        finally:
+            self.app.core.verify_actor = verify
+        result = self.call(OWNER, "van_phong.doc", {"id": file["id"]})
+        self.assertEqual(result["version"], 1)
+        self.assertEqual(base64.b64decode(result["content_base64"]), b"Ban dau")
+
 
 if __name__ == "__main__":
     unittest.main()

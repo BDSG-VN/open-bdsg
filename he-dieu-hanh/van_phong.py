@@ -86,6 +86,22 @@ class VanPhong:
 
     def _project(self, actor, pid, db, write=False):
         project = self.projects.authorize(actor, pid, write=write, db=db)
+        # Xác thực ở nhân có thể xảy ra trước lúc chờ khóa SQLite. Kiểm lại
+        # trên chính giao dịch để thu hồi đã commit không còn ghi được tệp.
+        if actor["role"] == "quan-tri":
+            active = (
+                actor["id"] == "chu-quan"
+                and db.execute(
+                    "SELECT 1 FROM chu WHERE ma=?", (actor["id"],)
+                ).fetchone()
+            )
+        else:
+            active = db.execute(
+                "SELECT 1 FROM agents WHERE ma=? AND active=1 AND role=?",
+                (actor["id"], actor["role"]),
+            ).fetchone()
+        if not active:
+            raise PermissionError("Danh tính đã bị thu hồi")
         if write and project["archived"]:
             raise ValueError("Khôi phục dự án trước khi sửa tệp Office")
 
