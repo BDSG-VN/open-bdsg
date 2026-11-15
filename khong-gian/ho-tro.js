@@ -7,7 +7,7 @@
     ["tai-khoan", "Tài khoản & đăng nhập"],
     ["mua-hang", "Mua hàng & dịch vụ"],
   ];
-  const current = () => location.hash === "#support" || location.hash.startsWith("#support/");
+  const current = () => location.hash === "#support" || /^#support\/[a-z0-9_-]{1,80}$/.test(location.hash);
   const selectedRoute = id => "#support/" + encodeURIComponent(id);
   function rows(query = "") {
     const matches = directory.filter(a => clean(a.name + " " + a.description + " " + a.group).includes(clean(query).trim()));
@@ -33,6 +33,8 @@
     try {
       if (identifier) {
         const profile = await api('/api/customer-agent?id=' + encodeURIComponent(identifier));
+        const known = state.products.find(p => p.id === profile.platform_id);
+        if (profile.id !== identifier || profile.id !== 'tro-ly-' + profile.platform_id || profile.brain?.id !== identifier || profile.brain?.brain_id !== profile.brain_id || profile.brain?.platform_id !== profile.platform_id || profile.platform?.id !== profile.platform_id || !known || known.url !== profile.platform.url) throw new Error('Hồ sơ trả về không đúng trợ lý đã chọn. Vui lòng thử lại.');
         if (ticket === revision && current()) drawAssistant(profile);
       } else {
         const result = await api('/api/customer-agents');
@@ -85,6 +87,7 @@
     data.message = data.message.trim(); data.assistant_id = assistant.id;
     if (!data.message) { $("#customer-error").textContent = "Nhập nhu cầu cần hỗ trợ."; return; }
     pending = true;
+    form.querySelectorAll('select,textarea').forEach(field => {field.disabled = true;});
     const button = form.querySelector('button[type="submit"]');
     button.disabled = true; button.textContent = "Đang chuẩn bị hướng dẫn…";
     $("#assistant-clear").disabled = true;
@@ -94,7 +97,7 @@
     try {
       const answer = await api("/api/customer-support", {method:"POST", body:JSON.stringify(data), signal:controller.signal});
       if (ticket !== revision || !current() || active?.id !== assistant.id) return;
-      if (answer.assistant_id !== assistant.id || answer.brain_id !== assistant.brain_id) throw new Error("Phản hồi không thuộc trợ lý đã chọn. Vui lòng thử lại.");
+      if (answer.assistant_id !== assistant.id || answer.brain_id !== assistant.brain_id || answer.agent !== data.agent || !Array.isArray(answer.platforms) || answer.platforms.length !== 1 || answer.platforms[0].id !== assistant.platform_id || answer.platforms[0].url !== assistant.platform.url) throw new Error("Phản hồi không thuộc trợ lý đã chọn. Vui lòng thử lại.");
       const exchanges = conversations.get(assistant.id) || [];
       exchanges.push({question:data.message, answer});
       conversations.set(assistant.id, exchanges.slice(-5)); messages();
@@ -104,7 +107,7 @@
       if (ticket === revision && current()) $("#customer-error").textContent = error.name === "AbortError" ? "Chờ phản hồi quá lâu. Câu hỏi vẫn còn để bạn thử lại." : error.message;
     } finally {
       clearTimeout(timeout);
-      if (ticket === revision && current()) { pending = false; button.disabled = false; button.textContent = "Nhận hướng dẫn"; $("#assistant-clear").disabled = !(conversations.get(assistant.id)?.length); if (!received) $("#customer-message").focus(); }
+      if (ticket === revision && current()) { pending = false; form.querySelectorAll('select,textarea').forEach(field => {field.disabled = false;}); button.disabled = false; button.textContent = "Nhận hướng dẫn"; $("#assistant-clear").disabled = !(conversations.get(assistant.id)?.length); if (!received) $("#customer-message").focus(); }
     }
   });
   window.BDSGSupport = {open, settings, reset() {revision++; pending = false; active = null; directory = []; conversations.clear();}};

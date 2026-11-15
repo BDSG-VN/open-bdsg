@@ -1,5 +1,7 @@
 # V16 — Mỗi nền tảng, một trợ lý
 
+Đối chiếu danh mục và kiểm nghiệm ngày 15/11/2026.
+
 Danh mục BDSG hiện có **38 mục**, tương ứng 38 hồ sơ trợ lý chuyên trách.
 App và Messenger dùng chung website nhưng có mục đích và hồ sơ riêng.
 
@@ -57,6 +59,12 @@ Khi có mô hình/đầu nối thật, cần thêm cấu hình riêng theo trợ
 qua nhân. Trạng thái SIWC chờ OpenAI duyệt không thay đổi trong V16.
 
 ## Kiểm nghiệm và phát hành
+
+Ngày kiểm: 15/11/2026. Tái lập bằng tài khoản không phải root trên Linux:
+
+```sh
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_ho_tro.py' -v
+```
 
 Bài HTTP kiểm đủ 38 hồ sơ, ID/nhiệm vụ riêng và phản hồi đúng nền tảng. Kiểm
 từ chối gán lại nền tảng, brain hoặc lịch sử khác; giữ các kiểm quyền/hạn mức

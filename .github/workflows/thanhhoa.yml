@@ -18,4 +18,5 @@ jobs:
           for source in khong-gian/*.js; do node --check "$source"; done
           node khong-gian/thu_mo_dun.cjs
           node khong-gian/thu_xuong.cjs
+          node khong-gian/thu_tro_ly.cjs
           git diff --check
