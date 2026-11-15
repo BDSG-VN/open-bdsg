@@ -55,6 +55,64 @@ class ThuHoTro(unittest.TestCase):
         self.assertTrue(any("crm" in p["id"] for p in result["platforms"]))
         self.assertEqual(result["source"], "nen-tang/danh-muc.json")
 
+    def test_every_platform_has_its_own_brain_and_scoped_guidance(self):
+        products = self.request("/api/catalogue")[1]["products"]
+        agents = self.request("/api/customer-agents")[1]["agents"]
+        self.assertEqual(len(agents), 38)
+        self.assertEqual(
+            {a["platform_id"] for a in agents}, {p["id"] for p in products}
+        )
+        self.assertEqual(len({a["brain_id"] for a in agents}), 38)
+        missions = set()
+        for index, agent in enumerate(agents):
+            status, detail = self.request("/api/customer-agent?id=" + agent["id"])
+            self.assertEqual(status, 200)
+            missions.add(detail["brain"]["mission"])
+            self.assertEqual(detail["brain"]["tools"], {"read": [], "write": []})
+            self.assertEqual(detail["brain"]["model_state"], "chua-cau-hinh")
+            result = self.request(
+                "/api/customer-support",
+                {
+                    "assistant_id": agent["id"],
+                    "agent": "tu-van",
+                    "message": "Hướng dẫn công việc của nền tảng này",
+                },
+                {"X-BDSG-Client-IP": "198.51.100." + str(index + 1)},
+            )[1]
+            self.assertEqual(result["brain_id"], agent["brain_id"])
+            self.assertEqual(
+                [p["id"] for p in result["platforms"]], [agent["platform_id"]]
+            )
+            self.assertFalse(result["can_execute"])
+            self.assertTrue(result["intake"])
+        self.assertEqual(len(missions), 38)
+
+    def test_platform_brain_cannot_be_rebound_or_receive_other_conversations(self):
+        self.assertEqual(self.request("/api/customer-agent?id=unknown")[0], 404)
+        base = {
+            "assistant_id": "tro-ly-bdsg_crm",
+            "agent": "tu-van",
+            "message": "Tôi cần hướng dẫn CRM",
+        }
+        for extra in (
+            {"platform_id": "bdsg_shop"},
+            {"assistant_id": []},
+            {"assistant_id": "unknown"},
+            {
+                "history": [
+                    {"assistant_id": "tro-ly-bdsg_shop", "content": "other-secret"}
+                ]
+            },
+            {"brain_id": "brain-bdsg_shop-v1"},
+        ):
+            self.assertEqual(
+                self.request("/api/customer-support", {**base, **extra})[0], 400
+            )
+        for agent in ("tai-khoan", "mua-hang"):
+            result = self.request("/api/customer-support", {**base, "agent": agent})[1]
+            self.assertEqual(result["brain_id"], "brain-bdsg_crm-v1")
+            self.assertEqual([p["id"] for p in result["platforms"]], ["bdsg_crm"])
+
     def test_chatgpt_connection_requires_owner_and_cannot_fake_a_login(self):
         self.assertEqual(self.request("/api/chatgpt-connection")[0], 401)
         self.app.kho.tao_chu("synthetic-owner-password-only")

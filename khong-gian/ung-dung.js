@@ -381,9 +381,12 @@ function activityPage() {
 }
 function render() {
   const taskMatch = /^#task\/([a-f0-9]{24})$/.exec(location.hash);
+  const supportMatch = /^#support\/([a-z0-9_-]{1,80})$/.exec(location.hash);
   state.view = Object.hasOwn(titles, location.hash.slice(1))
     ? location.hash.slice(1)
-    : taskMatch
+    : supportMatch
+      ? "support"
+      : taskMatch
       ? "tasks"
       : "work";
   $("#view-title").textContent = titles[state.view];
@@ -397,6 +400,10 @@ function render() {
   });
   if (taskMatch) {
     window.BDSGTasks?.renderTask(taskMatch[1]);
+    return;
+  }
+  if (supportMatch) {
+    window.BDSGSupport?.open(supportMatch[1]);
     return;
   }
   ({

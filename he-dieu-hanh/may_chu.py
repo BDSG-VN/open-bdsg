@@ -190,6 +190,11 @@ def tao_may_chu(app, port=8766):
                 return self.send(200, app.catalog())
             if path == "/api/customer-agents":
                 return self.send(200, app.customer_support.catalogue())
+            if path == "/api/customer-agent":
+                try:
+                    return self.send(200, app.customer_support.brains.detail(parse_qs(urlsplit(self.path).query).get('id',[''])[0]))
+                except ValueError as error:
+                    return self.send(404, {'error':str(error)})
             if path == "/api/modules":
                 return self.send(200, app.tasks.modules(None))
             if path == "/api/model":

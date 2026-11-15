@@ -6,6 +6,7 @@ import threading
 import time
 import unicodedata
 from urllib.parse import urlsplit
+from bo_nao_tro_ly import BoNaoTroLy
 
 AGENTS = [
     {
@@ -41,19 +42,25 @@ class QuaHanHoTro(Exception):
 class HoTroKhach:
     def __init__(self, catalogue):
         self.products = [
-            {k: p[k] for k in ("id", "name", "url", "purpose")}
+            {k: p[k] for k in ("id", "name", "url", "purpose", "group")}
             for p in catalogue
             if urlsplit(p["url"]).scheme == "https" and not urlsplit(p["url"]).username
         ]
         self.lock = threading.Lock()
+        self.brains = BoNaoTroLy(self.products)
         self.windows = {}
         self.total = collections.deque()
 
     def catalogue(self):
-        return {"agents": AGENTS, "mode": "huong-dan", "can_execute": False}
+        return {
+            "agents": self.brains.catalogue(),
+            "topics": AGENTS,
+            "mode": "huong-dan",
+            "can_execute": False,
+        }
 
     def reply(self, args, ip):
-        if set(args) - {"agent", "message", "platform_id"}:
+        if set(args) - {"agent", "message", "platform_id", "assistant_id"}:
             raise ValueError("Chỉ gửi trợ lý, nội dung và nền tảng cần hỗ trợ")
         message, agent, selected = (
             args.get("message"),
@@ -70,6 +77,16 @@ class HoTroKhach:
             raise ValueError("Chọn trợ lý và nhập từ 1 đến 1000 ký tự")
         if selected and selected not in {p["id"] for p in self.products}:
             raise ValueError("Nền tảng không có trong danh mục BDSG")
+        assistant_id = args.get("assistant_id", "")
+        if not isinstance(assistant_id, str):
+            raise ValueError("Danh tính trợ lý không hợp lệ")
+        assistant = self.brains.detail(assistant_id) if assistant_id else None
+        if assistant:
+            if selected and selected != assistant["platform_id"]:
+                raise ValueError(
+                    "Trợ lý chỉ phụ trách nền tảng đã chọn; mở trợ lý khác để đổi phạm vi"
+                )
+            selected = assistant["platform_id"]
         # Bộ đếm có giới hạn trong bộ nhớ; không ghi IP hoặc câu hỏi xuống đĩa.
         now = time.monotonic()
         key = hashlib.sha256(ip.encode()).digest()
@@ -147,13 +164,20 @@ class HoTroKhach:
                 "Chỉ xác nhận đặt hàng hoặc thanh toán khi bạn đồng ý với tổng tiền và điều kiện.",
             ],
         }
+        if assistant and agent == "tu-van":
+            steps[agent] = assistant["brain"]["workflow"]
         return {
             "agent": agent,
+            "assistant_id": assistant_id or None,
+            "assistant_name": assistant["name"] if assistant else None,
+            "brain_id": assistant["brain_id"] if assistant else None,
+            "intake": assistant["brain"]["intake"] if assistant else [],
             "mode": "huong-dan",
             "can_execute": False,
             "source": "nen-tang/danh-muc.json",
             "platforms": products,
             "steps": steps[agent],
-            "message": "Tôi hướng dẫn theo danh mục BDSG. Chưa có kết nối để tạo tài khoản hoặc đặt hàng thay bạn.",
+            "message": (assistant["brain"]["mission"] + " " if assistant else "")
+            + "Tôi hướng dẫn theo danh mục BDSG. Chưa có kết nối để tạo tài khoản hoặc đặt hàng thay bạn.",
             "privacy": "Nội dung câu hỏi không được lưu vào lịch sử máy chủ hoặc gửi tới mô hình AI.",
         }
