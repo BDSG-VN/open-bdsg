@@ -59,6 +59,8 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("du-an.css", doc_tep("khong-gian/du-an.css"))
     ghi("studio.js", doc_tep("khong-gian/studio.js"))
     ghi("studio.css", doc_tep("khong-gian/studio.css"))
+    ghi("ho-tro.js", doc_tep("khong-gian/ho-tro.js"))
+    ghi("ho-tro.css", doc_tep("khong-gian/ho-tro.css"))
     ghi("dien-mao.css", doc_tep("khong-gian/dien-mao.css"))
     for ten_font in ("lora-latin.woff2", "lora-vietnamese.woff2"):
         ghi("fonts/" + ten_font, doc_tep("khong-gian/fonts/" + ten_font, nhi_phan=True))

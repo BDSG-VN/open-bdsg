@@ -25,6 +25,8 @@ from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
+from ho_tro_khach import HoTroKhach, QuaHanHoTro
+from ket_noi_chatgpt import KetNoiChatGPT
 
 
 class UngDung:
@@ -37,6 +39,8 @@ class UngDung:
             )["products"]
         )
         self.kho = Kho(data)
+        self.customer_support = HoTroKhach(self.catalogue)
+        self.chatgpt_connection = KetNoiChatGPT(self.kho)
         self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
 
         def verify(actor):
@@ -184,6 +188,8 @@ def tao_may_chu(app, port=8766):
                 )
             if path == "/api/catalogue":
                 return self.send(200, app.catalog())
+            if path == "/api/customer-agents":
+                return self.send(200, app.customer_support.catalogue())
             if path == "/api/modules":
                 return self.send(200, app.tasks.modules(None))
             if path == "/api/model":
@@ -198,6 +204,12 @@ def tao_may_chu(app, port=8766):
                     },
                 )
             actor = self.actor()
+            if path == "/api/chatgpt-connection":
+                if not actor:
+                    return self.send(401, {"error":"Cần đăng nhập"})
+                if actor['role'] != 'quan-tri':
+                    return self.send(403, {"error":"Chỉ chủ quản xem cài đặt ChatGPT"})
+                return self.send(200, app.chatgpt_connection.status())
             if path == "/api/document":
                 if not actor:
                     return self.send(401, {"error": "Cần đăng nhập"})
@@ -250,7 +262,7 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok(required=path != "/mcp"):
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             actor = self.actor(path == "/mcp")
-            if path not in ("/api/login",) and not actor:
+            if path not in ("/api/login", "/api/customer-support") and not actor:
                 return self.send(
                     401,
                     {"error": "Cần xác thực"},
@@ -265,6 +277,18 @@ def tao_may_chu(app, port=8766):
                     400, {"error": "Nội dung yêu cầu không hợp lệ hoặc quá lớn"}
                 )
             try:
+                if path == "/api/chatgpt-connection/start":
+                    if actor['role'] != 'quan-tri':
+                        return self.send(403, {"error":"Chỉ chủ quản quản lý kết nối ChatGPT"})
+                    return self.send(409, {"error":"Chưa được OpenAI cấp quyền và Client ID cho website. Hồ sơ đăng ký không phải quyền đăng nhập.", "state":"awaiting_partner_approval"})
+                if path == "/api/customer-support":
+                    try:
+                        ip = self.headers.get("X-BDSG-Client-IP", self.client_address[0])[:100]
+                        return self.send(200, app.customer_support.reply(body, ip))
+                    except QuaHanHoTro as error:
+                        return self.send(429, {"error":str(error)}, headers={"Retry-After":"60"})
+                    except ValueError as error:
+                        return self.send(400, {"error":str(error)})
                 if path == "/api/login":
                     user, password = body.get("username", ""), body.get("password", "")
                     if (

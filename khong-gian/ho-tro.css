@@ -1,0 +1,47 @@
+.support-layout { display:grid; grid-template-columns:minmax(0, 1fr) 280px; gap:36px; align-items:start; }
+.support-conversation { min-width:0; }
+.support-mode { margin:0 0 24px; color:var(--muted); }
+#customer-support-form { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:24px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+#customer-support-form label { display:flex; flex-direction:column; gap:8px; font-size:14px; font-weight:600; min-width:0; }
+#customer-support-form select, #customer-support-form textarea { width:100%; min-width:0; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; font:inherit; font-weight:400; }
+#customer-support-form textarea { resize:vertical; min-height:108px; }
+.support-prompt, .support-send, #customer-error { grid-column:1 / -1; }
+.support-send { display:flex; gap:16px; justify-content:space-between; align-items:center; }
+.support-send p { margin:0; max-width:42ch; color:var(--muted); font-size:13px; }
+.support-send button { flex-shrink:0; }
+#customer-error:empty { display:none; }
+#customer-error { color:var(--ink); margin:0; }
+.support-boundary { border-left:1px solid var(--line); padding:8px 0 8px 24px; }
+.support-boundary h2 { font-size:20px; line-height:1.4; margin:0 0 12px; }
+.support-boundary h3 { font-size:15px; margin:28px 0 8px; }
+.support-boundary p { font-size:14px; line-height:1.8; max-width:68ch; }
+.support-examples { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.support-exchange { margin-bottom:32px; overflow-wrap:anywhere; }
+.support-question { padding:16px 20px; background:var(--surface-subtle); border-radius:12px; display:flex; flex-direction:column; gap:6px; }
+.support-answer { padding:12px 0; }
+.support-answer h2 { font-size:20px; margin:0 0 12px; }
+.support-answer h3 { font-size:15px; margin:24px 0 12px; }
+.support-answer p, .support-answer li { font-size:14px; line-height:1.8; }
+.support-answer ol { padding-left:22px; }
+.support-answer ol li + li { margin-top:8px; }
+.support-platforms { list-style:none; padding:0; margin:0; }
+.support-platforms li { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 0; border-top:1px solid var(--line); }
+.support-platforms p { margin:4px 0 0; color:var(--muted); }
+.support-platforms a { flex-shrink:0; }
+.support-settings { max-width:1000px; }
+.support-settings .panel { padding:28px; }
+.support-settings .panel h2 { margin:0 0 16px; font-size:22px; }
+.support-settings .panel p, .support-settings li { max-width:70ch; font-size:14px; line-height:1.8; }
+.support-settings ol { margin:24px 0; padding-left:22px; }
+.support-settings .support-boundary { margin-top:32px; }
+.support-links { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
+@media (max-width:1100px) { .support-layout { grid-template-columns:1fr; gap:32px; } }
+@media (max-width:600px) {
+  #customer-support-form { grid-template-columns:1fr; padding:18px; gap:18px; }
+  .support-send, .support-platforms li { align-items:stretch; flex-direction:column; }
+  .support-send button { width:100%; }
+  .support-platforms a { align-self:flex-start; }
+  .support-settings .panel { padding:20px; }
+  .support-links { align-items:flex-start; flex-direction:column; }
+}
+

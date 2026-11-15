@@ -94,6 +94,8 @@ const stages = [
 ];
 const titles = {
   integrations: "Quản lý kết nối",
+  support: "Hỗ trợ khách hàng",
+  settings: "Cài đặt ChatGPT",
   projects: "Dự án công việc",
   studio: "Xưởng công việc",
   work: "Giao việc",
@@ -399,6 +401,8 @@ function render() {
   }
   ({
     integrations: () => window.BDSGConnectors?.open(),
+    support: () => window.BDSGSupport?.open(),
+    settings: () => window.BDSGSupport?.settings(),
     projects: () => window.BDSGProjects?.open(),
     studio: () => window.BDSGStudio?.open(),
     work: () => window.BDSGTasks?.home(),
@@ -638,6 +642,7 @@ $("#profile").addEventListener("click", async () => {
     window.BDSGTasks?.reset();
     window.BDSGStudio?.reset();
     window.BDSGConnectors?.reset();
+    window.BDSGSupport?.reset();
     state.requests = [];
     state.agents = [];
     state.messages = [];
