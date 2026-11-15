@@ -77,6 +77,15 @@ khi thêm dấu xác nhận Python đã khởi chạy: đỏ trên mã cũ, xanh
 
 ## Phát hành và rà soát
 
+Trên máy chạy, 16 nhóm thao tác trong ma trận đã qua bằng dữ liệu tổng hợp.
+Đã tắt lịch thử, thu hồi mọi tài khoản thử V14 và lưu trữ dự án thử. Hai kết
+quả của tác vụ cũ vẫn còn. Giao diện có 15 bước đạt: đăng nhập qua form, bốn
+trang chính, trạng thái chỉ có dự án lưu trữ, cả bảy thẻ Xưởng, mở thiết lập
+giao việc và đăng xuất. Kiểm ở 1280/768/390px không tràn ngang, không lỗi JS.
+Đây là Chromium thực và giả lập kích thước màn hình, không phải thử cảm ứng
+trên điện thoại vật lý. Bài kiểm chủ động giãn yêu cầu để tuân thủ hạn mức;
+không suy ra đã kiểm tải đồng thời lớn hoặc đo hiệu năng ở quy mô khách thật.
+
 Lõi được phát hành từ `901e34188c8f2fd3c5379a7818187b55fb815f25`.
 Hai lượt rà riêng: chuẩn mã không còn phát hiện; đối chiếu yêu cầu phát hiện
 một điểm yếu bằng chứng crash và đã kiểm tra lại bản bổ sung là đạt.
