@@ -11,6 +11,7 @@ import time
 import re
 from pathlib import Path
 from co_lap import command_for
+from cong_viec import kiem_han_ket_qua
 
 
 class RuntimeTacVu:
@@ -150,6 +151,7 @@ class RuntimeTacVu:
                 current = self.tasks.detail(actor, task["id"])
                 if current.get("cancel_requested"):
                     raise ValueError("Tác vụ đã dừng")
+                kiem_han_ket_qua(current["artifacts"], artifacts)
                 current["artifacts"] += artifacts
                 self.tasks._event(
                     current,

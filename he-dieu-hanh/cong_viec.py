@@ -33,6 +33,16 @@ def _cell(value):
     return str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ")
 
 
+def kiem_han_ket_qua(hien_co, bo_sung):
+    # Cùng một hạn mức cho báo cáo agent và cả lô tệp Python khi giữ khóa tác vụ.
+    if (
+        len(hien_co) + len(bo_sung) > 80
+        or sum(len(a.get("content", "").encode()) for a in [*hien_co, *bo_sung])
+        > 8 * 1024 * 1024
+    ):
+        raise ValueError("Kết quả vượt hạn 80 tệp hoặc 8 MiB; giữ nguyên các tệp đã có")
+
+
 class CongViec:
     """Hai worker, hàng đợi có giới hạn; chỉ gọi các công cụ đọc đã định trước."""
 
@@ -68,10 +78,11 @@ class CongViec:
             )
             # Không tự chạy lại tác vụ sau khởi động: công cụ ngoài có thể đã chạy.
             for row in db.execute(
-                "SELECT document FROM cong_viec_tasks WHERE status IN ('queued','running','cancelling')"
+                "SELECT document FROM cong_viec_tasks WHERE status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1"
             ).fetchall():
                 task = json.loads(row[0])
                 task["status"] = "interrupted"
+                task["runtime_running"] = False
                 task["updated"] = time.time()
                 for step in task["steps"]:
                     if step["status"] == "running":
@@ -723,7 +734,7 @@ class CongViec:
                 content = self._report(task, products, connections)
             with self.lock:
                 task = self._load(task_id)
-                task["artifacts"].append(
+                additions = [
                     {
                         "id": secrets.token_hex(8),
                         "name": "de-xuat-thanhhoa-luot-" + str(task["run"]) + ".md",
@@ -733,7 +744,9 @@ class CongViec:
                         "created": time.time(),
                         "run": task["run"],
                     }
-                )
+                ]
+                kiem_han_ket_qua(task["artifacts"], additions)
+                task["artifacts"].extend(additions)
                 self._save(task)
             self._finish_step(task_id, step, "Đã lưu báo cáo riêng tư cho tác vụ.")
             with self.lock:
