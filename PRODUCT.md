@@ -11,6 +11,8 @@ web
 Chủ quản, nhân viên vận hành và các agent được cấp quyền phát triển kinh doanh
 đa lĩnh vực tại Thanh Hoá. Phạm vi theo yêu cầu của chủ quản, không giới hạn
 thành công cụ dành riêng cho đội bất động sản hoặc mở rộng sang các tỉnh khác.
+Khách hàng có thể dùng hướng dẫn công khai theo từng nền tảng; mỗi trợ lý có
+hồ sơ riêng, không dùng quyền hoặc hội thoại của chủ quản.
 
 ## Product Purpose
 

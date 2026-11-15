@@ -1,5 +1,9 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+V16: [38 trợ lý nền tảng với bộ cấu hình riêng](V16-TRO-LY-NEN-TANG.md) và
+[danh sách đầy đủ](DANH-SACH-TRO-LY.md). Kết nối ChatGPT đang chờ cấp quyền,
+xem [V15](V15-CHATGPT-VA-HO-TRO.md).
+
 Nâng cấp tích hợp thử nghiệm: [Xưởng công việc V6–V11](V6-V11.md).
 Tiếp nối ngày 15/11/2026: [V12 — phê duyệt thao tác trình duyệt](V12-PHE-DUYET-TRINH-DUYET.md).
 Giao diện V13 ngày 15/11/2026 áp dụng Impeccable và tham chiếu Manus theo yêu
