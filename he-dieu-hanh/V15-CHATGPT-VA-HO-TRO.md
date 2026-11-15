@@ -84,3 +84,24 @@ trước khi triển khai. Không gọi AI trả phí hoặc API thương mại 
 Giao diện giữ hệ màu V13/`DESIGN.md`; phải kiểm desktop/mobile, bàn phím,
 chọn từng trợ lý, phản hồi, lỗi, điều hướng và ranh giới chủ quản trước phát hành.
 Triển khai phải có backup/hash/rollback, giữ dữ liệu và sổ tay.
+
+### Kết quả bản chạy ngày 15/11/2026
+
+- Lõi phát hành `0925fcff73e06515921c9625b54a90e17c190954`; CI fork đạt.
+- Bộ kiểm Linux non-root: 94 bài được phát hiện, 85 qua, 9 ca Chromium ghi rõ
+  bỏ qua trong lượt này; thêm 4 bài đóng gói và 2 chương trình JS qua. Không
+  tính ca bỏ qua thành pass. Sáu bài HTTP mới đều đạt.
+- Bảy nhóm UI đạt với Chromium sandbox và kho tổng hợp: gửi từng trợ lý bằng
+  bàn phím, đăng nhập chủ quản/trạng thái chờ duyệt, lỗi 429 giữ câu hỏi, thử
+  lại, mở lại xóa hội thoại và đăng xuất. Không lỗi JS/tràn ngang ở 1280,
+  768 và 390px; chưa thử thiết bị cảm ứng vật lý hoặc tải lớn.
+- Reviewer giao diện độc lập kết luận `ship`. Giữ nguyên DESIGN.md; cỡ tiêu
+  đề phụ 20/22px là phân cấp cục bộ, không thay hệ màu hoặc token toàn cục.
+  Rà chuẩn/yêu cầu không còn phát hiện sau sửa chú thích và đối chiếu proxy.
+- Trên HTTPS origin qua nginx: ba hướng dẫn, từ chối chèn tool, hạn 20/phút
+  vẫn chặn khi khách đổi header IP giả, chủ quản thấy hồ sơ đã gửi và start
+  vẫn 409, hai kết quả cũ còn, đăng xuất đạt. Chưa chạy inference SIWC hoặc
+  tạo tài khoản/đơn hàng thật.
+- Backup SQLite/SHA/rollback được kiểm chứng, 12 tệp sổ tay giữ nguyên hash.
+  Browser worker, quyền máy chủ và đầu nối nghiệp vụ giữ nguyên; không mở
+  cổng mới. Biên nhận trạng thái riêng không bật OAuth hay thay cấu hình AI.
