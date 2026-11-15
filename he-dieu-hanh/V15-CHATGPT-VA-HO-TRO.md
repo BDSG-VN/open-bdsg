@@ -62,6 +62,10 @@ Mở website không phải đăng nhập dùng chung hoặc thực hiện nghi�
 ký tự. Không nhận tool, credential hoặc URL tùy ý. Cùng-origin bắt buộc,
 20 yêu cầu/phút/IP và 200 yêu cầu/phút/toàn tiến trình. Bộ đếm có giới hạn và
 chỉ ở bộ nhớ; không lưu IP gốc, câu hỏi hoặc lịch sử hội thoại vào máy chủ.
+Proxy phải ghi đè `X-BDSG-Client-IP` bằng địa chỉ tin cậy, như hướng dẫn trong
+README; gateway chỉ nghe loopback. Nếu CDN chưa chuyển IP khách qua cấu hình
+real-IP tin cậy, nhiều khách có thể dùng chung hạn mức theo IP CDN. Không tin
+header do khách tự khai để khắc phục; cần cấu hình proxy riêng khi mở rộng tải.
 Không gọi mô hình tính phí hoặc công cụ có quyền. Giao diện giữ tối đa năm
 lượt trong bộ nhớ, xóa khi mở lại hỗ trợ; chưa có lịch sử bền vững.
 

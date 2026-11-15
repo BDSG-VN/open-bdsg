@@ -10,7 +10,7 @@
   function messages() {
     const log = $("#customer-log");
     if (!log) return;
-    log.innerHTML = exchanges.map(({question, answer}) => `<article class="support-exchange"><p class="support-question"><strong>Bạn</strong><span>${esc(question)}</span></p><div class="support-answer"><h2>${esc(choices.find(c => c[0] === answer.agent)?.[1] || "Hướng dẫn BDSG")}</h2><p>${esc(answer.message)}</p><ol>${answer.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol><h3>Nền tảng để tiếp tục</h3><ul class="support-platforms">${answer.platforms.map(p => `<li><div><strong>${esc(p.name)}</strong><p>${esc(p.purpose)}</p></div><a class="button small" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Mở nền tảng ${icon("external")}</a></li>`).join("")}</ul></div></article>`).join("");
+    log.innerHTML = exchanges.map(({question, answer}) => `<article class="support-exchange"><p class="support-question"><strong>Bạn</strong><span>${esc(question)}</span></p><div class="support-answer"><h2 tabindex="-1">${esc(choices.find(c => c[0] === answer.agent)?.[1] || "Hướng dẫn BDSG")}</h2><p>${esc(answer.message)}</p><ol>${answer.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol><h3>Nền tảng để tiếp tục</h3><ul class="support-platforms">${answer.platforms.map(p => `<li><div><strong>${esc(p.name)}</strong><p>${esc(p.purpose)}</p></div><a class="button small" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Mở nền tảng ${icon("external")}</a></li>`).join("")}</ul></div></article>`).join("");
   }
   function open() {
     revision++; pending = false; exchanges = [];
@@ -55,17 +55,20 @@
     button.disabled = true; button.textContent = "Đang chuẩn bị hướng dẫn…";
     $("#customer-error").textContent = "";
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),15000);
+    let received = false;
     try {
       const answer = await api("/api/customer-support", {method:"POST", body:JSON.stringify(data), signal:controller.signal});
       if (ticket !== revision || !current()) return;
       exchanges.push({question:data.message, answer});
       exchanges = exchanges.slice(-5); messages();
       $("#customer-message").value = "";
+      received = true;
+      $("#customer-log .support-exchange:last-child h2").focus();
     } catch (error) {
       if (ticket === revision && current()) $("#customer-error").textContent = error.name === "AbortError" ? "Chờ phản hồi quá lâu. Câu hỏi vẫn còn để bạn thử lại." : error.message;
     } finally {
       clearTimeout(timeout);
-      if (ticket === revision && current()) { pending = false; button.disabled = false; button.textContent = "Nhận hướng dẫn"; $("#customer-message").focus(); }
+      if (ticket === revision && current()) { pending = false; button.disabled = false; button.textContent = "Nhận hướng dẫn"; if (!received) $("#customer-message").focus(); }
     }
   });
   window.BDSGSupport = {open, settings, reset() {revision++; pending = false; exchanges = [];}};

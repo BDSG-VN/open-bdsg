@@ -16,7 +16,7 @@ class KetNoiChatGPT:
                     metadata = value
         except (ValueError, OSError):
             pass
-        # A registration receipt is not a client grant or an inference credential.
+        # Biên nhận hồ sơ không phải quyền client hoặc chứng thư gọi mô hình.
         return {
             "enabled": False,
             "has_client_id": False,

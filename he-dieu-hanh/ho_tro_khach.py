@@ -70,7 +70,7 @@ class HoTroKhach:
             raise ValueError("Chọn trợ lý và nhập từ 1 đến 1000 ký tự")
         if selected and selected not in {p["id"] for p in self.products}:
             raise ValueError("Nền tảng không có trong danh mục BDSG")
-        # Bounded, memory-only rate state. Neither IP nor prompt is written to disk.
+        # Bộ đếm có giới hạn trong bộ nhớ; không ghi IP hoặc câu hỏi xuống đĩa.
         now = time.monotonic()
         key = hashlib.sha256(ip.encode()).digest()
         with self.lock:
