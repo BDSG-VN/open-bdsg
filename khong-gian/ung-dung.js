@@ -98,6 +98,7 @@ const titles = {
   settings: "Cài đặt ChatGPT",
   projects: "Dự án công việc",
   studio: "Xưởng công việc",
+  office: "Văn phòng BDSG",
   work: "Giao việc",
   tasks: "Công việc của tôi",
   modules: "Mô-đun BDSG",
@@ -380,6 +381,7 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  if (window.BDSGOffice?.leave(location.hash) === false) return;
   const taskMatch = /^#task\/([a-f0-9]{24})$/.exec(location.hash);
   const supportMatch = /^#support\/([a-z0-9_-]{1,80})$/.exec(location.hash);
   state.view = Object.hasOwn(titles, location.hash.slice(1))
@@ -412,6 +414,7 @@ function render() {
     settings: () => window.BDSGSupport?.settings(),
     projects: () => window.BDSGProjects?.open(),
     studio: () => window.BDSGStudio?.open(),
+    office: () => window.BDSGOffice?.open(),
     work: () => window.BDSGTasks?.home(),
     tasks: () => window.BDSGTasks?.tasks(),
     modules: () => window.BDSGTasks?.modules(),
@@ -648,6 +651,7 @@ $("#profile").addEventListener("click", async () => {
     window.BDSGProjects?.clearSelected();
     window.BDSGTasks?.reset();
     window.BDSGStudio?.reset();
+    window.BDSGOffice?.reset();
     window.BDSGConnectors?.reset();
     window.BDSGSupport?.reset();
     state.requests = [];

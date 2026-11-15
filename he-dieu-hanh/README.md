@@ -4,9 +4,8 @@ V16: [38 trợ lý nền tảng với bộ cấu hình riêng](V16-TRO-LY-NEN-TA
 [danh sách đầy đủ](DANH-SACH-TRO-LY.md). Kết nối ChatGPT đang chờ cấp quyền,
 xem [V15](V15-CHATGPT-VA-HO-TRO.md).
 
-Mã nền Office đang phát triển: [V17 — lưu tệp, quyền và phiên bản](V17-VAN-PHONG.md).
-Phần này chưa có giao diện soạn thảo hoặc kết nối Google; không thay trạng thái
-phát hành của V16.
+Văn phòng bản đầu: [V17 — giao diện tệp, văn bản, quyền và phiên bản](V17-VAN-PHONG.md).
+Có sửa TXT/MD/CSV; chưa có editor DOCX/XLSX/PPTX hoặc kết nối Google.
 
 Nâng cấp tích hợp thử nghiệm: [Xưởng công việc V6–V11](V6-V11.md).
 Tiếp nối ngày 15/11/2026: [V12 — phê duyệt thao tác trình duyệt](V12-PHE-DUYET-TRINH-DUYET.md).

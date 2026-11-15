@@ -264,6 +264,23 @@ class ThuVanPhong(unittest.TestCase):
             },
         )
 
+    def test_ui_permissions_and_usage_follow_current_project_access(self):
+        args = {"project_id": self.project["id"]}
+        file = self.create(value="Ban dau")
+        file = self.update(file, "save", content_base64=encoded("Moi"))
+        self.update(file, "trash")
+        status = self.call(A, "van_phong.trang_thai", args)
+        self.assertTrue(status["permissions"]["can_write"])
+        self.assertEqual(status["usage"], {"files": 1, "versions": 2, "bytes": 10})
+        self.share("viewer")
+        self.assertFalse(self.call(B, "van_phong.trang_thai", args)["permissions"]["can_write"])
+        self.share("editor")
+        self.assertTrue(self.call(B, "van_phong.trang_thai", args)["permissions"]["can_write"])
+        self.call(A, "du_an.luu_tru", {"id": self.project["id"]})
+        status = self.call(A, "van_phong.trang_thai", args)
+        self.assertTrue(status["permissions"]["archived"])
+        self.assertFalse(status["permissions"]["can_write"])
+
     def test_revoked_identity_and_write_gate(self):
         file = self.create()
         self.app.core.nhan.chinh_sach.cong_ghi.dong()

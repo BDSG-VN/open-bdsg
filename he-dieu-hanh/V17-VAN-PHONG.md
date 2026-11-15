@@ -3,6 +3,21 @@
 Mã thử nghiệm ngày **15/11/2026**, tiếp nối V16. Không phải tuyên bố đã có bộ
 Google Workspace tương đương hoặc bộ soạn thảo đang vận hành trên website.
 
+## Giao diện Văn phòng
+
+Mở `/#office` sau khi đăng nhập: chọn dự án, tìm tên tệp không dấu, tải lên,
+tải xuống, đổi tên, thùng rác và lịch sử/khôi phục. Có tạo và sửa văn bản UTF-8
+TXT/MD/CSV bằng textarea; không diễn giải Markdown, HTML hoặc công thức CSV.
+DOCX/XLSX/PPTX/PDF chỉ lưu và tải xuống. Không coi trình sửa văn bản này là
+bộ soạn thảo Word/Excel/PowerPoint hoặc Google Docs.
+
+Giao diện dùng quyền đọc/ghi và mức sử dụng từ máy chủ. Viewer không có nút
+ghi; dự án lưu trữ chỉ đọc. Xung đột không tự ghi đè và giữ bản đang gõ để sao
+chép; đóng/rời trang có thay đổi chưa lưu cần xác nhận. Phản hồi muộn bị bỏ
+khi đổi dự án, rời Văn phòng hoặc đăng xuất. Không lưu nội dung Office vào
+localStorage/sessionStorage. Lỗi hiển thị thông điệp theo mã cố định, không
+bật trả nội dung ngoại lệ từ nhân.
+
 ## Phần đã có trong mã
 
 `van_phong.py` giữ tệp theo dự án trong SQLite riêng ngoài web. Các công cụ
@@ -47,9 +62,9 @@ nằm ngoài bản sao lưu SQLite; tệp lớn cần một đợt thiết kế 
 
 ## Chưa có
 
-Chưa có giao diện Drive, thư mục, tìm kiếm nội dung, chia sẻ công khai, quét mã
+Chưa có thư mục lồng nhau, tải tệp lớn, tìm kiếm nội dung, chia sẻ công khai, quét mã
 độc, Docs/Sheets/Slides editor, đồng tác giả, chuyển đổi Office, lịch người dùng,
-Google OAuth hoặc đồng bộ Google. Trạng thái trả rõ `chua-cau-hinh`, `chua-ket-noi`,
+Google OAuth hoặc đồng bộ Google. Trạng thái engine trả rõ `chua-cau-hinh`, `chua-ket-noi`,
 `chua-quet`. Không chuyển tệp này sang bộ soạn thảo cho đến khi có đường kiểm
 định dạng/quét tệp và phiên editor được xác thực. Không gửi tệp tới mô hình AI.
 

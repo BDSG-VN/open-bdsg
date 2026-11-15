@@ -14,6 +14,14 @@ import time
 from pathlib import PurePath
 
 
+class LoiXungDotVanPhong(ValueError):
+    """Mã lỗi ổn định cho UI, không cần công khai thông điệp ngoại lệ."""
+
+
+class LoiHanMucVanPhong(ValueError):
+    """Kho đã đầy; dữ liệu chi tiết vẫn nằm sau quyền dự án."""
+
+
 class VanPhong:
     MAX_BYTES = 32 * 1024
     MAX_FILES = 100
@@ -45,12 +53,29 @@ class VanPhong:
 
     def status(self, actor, args):
         with self.kho.ket_noi() as db:
-            self.projects.authorize(actor, args.get("project_id"), db=db)
+            project = self._project(actor, args.get("project_id"), db)
+            member = db.execute(
+                "SELECT role FROM du_an_members WHERE project_id=? AND identity=?",
+                (project["id"], actor["id"]),
+            ).fetchone()
+            can_write = not project["archived"] and (
+                actor["role"] == "quan-tri" or project["owner"] == actor["id"]
+                or (member and member["role"] == "editor")
+            )
+            files = db.execute(
+                "SELECT count(*) FROM office_files WHERE project_id=?", (project["id"],)
+            ).fetchone()[0]
+            versions, total = db.execute(
+                "SELECT count(*),coalesce(sum(v.size),0) FROM office_versions v "
+                "JOIN office_files f ON f.id=v.file_id WHERE f.project_id=?", (project["id"],)
+            ).fetchone()
         return {
             "storage": "bdsg-sqlite",
             "editor_state": "chua-cau-hinh",
             "google_state": "chua-ket-noi",
             "scan_state": "chua-quet",
+            "permissions": {"can_write": bool(can_write), "archived": project["archived"]},
+            "usage": {"files": files, "versions": versions, "bytes": total},
             "limits": {
                 "file_bytes": self.MAX_BYTES,
                 "project_files_including_trash": self.MAX_FILES,
@@ -104,6 +129,7 @@ class VanPhong:
             raise PermissionError("Danh tính đã bị thu hồi")
         if write and project["archived"]:
             raise ValueError("Khôi phục dự án trước khi sửa tệp Office")
+        return project
 
     def _file(self, actor, identifier, db, write=False):
         if not isinstance(identifier, str) or not re.fullmatch(
@@ -121,7 +147,7 @@ class VanPhong:
     @staticmethod
     def _check_revision(row, expected):
         if type(expected) is not int or expected != row["revision"]:
-            raise ValueError("Tệp đã thay đổi; đọc lại trước khi lưu để tránh ghi đè")
+            raise LoiXungDotVanPhong("Tệp đã thay đổi; đọc lại trước khi lưu để tránh ghi đè")
 
     @staticmethod
     def _metadata(row):
@@ -142,7 +168,7 @@ class VanPhong:
             or versions >= self.MAX_VERSIONS
             or total + size > self.MAX_TOTAL_BYTES
         ):
-            raise ValueError("Dự án đạt giới hạn tệp, lịch sử hoặc dung lượng Office")
+            raise LoiHanMucVanPhong("Dự án đạt giới hạn tệp, lịch sử hoặc dung lượng Office")
 
     def _version(self, db, row, actor, raw):
         self._quota(db, row["project_id"], len(raw))
