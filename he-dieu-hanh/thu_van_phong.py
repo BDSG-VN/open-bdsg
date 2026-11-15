@@ -273,9 +273,13 @@ class ThuVanPhong(unittest.TestCase):
         self.assertTrue(status["permissions"]["can_write"])
         self.assertEqual(status["usage"], {"files": 1, "versions": 2, "bytes": 10})
         self.share("viewer")
-        self.assertFalse(self.call(B, "van_phong.trang_thai", args)["permissions"]["can_write"])
+        self.assertFalse(
+            self.call(B, "van_phong.trang_thai", args)["permissions"]["can_write"]
+        )
         self.share("editor")
-        self.assertTrue(self.call(B, "van_phong.trang_thai", args)["permissions"]["can_write"])
+        self.assertTrue(
+            self.call(B, "van_phong.trang_thai", args)["permissions"]["can_write"]
+        )
         self.call(A, "du_an.luu_tru", {"id": self.project["id"]})
         status = self.call(A, "van_phong.trang_thai", args)
         self.assertTrue(status["permissions"]["archived"])

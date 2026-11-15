@@ -126,6 +126,14 @@
     dialogKind = "";
     return true;
   }
+  function lockDialog(value) {
+    const element = document.querySelector("#office-dialog");
+    if (!element) return;
+    element.setAttribute("aria-busy", String(value));
+    element
+      .querySelectorAll("button,input,textarea")
+      .forEach((e) => (e.disabled = value));
+  }
   function reset() {
     generation++;
     closeDialog(true);
@@ -229,7 +237,10 @@
     });
     element.addEventListener("input", () => {
       const editor = element.querySelector("#office-content");
-      dirty = editor ? editor.value !== original : kind === "create";
+      const name = element.querySelector('input[name="name"]');
+      dirty =
+        Boolean(editor && editor.value !== original) ||
+        Boolean(kind === "create" && name && name.value !== name.defaultValue);
       const label = element.querySelector("#office-save-status");
       if (label) label.textContent = dirty ? "Có thay đổi chưa lưu" : "Đã lưu";
     });
@@ -298,9 +309,7 @@
     const file = activeFile,
       t = ticket();
     busy = true;
-    document
-      .querySelectorAll("#office-dialog button")
-      .forEach((b) => (b.disabled = true));
+    lockDialog(true);
     try {
       const updated = await call("cap_nhat", {
         id: file.id,
@@ -338,9 +347,7 @@
     } finally {
       if (valid(t)) {
         busy = false;
-        document
-          .querySelectorAll("#office-dialog button")
-          .forEach((b) => (b.disabled = false));
+        lockDialog(false);
       }
     }
   }
@@ -350,6 +357,7 @@
       return notice("Tệp vượt 32 KiB. Chọn tệp nhỏ hơn để tải lên.", true);
     const t = ticket();
     busy = true;
+    lockDialog(true);
     draw();
     notice("Đang tải tệp lên…");
     try {
@@ -380,6 +388,7 @@
         const input = document.querySelector("#office-upload");
         if (input) input.value = "";
         drawControls();
+        lockDialog(false);
       }
     }
   }

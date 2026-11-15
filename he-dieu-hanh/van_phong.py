@@ -59,7 +59,8 @@ class VanPhong:
                 (project["id"], actor["id"]),
             ).fetchone()
             can_write = not project["archived"] and (
-                actor["role"] == "quan-tri" or project["owner"] == actor["id"]
+                actor["role"] == "quan-tri"
+                or project["owner"] == actor["id"]
                 or (member and member["role"] == "editor")
             )
             files = db.execute(
@@ -67,14 +68,18 @@ class VanPhong:
             ).fetchone()[0]
             versions, total = db.execute(
                 "SELECT count(*),coalesce(sum(v.size),0) FROM office_versions v "
-                "JOIN office_files f ON f.id=v.file_id WHERE f.project_id=?", (project["id"],)
+                "JOIN office_files f ON f.id=v.file_id WHERE f.project_id=?",
+                (project["id"],),
             ).fetchone()
         return {
             "storage": "bdsg-sqlite",
             "editor_state": "chua-cau-hinh",
             "google_state": "chua-ket-noi",
             "scan_state": "chua-quet",
-            "permissions": {"can_write": bool(can_write), "archived": project["archived"]},
+            "permissions": {
+                "can_write": bool(can_write),
+                "archived": project["archived"],
+            },
             "usage": {"files": files, "versions": versions, "bytes": total},
             "limits": {
                 "file_bytes": self.MAX_BYTES,
@@ -147,7 +152,9 @@ class VanPhong:
     @staticmethod
     def _check_revision(row, expected):
         if type(expected) is not int or expected != row["revision"]:
-            raise LoiXungDotVanPhong("Tệp đã thay đổi; đọc lại trước khi lưu để tránh ghi đè")
+            raise LoiXungDotVanPhong(
+                "Tệp đã thay đổi; đọc lại trước khi lưu để tránh ghi đè"
+            )
 
     @staticmethod
     def _metadata(row):
@@ -168,7 +175,9 @@ class VanPhong:
             or versions >= self.MAX_VERSIONS
             or total + size > self.MAX_TOTAL_BYTES
         ):
-            raise LoiHanMucVanPhong("Dự án đạt giới hạn tệp, lịch sử hoặc dung lượng Office")
+            raise LoiHanMucVanPhong(
+                "Dự án đạt giới hạn tệp, lịch sử hoặc dung lượng Office"
+            )
 
     def _version(self, db, row, actor, raw):
         self._quota(db, row["project_id"], len(raw))
