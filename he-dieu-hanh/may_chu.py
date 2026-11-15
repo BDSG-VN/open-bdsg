@@ -21,6 +21,8 @@ from cau_hinh_ket_noi import CauHinhKetNoi
 from du_an import DuAn
 from tai_lieu import TaiLieu
 from van_phong import VanPhong
+from soan_thao_office import SoanThaoOffice
+from google_office import GoogleOffice, LoiKetNoiGoogle
 from runtime_tac_vu import RuntimeTacVu
 from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
@@ -56,6 +58,9 @@ class UngDung:
         self.tasks.projects = self.projects
         self.documents = TaiLieu(self.kho, self.projects)
         self.office = VanPhong(self.kho, self.projects)
+        self.office_editor = SoanThaoOffice(self.office, self.origin)
+        self.google_office = GoogleOffice(self.office, self.origin)
+        self.office.editor_status = self.office_editor.status
         self.tasks.documents = self.documents
         self.runtime = RuntimeTacVu(self.kho, self.tasks)
         self.browser = TrinhDuyet(self.kho, self.tasks)
@@ -64,6 +69,7 @@ class UngDung:
         def revoke(identity):
             self.tasks.cancel_owner(identity)
             revoke_browser(identity)
+            self.google_office.forget(identity)
 
         self.core.on_revoke = revoke
         self.actions = HanhDong(self.kho, self.core, self.tasks,self.browser)
@@ -176,6 +182,31 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             path = urlsplit(self.path).path
+            if path == "/api/google/callback":
+                try:
+                    cookie = SimpleCookie(self.headers.get("Cookie", ""))
+                    app.google_office.callback(parse_qs(urlsplit(self.path).query),
+                                               cookie["bdsg_google"].value if "bdsg_google" in cookie else "")
+                    target = "/?google=connected#office"
+                except (CookieError, ValueError, PermissionError, OSError):
+                    target = "/?google=failed#office"
+                return self.send(303, cookie="bdsg_google=; Path=/api/google/callback; Secure; HttpOnly; SameSite=Lax; Max-Age=0",
+                                 headers={"Location": target, "Referrer-Policy": "no-referrer"})
+            if path == "/api/office-source":
+                try:
+                    raw = app.office_editor.source(parse_qs(urlsplit(self.path).query), self.headers.get("Authorization", ""))
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/octet-stream")
+                    self.send_header("Content-Length", str(len(raw)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(raw)
+                    return
+                except (ValueError, PermissionError):
+                    return self.send(403, {"error": "Không có quyền tải nguồn Office"})
+            if path == "/api/office-engine-auth":
+                allowed = app.office_editor.engine_access(self.actor(), self.headers.get("X-BDSG-Engine-Path", ""))
+                return self.send(200 if allowed else 403)
             if path == "/mcp":
                 if not self.actor(True):
                     return self.send(
@@ -266,6 +297,11 @@ def tao_may_chu(app, port=8766):
         def do_POST(self):
             self.connection.settimeout(12)
             path = urlsplit(self.path).path
+            if path == "/api/office-callback":
+                try:
+                    return self.send(200, app.office_editor.callback(self.body(), self.headers.get("Authorization", "")))
+                except (ValueError, PermissionError, OSError):
+                    return self.send(200, {"error": 1})
             if not self.origin_ok(required=path != "/mcp"):
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             actor = self.actor(path == "/mcp")
@@ -284,6 +320,22 @@ def tao_may_chu(app, port=8766):
                     400, {"error": "Nội dung yêu cầu không hợp lệ hoặc quá lớn"}
                 )
             try:
+                if path == "/api/google/picker":
+                    if actor["role"] not in ("operator", "quan-tri"):
+                        return self.send(403, {"error": "Cần quyền vận hành"})
+                    try:
+                        return self.send(200, app.google_office.picker(actor))
+                    except LoiKetNoiGoogle:
+                        return self.send(409, {"error": "Chưa sẵn sàng Google Picker; kiểm tra cấu hình và kết nối tài khoản"})
+                if path == "/api/google/start":
+                    if actor["role"] not in ("operator", "quan-tri"):
+                        return self.send(403, {"error": "Cần quyền vận hành"})
+                    try:
+                        url, binding = app.google_office.start(actor, self.session())
+                        return self.send(200, {"url": url}, cookie="bdsg_google=" + binding +
+                                         "; Path=/api/google/callback; Secure; HttpOnly; SameSite=Lax; Max-Age=600")
+                    except LoiKetNoiGoogle:
+                        return self.send(409, {"error": "Chủ quản cần cấu hình OAuth Google trước khi kết nối"})
                 if path == "/api/chatgpt-connection/start":
                     if actor['role'] != 'quan-tri':
                         return self.send(403, {"error":"Chỉ chủ quản quản lý kết nối ChatGPT"})

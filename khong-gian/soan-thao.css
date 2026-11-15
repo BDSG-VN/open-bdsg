@@ -1,0 +1,92 @@
+:root {
+  color-scheme: light;
+  font:
+    14px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI Variable Display",
+    "Segoe UI",
+    Helvetica,
+    Arial,
+    sans-serif;
+  color: #454541;
+  background: #f8f8f6;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #e3e3df;
+}
+h1 {
+  font-size: 14px;
+  margin: 0;
+  color: #1a1a19;
+}
+header p {
+  flex: 1;
+  margin: 0;
+}
+a {
+  color: #454541;
+  text-underline-offset: 3px;
+}
+button {
+  padding: 9px 14px;
+  border: 1px solid #1a1a19;
+  border-radius: 8px;
+  background: #1a1a19;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+}
+button:hover {
+  background: #333330;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+:focus-visible {
+  outline: 2px solid #555550;
+  outline-offset: 3px;
+}
+main {
+  flex: 1;
+  min-height: 0;
+}
+#editor,
+iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+#error {
+  padding: 12px 20px;
+  margin: 0;
+  color: #9b2c2c;
+  background: #fff;
+}
+::selection {
+  background: #e7e7e3;
+}
+@media (max-width: 750px) {
+  header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px;
+  }
+  header p {
+    flex-basis: 100%;
+    order: 3;
+  }
+}

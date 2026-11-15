@@ -4,6 +4,9 @@ import secrets
 import time
 
 
+from quyen_office import khoa_phien, ngat_phien
+
+
 class DuAn:
     def __init__(self, kho):
         self.kho = kho
@@ -138,6 +141,8 @@ class DuAn:
                 "UPDATE du_an SET archived=?,updated=? WHERE id=?",
                 (int(archived), time.time(), project["id"]),
             )
+            keys = khoa_phien(db, project_id=project["id"]) if archived else []
+        ngat_phien(keys)
         self.kho.su_kien(
             actor["id"],
             "luu-tru-du-an" if archived else "khoi-phuc-du-an",
@@ -189,5 +194,7 @@ class DuAn:
                     "INSERT INTO du_an_members VALUES (?,?,?) ON CONFLICT(project_id,identity) DO UPDATE SET role=excluded.role",
                     (project["id"], identity, role),
                 )
+            keys = khoa_phien(db, identity=identity, project_id=project["id"]) if role != "editor" else []
+        ngat_phien(keys)
         self.kho.su_kien(actor["id"], "doi-quyen-du-an", project["id"])
         return self.members(actor, project["id"])

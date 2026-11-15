@@ -8,6 +8,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install optional Office vault for OAuth contract tests
+        run: python3 -m pip install --only-binary=:all: -r requirements-office.txt
       - name: Verify Python interfaces
         run: |
           for check in nhan/thu_*.py; do python3 "$check"; done

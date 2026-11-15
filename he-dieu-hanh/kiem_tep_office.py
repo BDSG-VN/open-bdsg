@@ -29,8 +29,21 @@ def _kiem_xml(archive, item, result, budget):
             raise ValueError("xml-complexity")
         content_type = attributes.get("ContentType", "").lower()
         relationship = attributes.get("Type", "").lower()
+        # Docs 10 khai báo Default .bin/oleObject cả khi gói không có .bin.
+        # Khai báo không có part tương ứng không mang nội dung thực thi; vẫn
+        # chặn mọi Override và relationship chủ động hoặc Default có part thật.
+        extension = attributes.get("Extension", "").lower()
+        unused_default = (
+            item.filename == "[Content_Types].xml"
+            and _name
+            == "http://schemas.openxmlformats.org/package/2006/content-types}Default"
+            and extension
+            and not any(
+                name.lower().endswith("." + extension) for name in archive.namelist()
+            )
+        )
         if any(
-            token in content_type or token in relationship
+            (token in content_type and not unused_default) or token in relationship
             for token in ("macroenabled", "vbaproject", "activex", "oleobject")
         ) or relationship.endswith("/package"):
             raise ValueError("active-declaration")

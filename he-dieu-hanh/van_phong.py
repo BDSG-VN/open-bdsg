@@ -1,7 +1,6 @@
 """Nền lưu tệp Office: quyền dự án, phiên bản nguyên tử và chống ghi đè.
 
-Chưa có bộ soạn thảo hoặc quét mã độc. Tệp là dữ liệu mờ, không được thực thi,
-chuyển đổi hay đưa ra web root. BLOB nhỏ trong SQLite để bản sao lưu hiện có
+Tệp không được thực thi hoặc đưa ra web root. BLOB trong SQLite để bản sao lưu
 giữ nguyên cả nội dung và metadata trong một giao dịch.
 """
 
@@ -15,6 +14,7 @@ import time
 from pathlib import PurePath
 
 from kiem_tep_office import kiem_tep
+from quet_virus import LoiChuaQuetVirus, QuetVirus
 
 
 class LoiXungDotVanPhong(ValueError):
@@ -36,8 +36,9 @@ class VanPhong:
     MAX_TOTAL_BYTES = 20 * 1024 * 1024
     EXTENSIONS = frozenset({".txt", ".md", ".csv", ".pdf", ".docx", ".xlsx", ".pptx"})
 
-    def __init__(self, kho, projects):
+    def __init__(self, kho, projects, scanner=None):
         self.kho, self.projects = kho, projects
+        self.scanner = scanner or QuetVirus()
         with kho.ket_noi() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS office_files(
@@ -73,6 +74,10 @@ class VanPhong:
                     file_id TEXT NOT NULL, version INTEGER NOT NULL, result TEXT NOT NULL,
                     PRIMARY KEY(file_id,version)
                 );
+                CREATE TABLE IF NOT EXISTS office_creates(
+                    owner TEXT NOT NULL,request TEXT NOT NULL,project_id TEXT NOT NULL,
+                    name TEXT NOT NULL,sha256 TEXT NOT NULL,file_id TEXT NOT NULL,
+                    PRIMARY KEY(owner,request));
             """)
 
     def status(self, actor, args):
@@ -101,9 +106,11 @@ class VanPhong:
             ).fetchone()
         return {
             "storage": "bdsg-sqlite",
-            "editor_state": "chua-cau-hinh",
+            "editor_state": self.editor_status()["state"]
+            if hasattr(self, "editor_status")
+            else "chua-cau-hinh",
             "google_state": "chua-ket-noi",
-            "scan_state": "chua-quet",
+            "scan_state": self.scanner.status()["state"],
             "permissions": {
                 "can_write": bool(can_write),
                 "archived": project["archived"],
@@ -224,8 +231,11 @@ class VanPhong:
                 "Dự án đạt giới hạn tệp, lịch sử hoặc dung lượng Office"
             )
 
-    def _version(self, db, row, actor, raw):
+    def _version(self, db, row, actor, raw, scan=None):
         self._quota(db, row["project_id"], len(raw))
+        scan = self.scanner.scan(raw) if scan is None else scan
+        if scan.get("sha256") != hashlib.sha256(raw).hexdigest():
+            raise ValueError("Dấu kiểm quét không khớp nội dung")
         db.execute(
             "INSERT INTO office_versions VALUES (?,?,?,?,?,?,?)",
             (
@@ -237,6 +247,10 @@ class VanPhong:
                 actor["id"],
                 time.time(),
             ),
+        )
+        db.execute(
+            "INSERT INTO office_checks VALUES (?,?,?)",
+            (row["id"], row["version"], json.dumps(scan)),
         )
 
     def list(self, actor, args):
@@ -259,12 +273,55 @@ class VanPhong:
             self._content(args.get("content_base64")),
         )
         pid = args.get("project_id")
+        return self.create_bytes(actor, pid, name, raw, args.get("request_key"))
+
+    def _created(self, db, actor, pid, name, digest, request):
+        if request is None:
+            return None
+        if not isinstance(request, str) or not re.fullmatch(
+            r"[a-f0-9-]{32,64}", request
+        ):
+            raise ValueError("Mã yêu cầu tạo tệp không hợp lệ")
+        previous = db.execute(
+            "SELECT * FROM office_creates WHERE owner=? AND request=?",
+            (actor["id"], request),
+        ).fetchone()
+        if previous:
+            if (previous["project_id"], previous["name"], previous["sha256"]) != (
+                pid,
+                name,
+                digest,
+            ):
+                raise LoiXungDotVanPhong("Mã yêu cầu đã dùng cho nội dung khác")
+            return self._metadata(self._file(actor, previous["file_id"], db))
+        return None
+
+    def create_bytes(self, actor, pid, name, raw, request=None):
+        name = self._name(name)
+        if not isinstance(raw, bytes) or len(raw) > self.MAX_FILE_BYTES:
+            raise ValueError("Tệp vượt giới hạn")
+        digest = hashlib.sha256(raw).hexdigest()
+        with self.kho.ket_noi() as db:
+            self._project(actor, pid, db, True)
+            previous = self._created(db, actor, pid, name, digest, request)
+            if previous:
+                return previous
+        scan = self.scanner.scan(raw)
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             self._project(actor, pid, db, True)
-            return self._create_file(db, actor, pid, name, raw)
+            previous = self._created(db, actor, pid, name, digest, request)
+            if previous:
+                return previous
+            file = self._create_file(db, actor, pid, name, raw, scan)
+            if request is not None:
+                db.execute(
+                    "INSERT INTO office_creates VALUES (?,?,?,?,?,?)",
+                    (actor["id"], request, pid, name, digest, file["id"]),
+                )
+            return file
 
-    def _create_file(self, db, actor, pid, name, raw):
+    def _create_file(self, db, actor, pid, name, raw, scan=None):
         self._quota(db, pid, len(raw), creating=True)
         identifier, now = secrets.token_hex(12), time.time()
         row = {
@@ -281,7 +338,7 @@ class VanPhong:
         db.execute(
             "INSERT INTO office_files VALUES (?,?,?,?,?,?,?,?,?)", tuple(row.values())
         )
-        self._version(db, row, actor, raw)
+        self._version(db, row, actor, raw, scan)
         self._audit(db, actor, "office-tao-tep", identifier)
         return self._metadata(row)
 
@@ -444,12 +501,37 @@ class VanPhong:
             return self._upload_public(row)
 
     def finish_upload(self, actor, args):
+        # Quét ngoài khóa ghi SQLite; sau đó kiểm lại quyền và phiên tải trong
+        # giao dịch commit. Phiên đã nhận đủ không cho thay nội dung phần cũ.
+        scan = None
+        with self.kho.ket_noi() as db:
+            candidate = self._upload(actor, args.get("id"), db, True)
+            if candidate["state"] == "pending":
+                if candidate["received"] != candidate["total"]:
+                    raise ValueError("Chưa đủ nội dung tệp")
+                with db.blobopen(
+                    "office_uploads", "content", candidate["blob_id"], readonly=True
+                ) as blob:
+                    candidate_raw = blob.read()
+                if hashlib.sha256(candidate_raw).hexdigest() != candidate["sha256"]:
+                    raise ValueError("Nội dung không khớp SHA-256")
+        if candidate["state"] == "pending":
+            kiem_tep(candidate["name"], candidate_raw)
+            scan = self.scanner.scan(candidate_raw)
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             row = self._upload(actor, args.get("id"), db, True)
             if row["state"] == "complete":
+                checked = db.execute(
+                    "SELECT result FROM office_checks WHERE file_id=? AND version=1",
+                    (row["file_id"],),
+                ).fetchone()
                 return {
                     "file": self._metadata(self._file(actor, row["file_id"], db)),
+                    "checks": json.loads(checked[0])
+                    if checked
+                    else {"virus_state": "chua-quet"},
+                    "version": 1,
                     "completed": True,
                 }
             if row["received"] != row["total"]:
@@ -465,16 +547,30 @@ class VanPhong:
             db.execute(
                 "UPDATE office_uploads SET state='committing' WHERE id=?", (row["id"],)
             )
-            file = self._create_file(db, actor, row["project_id"], row["name"], raw)
+            file = self._create_file(
+                db, actor, row["project_id"], row["name"], raw, scan
+            )
+            checks.update(
+                json.loads(
+                    db.execute(
+                        "SELECT result FROM office_checks WHERE file_id=? AND version=1",
+                        (file["id"],),
+                    ).fetchone()[0]
+                )
+            )
             db.execute(
-                "INSERT INTO office_checks VALUES (?,?,?)",
-                (file["id"], 1, json.dumps(checks)),
+                "UPDATE office_checks SET result=? WHERE file_id=? AND version=?",
+                (
+                    json.dumps(checks),
+                    file["id"],
+                    1,
+                ),
             )
             db.execute(
                 "UPDATE office_uploads SET state='complete',file_id=?,content=NULL,expires=? WHERE id=?",
                 (file["id"], time.time() + self.UPLOAD_TTL, row["id"]),
             )
-            return {"file": file, "checks": checks, "completed": True}
+            return {"file": file, "checks": checks, "version": 1, "completed": True}
 
     def cancel_upload(self, actor, args):
         with self.kho.ket_noi() as db:
@@ -490,6 +586,48 @@ class VanPhong:
             self._audit(db, actor, "office-huy-tai", row["id"])
             return {"cancelled": True, "completed": False}
 
+    def _scan_download(self, actor, identifier, version=None):
+        if not getattr(self.scanner, "path", None):
+            return
+        status = self.scanner.status()
+        if status["state"] != "san-sang":
+            raise LoiChuaQuetVirus("Bộ quét chưa sẵn sàng")
+        with self.kho.ket_noi() as db:
+            file = self._file(actor, identifier, db)
+            version = file["version"] if version is None else version
+            if type(version) is not int or version < 1:
+                raise ValueError("Phiên bản không hợp lệ")
+            row = db.execute(
+                "SELECT sha256 FROM office_versions WHERE file_id=? AND version=?",
+                (identifier, version),
+            ).fetchone()
+            check = db.execute(
+                "SELECT result FROM office_checks WHERE file_id=? AND version=?",
+                (identifier, version),
+            ).fetchone()
+            if not row:
+                raise ValueError("Không có phiên bản")
+            checked = json.loads(check[0]) if check else {}
+            if (
+                checked.get("virus_state") == "khong-phat-hien"
+                and checked.get("sha256") == row["sha256"]
+                and checked.get("signature_version") == status["signature_version"]
+            ):
+                return
+            raw = db.execute(
+                "SELECT content FROM office_versions WHERE file_id=? AND version=?",
+                (identifier, version),
+            ).fetchone()[0]
+        result = self.scanner.scan(raw)
+        if result["sha256"] != row["sha256"]:
+            raise ValueError("Dữ liệu không khớp dấu kiểm")
+        with self.kho.ket_noi() as db:
+            self._file(actor, identifier, db)
+            db.execute(
+                "INSERT INTO office_checks VALUES (?,?,?) ON CONFLICT(file_id,version) DO UPDATE SET result=excluded.result",
+                (identifier, version, json.dumps({**checked, **result})),
+            )
+
     def read_part(self, actor, args):
         offset, version = args.get("offset"), args.get("version")
         if (
@@ -499,6 +637,7 @@ class VanPhong:
             or version < 1
         ):
             raise ValueError("Vị trí hoặc phiên bản không hợp lệ")
+        self._scan_download(actor, args.get("id"), version)
         with self.kho.ket_noi() as db:
             row = self._file(actor, args.get("id"), db)
             value = db.execute(
@@ -522,6 +661,7 @@ class VanPhong:
             }
 
     def read(self, actor, args):
+        self._scan_download(actor, args.get("id"), args.get("version"))
         with self.kho.ket_noi() as db:
             row = self._file(actor, args.get("id"), db)
             version = args.get("version", row["version"])
@@ -587,6 +727,30 @@ class VanPhong:
         action = args.get("action")
         if action not in ("save", "rename", "trash", "untrash", "restore-version"):
             raise ValueError("Thao tác Office chưa hỗ trợ")
+        raw, scan = None, None
+        if action in ("save", "restore-version"):
+            with self.kho.ket_noi() as db:
+                candidate = self._file(actor, args.get("id"), db, True)
+                self._check_revision(candidate, args.get("expected_revision"))
+                if candidate["trashed"]:
+                    raise ValueError("Khôi phục tệp trước khi sửa")
+                if action == "save":
+                    raw = self._content(args.get("content_base64"))
+                else:
+                    version = args.get("version")
+                    if type(version) is not int or version < 1:
+                        raise ValueError("Phiên bản không hợp lệ")
+                    old = db.execute(
+                        "SELECT content,sha256 FROM office_versions WHERE file_id=? AND version=?",
+                        (candidate["id"], version),
+                    ).fetchone()
+                    if (
+                        not old
+                        or hashlib.sha256(old["content"]).hexdigest() != old["sha256"]
+                    ):
+                        raise ValueError("Không có phiên bản hợp lệ để khôi phục")
+                    raw = old["content"]
+            scan = self.scanner.scan(raw)
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             row = self._file(actor, args.get("id"), db, True)
@@ -606,24 +770,8 @@ class VanPhong:
             elif action in ("trash", "untrash"):
                 row["trashed"] = int(action == "trash")
             else:
-                if action == "save":
-                    raw = self._content(args.get("content_base64"))
-                else:
-                    version = args.get("version")
-                    if type(version) is not int or version < 1:
-                        raise ValueError("Phiên bản không hợp lệ")
-                    old = db.execute(
-                        "SELECT content,sha256 FROM office_versions WHERE file_id=? AND version=?",
-                        (row["id"], version),
-                    ).fetchone()
-                    if (
-                        not old
-                        or hashlib.sha256(old["content"]).hexdigest() != old["sha256"]
-                    ):
-                        raise ValueError("Không có phiên bản hợp lệ để khôi phục")
-                    raw = old["content"]
                 row["version"] += 1
-                self._version(db, row, actor, raw)
+                self._version(db, row, actor, raw, scan)
             row["revision"] += 1
             row["updated"] = time.time()
             db.execute(

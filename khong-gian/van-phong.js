@@ -16,6 +16,9 @@
   let transfers = [],
     transfer = null;
   let retryUpload = null;
+  const googleExports = new Map();
+  const googleImports = new Map();
+  const createIntents = new Map();
   const urls = new Set();
   const current = () => location.hash === "#office" && Boolean(state.user);
   const ticket = () => ({
@@ -58,6 +61,12 @@
     }
     if (!result.ok) {
       const messages = {
+        LoiChuaQuetVirus:
+          "Bộ quét virus chưa sẵn sàng. Tệp chưa được xuất bản; hãy thử lại sau.",
+        LoiPhatHienVirus:
+          "Tệp bị bộ quét virus từ chối. Hủy phiên tải và kiểm tra máy nguồn.",
+        LoiKetNoiGoogle:
+          "Google chưa hoàn tất thao tác. Kiểm tra kết nối và quyền cấp cho ứng dụng rồi thử lại.",
         LoiXungDotVanPhong:
           "Tệp đã thay đổi. Đọc lại phiên bản mới trước khi lưu để tránh ghi đè.",
         LoiHanMucVanPhong:
@@ -100,6 +109,136 @@
   function heading() {
     return `<div class="office-heading"><div><h1>Văn phòng của dự án</h1><p>Tệp, ghi chú và các phiên bản công việc, trong cùng một không gian.</p></div><a class="button" href="#projects">Quản lý dự án ${icon("arrow")}</a></div>`;
   }
+  async function newOffice(extension) {
+    if (!write() || busy) return;
+    const name = window.prompt(
+      "Tên tài liệu mới (giữ đuôi ." + extension + ")",
+      "tai-lieu." + extension,
+    );
+    if (!name) return;
+    if (!name.toLowerCase().endsWith("." + extension))
+      return notice("Giữ đúng phần mở rộng đã chọn.", true);
+    const t = ticket();
+    busy = true;
+    try {
+      const intent = t.user + ":" + t.project + ":" + name;
+      if (!createIntents.has(intent))
+        createIntents.set(intent, crypto.randomUUID());
+      const file = await call("tao_office", {
+        project_id: selected,
+        name,
+        request_key: createIntents.get(intent),
+      });
+      createIntents.delete(intent);
+      if (valid(t))
+        location.assign("/soan-thao.html?id=" + encodeURIComponent(file.id));
+    } catch (error) {
+      if (valid(t)) notice(error.message, true);
+    } finally {
+      if (valid(t)) busy = false;
+    }
+  }
+  async function googlePanel() {
+    const t = ticket(),
+      panel = document.querySelector("#office-google-body");
+    if (!panel) return;
+    panel.textContent = "Đang kiểm tra kết nối…";
+    try {
+      const result = await call("google_trang_thai");
+      if (!valid(t) || !panel.isConnected) return;
+      if (result.state === "chua-cau-hinh") {
+        panel.innerHTML =
+          "<p>Kết nối Google đang chờ chủ quản thiết lập. Khi sẵn sàng, mỗi người tự chọn tài khoản và cấp quyền cho các tệp muốn dùng. Không nhập mật khẩu Google tại BDSG.</p>";
+      } else if (result.state === "chua-ket-noi") {
+        panel.innerHTML =
+          '<p>Kết nối tài khoản riêng của bạn. Chỉ các tệp bạn cấp cho ứng dụng mới được liệt kê.</p><button type="button" class="button" data-office-google-connect>Kết nối Google</button>';
+      } else {
+        const list = await call("google_danh_sach");
+        if (!valid(t) || !panel.isConnected) return;
+        panel.innerHTML = `<p>Đã kết nối. Nhập tệp tạo bản sao riêng trong dự án, không tự đồng bộ hai chiều.</p><button type="button" class="button" data-office-google-disconnect>Ngắt và thu hồi quyền Google</button><ul>${list.files.map((f) => `<li><span>${esc(f.name)}</span>${write() ? `<button class="button" type="button" data-office-google-import="${esc(f.id)}">Nhập bản sao</button>` : ""}</li>`).join("")}</ul><p>${list.files.length ? "" : "Chưa có tệp nào được cấp cho ứng dụng."}${list.limited ? " Đang hiển thị 50 tệp gần nhất." : ""}</p>`;
+        if (write()) {
+          const picker = document.createElement("a");
+          picker.className = "button";
+          picker.href =
+            "/google-picker.html?project=" + encodeURIComponent(selected);
+          picker.textContent = "Chọn tệp khác trên Google Drive";
+          panel.prepend(picker);
+        }
+      }
+    } catch (error) {
+      if (valid(t) && panel.isConnected) panel.textContent = error.message;
+    }
+  }
+  async function googleAction(action, id) {
+    if (busy) return;
+    const t = ticket();
+    busy = true;
+    try {
+      if (action === "connect") {
+        const result = await api("/api/google/start", {
+          method: "POST",
+          body: "{}",
+        });
+        const url = new URL(result.url);
+        if (
+          url.origin !== "https://accounts.google.com" ||
+          url.pathname !== "/o/oauth2/v2/auth"
+        )
+          throw new Error("Không mở được trang cấp quyền Google.");
+        if (valid(t)) location.assign(url.href);
+      } else if (action === "disconnect") {
+        if (
+          !window.confirm(
+            "Thu hồi kết nối Google cho ứng dụng? Tệp trên Google và trong BDSG vẫn được giữ.",
+          )
+        )
+          return;
+        await call("google_ngat");
+        if (valid(t)) await googlePanel();
+      } else if (action === "import") {
+        const intent = selected + ":" + id;
+        if (!googleImports.has(intent))
+          googleImports.set(intent, crypto.randomUUID());
+        await call("google_nhap", {
+          project_id: selected,
+          drive_id: id,
+          request_key: googleImports.get(intent),
+        });
+        googleImports.delete(intent);
+        if (valid(t)) {
+          busy = false;
+          await load();
+          notice("Đã nhập bản sao từ Google vào dự án.");
+        }
+      } else if (action === "export") {
+        if (
+          !window.confirm(
+            "Tạo bản sao phiên bản hiện tại trên Google Drive của bạn?",
+          )
+        )
+          return;
+        const intent = activeFile.id + ":" + activeFile.version;
+        if (!googleExports.has(intent))
+          googleExports.set(intent, crypto.randomUUID());
+        await call("google_xuat", {
+          id: activeFile.id,
+          request_key: googleExports.get(intent),
+        });
+        googleExports.delete(intent);
+        if (valid(t))
+          document.querySelector("#office-dialog-error").textContent =
+            "Đã xuất bản sao lên Google Drive.";
+      }
+    } catch (error) {
+      if (valid(t)) {
+        const element = document.querySelector("#office-dialog-error");
+        if (element) element.textContent = error.message;
+        else notice(error.message, true);
+      }
+    } finally {
+      if (valid(t)) busy = false;
+    }
+  }
   function draw() {
     if (location.hash !== "#office") return;
     if (!state.user) {
@@ -110,14 +249,30 @@
       <div class="office-controls"><label class="office-project-label">Dự án<select id="office-project" ${busy ? "disabled" : ""}><option value="">Chọn dự án…</option>${projects.map((p) => `<option value="${esc(p.id)}" ${p.id === selected ? "selected" : ""}>${esc(p.name)}${p.archived ? " · Đã lưu trữ" : ""}</option>`).join("")}</select></label>
       <div class="office-primary-actions"><button class="button" type="button" data-office-new ${!write() || loading || busy ? "disabled" : ""}>${icon("plus")}Tạo văn bản</button><label class="button primary office-upload ${!write() || loading || busy ? "disabled" : ""}">Tải tệp lên<input id="office-upload" type="file" accept=".txt,.md,.csv,.pdf,.docx,.xlsx,.pptx" aria-label="Chọn tệp để tải lên" ${!write() || loading || busy ? "disabled" : ""}></label></div></div>
       <div class="office-filter-bar"><div class="office-tabs" role="group" aria-label="Khu vực tệp"><button type="button" data-office-tab="files" aria-pressed="${!trash}" ${busy ? "disabled" : ""}>Tệp của dự án</button><button type="button" data-office-tab="trash" aria-pressed="${trash}" ${busy ? "disabled" : ""}>Thùng rác</button></div><label class="office-search">${icon("search")}<input id="office-search" type="search" placeholder="Tìm tên tệp…" aria-label="Tìm tên tệp" value="${esc(query)}"></label></div>
+      <div class="office-formats" role="group" aria-label="Tạo tài liệu Office">${[
+        ["docx", "Tạo Word"],
+        ["xlsx", "Tạo Excel"],
+        ["pptx", "Tạo PowerPoint"],
+      ]
+        .map(
+          ([ext, label]) =>
+            `<button type="button" class="button" data-office-format="${ext}" ${!write() || busy || loading ? "disabled" : ""}>${label}</button>`,
+        )
+        .join("")}</div>
       <p id="office-notice" class="office-notice" role="status" aria-live="polite"></p>
       <div id="office-progress" class="office-progress" hidden></div>
       <div id="office-transfers"></div>
       <div id="office-files" aria-busy="${loading}"></div>
-      <div class="office-footer"><p id="office-usage"></p><p>Tệp tối đa 8 MiB; sửa văn bản tối đa 32 KiB. Word, Excel, PowerPoint và PDF chỉ lưu / tải xuống, chưa có trình soạn thảo hoặc quét virus.</p></div>
+      <details class="office-google"><summary>Kết nối Google Drive</summary><div id="office-google-body"><p>Mở để kiểm tra kết nối tài khoản riêng của bạn.</p></div></details>
+      <div class="office-footer"><p id="office-usage"></p><p>Tệp tối đa 8 MiB; sửa văn bản tối đa 32 KiB. Word, Excel và PowerPoint soạn trên máy tính bằng ONLYOFFICE. ${access?.scan_state === "san-sang" ? "Bộ quét virus đang sẵn sàng." : "Bộ quét virus chưa sẵn sàng; không coi tệp là đã được quét."}</p></div>
       </section>`;
     drawFiles();
     drawTransfers();
+    document
+      .querySelector(".office-google")
+      ?.addEventListener("toggle", (event) => {
+        if (event.target.open) googlePanel();
+      });
   }
   function drawTransfers() {
     const target = document.querySelector("#office-transfers");
@@ -187,6 +342,9 @@
       .forEach((e) => (e.disabled = value));
   }
   function reset() {
+    googleExports.clear();
+    googleImports.clear();
+    createIntents.clear();
     retryUpload = null;
     generation++;
     closeDialog(true);
@@ -276,6 +434,20 @@
         selected =
           projects.find((p) => !p.archived)?.id || projects[0]?.id || "";
       await load();
+      const returned = new URL(location.href);
+      if (current() && returned.searchParams.has("google")) {
+        const panel = document.querySelector(".office-google");
+        if (panel) panel.open = true;
+        notice(
+          "Đã trở về từ Google. Kiểm tra trạng thái kết nối bên dưới trước khi dùng tệp.",
+        );
+        returned.searchParams.delete("google");
+        history.replaceState(
+          null,
+          "",
+          returned.pathname + returned.search + returned.hash,
+        );
+      }
     } catch (error) {
       if (!valid(t)) return;
       loading = false;
@@ -341,6 +513,28 @@
       "file",
     );
     if (!element) return;
+    const actions = element.querySelector(".office-file-actions");
+    if (write() && !file.trashed && /\.(docx|xlsx|pptx)$/i.test(file.name)) {
+      const link = document.createElement("a");
+      link.className = "button primary";
+      link.href = "/soan-thao.html?id=" + encodeURIComponent(file.id);
+      link.textContent = "Mở bộ soạn thảo";
+      actions.prepend(link);
+    }
+    if (!file.trashed) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "button";
+      button.dataset.officeGoogleExport = "";
+      button.textContent = "Xuất bản sao lên Google";
+      actions.append(button);
+    }
+    const binary = element.querySelector(".office-binary-note");
+    if (binary)
+      binary.textContent =
+        result.checks?.virus_state === "khong-phat-hien"
+          ? "Bộ quét chưa phát hiện mã độc ở phiên bản này. Có thể tải xuống hoặc mở bộ soạn thảo nếu định dạng được hỗ trợ."
+          : "Phiên bản này chưa có kết quả quét virus. Bộ soạn thảo sẽ yêu cầu quét thành công trước khi mở.";
     activeFile = file;
     original = text || "";
     if (text !== null) element.querySelector("#office-content").value = text;
@@ -426,7 +620,8 @@
     draw();
     progress("Đang chuẩn bị tệp", 0, file.size);
     try {
-      let result;
+      let result,
+        createIntent = null;
       if (textName !== null) {
         const raw = new Uint8Array(await file.arrayBuffer());
         if (!valid(t)) return;
@@ -434,10 +629,20 @@
           notice("Đã hủy trước khi tạo văn bản.");
           return;
         }
+        const digest = [
+          ...new Uint8Array(await crypto.subtle.digest("SHA-256", raw)),
+        ]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        if (!valid(t)) return;
+        createIntent = t.user + ":" + t.project + ":" + textName + ":" + digest;
+        if (!createIntents.has(createIntent))
+          createIntents.set(createIntent, crypto.randomUUID());
         result = await call("tao", {
           project_id: selected,
           name: textName,
           content_base64: encode(raw),
+          request_key: createIntents.get(createIntent),
         });
       } else {
         const digest = [
@@ -526,9 +731,18 @@
           }
           progress("Đang kiểm tra và lưu", file.size, file.size);
           result = await call("ket_thuc_tai", { id: session.id });
-        } else result = { file: { id: session.file_id }, completed: true };
+        } else result = await call("ket_thuc_tai", { id: session.id });
       }
       if (!valid(t)) return;
+      const receipt = await call("doc", {
+        id: result.file?.id || result.id,
+        version: 1,
+      });
+      if (!valid(t)) return;
+      const scanned =
+        receipt.checks?.virus_state === "khong-phat-hien" &&
+        receipt.checks.sha256 === receipt.sha256;
+      if (createIntent) createIntents.delete(createIntent);
       retryUpload = null;
       busy = false;
       dirty = false;
@@ -538,7 +752,9 @@
         notice(
           operation.cancel
             ? "Tệp đã lưu xong trước khi hủy; nội dung vẫn được giữ."
-            : "Đã lưu tệp. Nội dung chưa được quét virus.",
+            : scanned
+              ? "Đã lưu tệp. Đã quét phiên bản tải lên; chưa phát hiện mã độc."
+              : "Đã lưu tệp. Phiên bản này chưa có kết quả quét virus.",
         );
       return result;
     } catch (error) {
@@ -717,6 +933,18 @@
       upload(event.target.files[0]);
   });
   document.addEventListener("click", (event) => {
+    const officeNew = event.target.closest("[data-office-format]");
+    if (officeNew && current())
+      return newOffice(officeNew.dataset.officeFormat);
+    if (event.target.closest("[data-office-google-connect]") && current())
+      return googleAction("connect");
+    if (event.target.closest("[data-office-google-disconnect]") && current())
+      return googleAction("disconnect");
+    const googleImport = event.target.closest("[data-office-google-import]");
+    if (googleImport && current())
+      return googleAction("import", googleImport.dataset.officeGoogleImport);
+    if (event.target.closest("[data-office-google-export]") && current())
+      return googleAction("export");
     if (event.target.closest("[data-office-login]")) return auth(open);
     if (event.target.closest("[data-office-close]")) return closeDialog();
     if (!current()) return;

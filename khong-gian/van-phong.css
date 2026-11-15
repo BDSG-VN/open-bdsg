@@ -496,3 +496,33 @@
     flex-direction: column;
   }
 }
+.office-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.office-google {
+  margin: 24px 0;
+  padding: 16px 0;
+  border-block: 1px solid var(--line, #e3e3df);
+}
+.office-google summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.office-google ul {
+  list-style: none;
+  padding: 0;
+}
+.office-google li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line, #e3e3df);
+}
+.office-google li span {
+  overflow-wrap: anywhere;
+}

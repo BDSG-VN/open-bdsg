@@ -13,6 +13,7 @@ import tempfile
 import threading
 from pathlib import Path
 from co_lap import command_for
+from quet_virus import QuetVirus
 
 
 class TaiLieu:
@@ -20,6 +21,7 @@ class TaiLieu:
 
     def __init__(self, kho, projects):
         self.kho, self.projects = kho, projects
+        self.scanner = QuetVirus()
         self.pdf_capacity = threading.BoundedSemaphore(1)
         self.root = kho.root / "tai-lieu"
         self.root.mkdir(mode=0o700, exist_ok=True)
@@ -52,6 +54,7 @@ class TaiLieu:
             raise ValueError("Nội dung tệp không hợp lệ") from None
         if not 0 < len(raw) <= self.MAX_BYTES:
             raise ValueError("Tệp phải từ 1 byte đến 1 MiB")
+        self.scanner.scan(raw)
         if name.lower().endswith(".pdf"):
             if not self.pdf_capacity.acquire(blocking=False):
                 raise ValueError(
@@ -192,4 +195,5 @@ class TaiLieu:
         raw = (self.root / doc["id"]).read_bytes()
         if hashlib.sha256(raw).hexdigest() != doc["sha256"]:
             raise ValueError("Tệp không khớp dấu kiểm")
+        self.scanner.scan(raw)
         return doc, raw

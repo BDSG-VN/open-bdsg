@@ -10,6 +10,7 @@ import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from quyen_office import khoa_phien, ngat_phien
 
 MA = re.compile(r"[a-z][a-z0-9_-]{2,63}\Z")
 
@@ -172,6 +173,12 @@ class Kho:
     def thu_hoi_agent(self, ma):
         with self.ket_noi() as c:
             c.execute("UPDATE agents SET active=0 WHERE ma=?", (ma,))
+            keys = khoa_phien(c, identity=ma)
+            if c.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='google_office_tokens'"
+            ).fetchone():
+                c.execute("DELETE FROM google_office_tokens WHERE actor=?", (ma,))
+        ngat_phien(keys)
 
     def tu_token(self, token):
         with self.ket_noi() as c:
