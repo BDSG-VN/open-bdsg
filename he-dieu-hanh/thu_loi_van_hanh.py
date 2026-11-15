@@ -22,6 +22,8 @@ class ThuKhoiPhucRuntime(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             program = r"""
 import json,os,sys,threading,time
+from pathlib import Path
+os.environ['TMPDIR']=sys.argv[1]
 sys.path.insert(0,sys.argv[2])
 from may_chu import UngDung
 actor={'id':'chu-quan','name':'Test','role':'quan-tri'}
@@ -37,12 +39,12 @@ for _ in range(100):
  if task['status']=='completed':break
  time.sleep(.01)
 before=[a['id'] for a in task['artifacts']]
-threading.Thread(target=lambda:tool('runtime.python',{'task_id':job['id'],'code':'while True: pass'}),daemon=True).start()
-for _ in range(100):
+threading.Thread(target=lambda:tool('runtime.python',{'task_id':job['id'],'code':'import os\nos.write(2, b"BDSG_RUNTIME_STARTED")\nwhile True: pass'}),daemon=True).start()
+for _ in range(400):
  task=tool('cong_viec.chi_tiet',{'id':job['id']})
- if task.get('runtime_running'):
+ started=any(b'BDSG_RUNTIME_STARTED' in p.read_bytes() for p in Path(sys.argv[1]).glob('bdsg-result-*/stderr'))
+ if task.get('runtime_running') and started:
   print(json.dumps({'task_id':job['id'],'before':before}),flush=True)
-  time.sleep(.05)
   os._exit(0)
  time.sleep(.01)
 os._exit(2)
