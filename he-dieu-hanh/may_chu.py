@@ -343,7 +343,10 @@ def tao_may_chu(app, port=8766):
                         app.core.goi(actor, body["name"], body.get("arguments", {})),
                     )
                 if path == "/api/upload":
-                    return self.send(200, app.core.goi(actor, "tai_lieu.tai_len", body))
+                    target = body.pop("destination", "documents")
+                    if target not in ("documents", "office-part"):
+                        return self.send(400, {"error":"Loại tải lên chưa hỗ trợ"})
+                    return self.send(200, app.core.goi(actor, "van_phong.ghi_phan" if target == "office-part" else "tai_lieu.tai_len", body))
                 if path == "/api/model-config":
                     if actor["role"] != "quan-tri":
                         return self.send(

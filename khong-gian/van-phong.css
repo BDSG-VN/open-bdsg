@@ -2,6 +2,67 @@
   max-width: 1240px;
   margin: 0 auto;
 }
+.office-progress {
+  margin: 12px 0 20px;
+  padding: 12px 0;
+  display: grid;
+  gap: 10px;
+}
+.office-progress[hidden] {
+  display: none;
+}
+.office-progress > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.office-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: #1a1a19;
+}
+.office-pending {
+  margin: 20px 0 28px;
+  padding: 16px 0;
+  border-top: 1px solid #e3e3df;
+  border-bottom: 1px solid #e3e3df;
+}
+.office-pending h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.office-pending p {
+  color: #6b6b66;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.office-pending ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.office-pending li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+}
+.office-pending li > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.office-pending strong {
+  overflow-wrap: anywhere;
+  font-weight: 550;
+}
+.office-pending small {
+  color: #6b6b66;
+}
 .office-page .sr-only {
   position: absolute;
   width: 1px;

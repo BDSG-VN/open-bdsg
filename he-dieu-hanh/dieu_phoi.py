@@ -633,6 +633,21 @@ class DieuPhoi:
         actor = lambda: self.actor.get()
         declarations = {
             "van_phong": [
+                ("bat_dau_tai", lambda a: app.office.begin_upload(actor(), a), True,
+                 {"project_id":text,"name":text,"total":integer,"sha256":text,"request_key":text},
+                 ["project_id","name","total","sha256","request_key"]),
+                ("ghi_phan", lambda a: app.office.upload_part(actor(), a), True,
+                 {"id":text,"offset":integer,"content_base64":text}, ["id","offset","content_base64"]),
+                ("ket_thuc_tai", lambda a: app.office.finish_upload(actor(), a), True,
+                 {"id":text}, ["id"]),
+                ("trang_thai_tai", lambda a: app.office.upload_status(actor(), a), False,
+                 {"id":text}, ["id"]),
+                ("phien_tai", lambda a: app.office.uploads(actor(), a), False,
+                 {"project_id":text}, ["project_id"]),
+                ("huy_tai", lambda a: app.office.cancel_upload(actor(), a), True,
+                 {"id":text}, ["id"]),
+                ("doc_phan", lambda a: app.office.read_part(actor(), a), False,
+                 {"id":text,"version":integer,"offset":integer}, ["id","version","offset"]),
                 ("trang_thai", lambda a: app.office.status(actor(), a), False,
                  {"project_id": text}, ["project_id"]),
                 ("danh_sach", lambda a: app.office.list(actor(), a), False,

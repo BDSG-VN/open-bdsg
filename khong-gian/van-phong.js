@@ -13,6 +13,8 @@
     original = "",
     dialogKind = "",
     dirty = false;
+  let transfers = [],
+    transfer = null;
   const urls = new Set();
   const current = () => location.hash === "#office" && Boolean(state.user);
   const ticket = () => ({
@@ -29,37 +31,51 @@
   const bytes = (n) =>
     n < 1024
       ? `${n} B`
-      : `${(n / 1024).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} KiB`;
+      : n < 1048576
+        ? `${(n / 1024).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} KiB`
+        : `${(n / 1048576).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} MiB`;
   async function call(name, args = {}) {
-    const result = await api("/api/tools", {
-      method: "POST",
-      body: JSON.stringify({ name: "van_phong." + name, arguments: args }),
-    });
+    const result = await api(
+      name === "ghi_phan" ? "/api/upload" : "/api/tools",
+      {
+        method: "POST",
+        body: JSON.stringify(
+          name === "ghi_phan"
+            ? { destination: "office-part", ...args }
+            : { name: "van_phong." + name, arguments: args },
+        ),
+      },
+    );
     if (!result.ok) {
       const messages = {
         LoiXungDotVanPhong:
           "Tệp đã thay đổi. Đọc lại phiên bản mới trước khi lưu để tránh ghi đè.",
         LoiHanMucVanPhong:
           "Kho dự án đã đạt giới hạn tệp, phiên bản hoặc dung lượng. Liên hệ chủ quản để xử lý.",
+        LoiDinhDangVanPhong:
+          "Tệp không đạt kiểm tra cấu trúc, có nội dung chủ động hoặc định dạng chưa hỗ trợ. Chọn tệp khác và hủy phiên tải này.",
         PermissionError:
           "Quyền truy cập đã thay đổi. Mở lại dự án để kiểm tra quyền hiện tại.",
         "xac-thuc":
           "Phiên làm việc hoặc tài khoản không còn hiệu lực. Hãy đăng nhập lại.",
       };
-      throw new Error(
+      const error = new Error(
         messages[result.loai_loi] ||
           (/hạn mức/.test(result.ly_do || "")
             ? "Bạn đang thao tác quá nhanh. Chờ một phút rồi thử lại; nội dung chưa lưu vẫn được giữ."
             : "Không thể xử lý tệp. Kiểm tra tên, định dạng, dung lượng và quyền dự án rồi thử lại."),
       );
+      error.code = result.loai_loi;
+      throw error;
     }
     return result.ket_qua;
   }
   const textFile = (name) => /\.(txt|md|csv)$/i.test(name);
   function encode(raw) {
-    let value = "";
-    for (const byte of raw) value += String.fromCharCode(byte);
-    return btoa(value);
+    const parts = [];
+    for (let i = 0; i < raw.length; i += 8192)
+      parts.push(String.fromCharCode(...raw.subarray(i, i + 8192)));
+    return btoa(parts.join(""));
   }
   function decode(value) {
     return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
@@ -85,10 +101,36 @@
       <div class="office-primary-actions"><button class="button" type="button" data-office-new ${!write() || loading || busy ? "disabled" : ""}>${icon("plus")}Tạo văn bản</button><label class="button primary office-upload ${!write() || loading || busy ? "disabled" : ""}">Tải tệp lên<input id="office-upload" type="file" accept=".txt,.md,.csv,.pdf,.docx,.xlsx,.pptx" aria-label="Chọn tệp để tải lên" ${!write() || loading || busy ? "disabled" : ""}></label></div></div>
       <div class="office-filter-bar"><div class="office-tabs" role="group" aria-label="Khu vực tệp"><button type="button" data-office-tab="files" aria-pressed="${!trash}" ${busy ? "disabled" : ""}>Tệp của dự án</button><button type="button" data-office-tab="trash" aria-pressed="${trash}" ${busy ? "disabled" : ""}>Thùng rác</button></div><label class="office-search">${icon("search")}<input id="office-search" type="search" placeholder="Tìm tên tệp…" aria-label="Tìm tên tệp" value="${esc(query)}"></label></div>
       <p id="office-notice" class="office-notice" role="status" aria-live="polite"></p>
+      <div id="office-progress" class="office-progress" hidden></div>
+      <div id="office-transfers"></div>
       <div id="office-files" aria-busy="${loading}"></div>
-      <div class="office-footer"><p id="office-usage"></p><p>Tệp tối đa 32 KiB. Word, Excel, PowerPoint và PDF chỉ lưu / tải xuống, chưa có trình soạn thảo hoặc quét virus.</p></div>
+      <div class="office-footer"><p id="office-usage"></p><p>Tệp tối đa 8 MiB; sửa văn bản tối đa 32 KiB. Word, Excel, PowerPoint và PDF chỉ lưu / tải xuống, chưa có trình soạn thảo hoặc quét virus.</p></div>
       </section>`;
     drawFiles();
+    drawTransfers();
+  }
+  function drawTransfers() {
+    const target = document.querySelector("#office-transfers");
+    if (!target || !current()) return;
+    target.innerHTML = transfers.length
+      ? `<section class="office-pending"><h2>Tệp đang tải dở</h2><p>Chọn lại cùng tệp để tiếp tục. Phiên hết hạn sau 15 phút không truyền thêm.</p><ul>${transfers.map((u) => `<li><div><strong>${esc(u.name)}</strong><small>${bytes(u.received)} / ${bytes(u.total)} đã nhận</small></div><button class="button" type="button" data-office-cancel="${esc(u.id)}" ${busy ? "disabled" : ""}>Hủy phiên tải</button></li>`).join("")}</ul></section>`
+      : "";
+  }
+  function progress(label, received, total) {
+    const target =
+      document.querySelector("#office-dialog-progress") ||
+      document.querySelector("#office-progress");
+    if (!target) return;
+    target.hidden = false;
+    target.innerHTML = `<div><span>${esc(label)} · ${bytes(received)} / ${bytes(total)}</span><button class="button" type="button" data-office-stop>Hủy</button></div><progress value="${received}" max="${total || 1}" aria-label="${esc(label)}"></progress>`;
+  }
+  function clearProgress() {
+    document
+      .querySelectorAll("#office-dialog-progress,#office-progress")
+      .forEach((e) => {
+        e.hidden = true;
+        e.replaceChildren();
+      });
   }
   function drawFiles() {
     const target = document.querySelector("#office-files");
@@ -107,7 +149,7 @@
     const usage = document.querySelector("#office-usage");
     if (usage)
       usage.textContent = access
-        ? `${access.usage.files} tệp · ${access.usage.versions} phiên bản · ${bytes(access.usage.bytes)} / 20 MiB, kể cả thùng rác.${access.permissions.archived ? " Dự án đã lưu trữ: chỉ đọc." : write() ? " Bạn có quyền chỉnh sửa." : " Bạn có quyền chỉ đọc."}`
+        ? `${access.usage.files} tệp · ${access.usage.versions} phiên bản · ${bytes(access.usage.bytes)} / 20 MiB, kể cả thùng rác.${access.transfer_usage?.reserved_bytes ? " Đang giữ chỗ " + bytes(access.transfer_usage.reserved_bytes) + " cho tải dở." : ""}${access.permissions.archived ? " Dự án đã lưu trữ: chỉ đọc." : write() ? " Bạn có quyền chỉnh sửa." : " Bạn có quyền chỉ đọc."}`
         : "";
   }
   function closeDialog(force = false) {
@@ -138,6 +180,8 @@
     generation++;
     closeDialog(true);
     projects = [];
+    transfers = [];
+    transfer = null;
     files = [];
     selected = "";
     access = null;
@@ -162,6 +206,8 @@
       closeDialog(true);
       files = [];
       access = null;
+      transfers = [];
+      transfer = null;
       loading = false;
       busy = false;
     }
@@ -171,6 +217,7 @@
     loading = true;
     access = null;
     files = [];
+    transfers = [];
     draw();
     if (!selected) {
       loading = false;
@@ -178,13 +225,15 @@
       return;
     }
     try {
-      const [status, listing] = await Promise.all([
+      const [status, listing, pending] = await Promise.all([
         call("trang_thai", { project_id: selected }),
         call("danh_sach", { project_id: selected, trashed: trash }),
+        call("phien_tai", { project_id: selected }),
       ]);
       if (!valid(t)) return;
       access = status;
       files = listing.files;
+      transfers = pending.uploads.filter((u) => u.state === "pending");
       loading = false;
       draw();
     } catch (error) {
@@ -228,7 +277,7 @@
     element.id = "office-dialog";
     element.className = "office-dialog";
     element.setAttribute("aria-labelledby", "office-dialog-title");
-    element.innerHTML = `<header><h2 id="office-dialog-title">${esc(title)}</h2><button class="icon-button" type="button" data-office-close aria-label="Đóng cửa sổ">${icon("close")}</button></header>${body}<p id="office-dialog-error" class="form-error" role="alert"></p>`;
+    element.innerHTML = `<header><h2 id="office-dialog-title">${esc(title)}</h2><button class="icon-button" type="button" data-office-close aria-label="Đóng cửa sổ">${icon("close")}</button></header>${body}<div id="office-dialog-progress" class="office-progress" hidden></div><p id="office-dialog-error" class="form-error" role="alert"></p>`;
     document.body.append(element);
     dialogKind = kind;
     element.addEventListener("cancel", (e) => {
@@ -258,9 +307,10 @@
   }
   function showFile(result, history) {
     const file = result.file;
-    const editable = write() && !file.trashed && textFile(file.name);
+    const editable =
+      write() && !file.trashed && textFile(file.name) && result.size <= 32768;
     let text = null;
-    if (textFile(file.name)) {
+    if (textFile(file.name) && typeof result.content_base64 === "string") {
       try {
         text = new TextDecoder("utf-8", { fatal: true }).decode(
           decode(result.content_base64),
@@ -353,31 +403,124 @@
   }
   async function upload(file, textName = null) {
     if (!write() || busy || !current()) return;
-    if (file.size > (access?.limits?.file_bytes || 32768))
-      return notice("Tệp vượt 32 KiB. Chọn tệp nhỏ hơn để tải lên.", true);
+    if (file.size > (access?.limits?.file_bytes || 8388608))
+      return notice("Tệp vượt 8 MiB. Chọn tệp nhỏ hơn để tải lên.", true);
     const t = ticket();
+    const operation = { cancel: false, id: null };
+    transfer = operation;
+    const chunkBytes = access?.limits?.chunk_bytes || 524288;
     busy = true;
     lockDialog(true);
     draw();
-    notice("Đang tải tệp lên…");
+    progress("Đang chuẩn bị tệp", 0, file.size);
     try {
-      const raw = new Uint8Array(await file.arrayBuffer());
-      if (!valid(t)) return;
-      const result = await call("tao", {
-        project_id: selected,
-        name: textName || file.name,
-        content_base64: encode(raw),
-      });
+      let result;
+      if (textName !== null) {
+        const raw = new Uint8Array(await file.arrayBuffer());
+        if (!valid(t)) return;
+        if (operation.cancel) {
+          notice("Đã hủy trước khi tạo văn bản.");
+          return;
+        }
+        result = await call("tao", {
+          project_id: selected,
+          name: textName,
+          content_base64: encode(raw),
+        });
+      } else {
+        const digest = [
+          ...new Uint8Array(
+            await crypto.subtle.digest("SHA-256", await file.arrayBuffer()),
+          ),
+        ]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        if (!valid(t)) return;
+        if (operation.cancel) {
+          notice("Đã hủy trước khi tải lên.");
+          return;
+        }
+        const inventory = await call("phien_tai", { project_id: selected });
+        if (!valid(t)) return;
+        let session = inventory.uploads.find(
+          (u) =>
+            u.name === file.name &&
+            u.total === file.size &&
+            u.sha256 === digest,
+        );
+        if (!session)
+          session = await call("bat_dau_tai", {
+            project_id: selected,
+            name: file.name,
+            total: file.size,
+            sha256: digest,
+            request_key: crypto.randomUUID(),
+          });
+        if (!valid(t)) return;
+        operation.id = session.id;
+        if (session.state !== "complete") {
+          progress("Đang tải lên", session.received, file.size);
+          while (session.received < file.size) {
+            if (!valid(t)) return;
+            if (operation.cancel) break;
+            const offset = session.received;
+            const part = new Uint8Array(
+              await file.slice(offset, offset + chunkBytes).arrayBuffer(),
+            );
+            if (!valid(t)) return;
+            session = await call("ghi_phan", {
+              id: session.id,
+              offset,
+              content_base64: encode(part),
+            });
+            if (!valid(t)) return;
+            if (session.received <= offset || session.received > file.size)
+              throw new Error("Tiến trình tải không hợp lệ; hãy mở lại dự án.");
+            progress("Đang tải lên", session.received, file.size);
+          }
+          if (operation.cancel) {
+            const cancelled = await call("huy_tai", { id: session.id });
+            if (!valid(t)) return;
+            busy = false;
+            await load();
+            if (valid(t))
+              notice(
+                cancelled.cancelled
+                  ? "Đã hủy và giải phóng chỗ giữ cho tệp."
+                  : "Tệp đã hoàn tất trước khi hủy; nội dung vẫn được giữ.",
+              );
+            return;
+          }
+          progress("Đang kiểm tra và lưu", file.size, file.size);
+          result = await call("ket_thuc_tai", { id: session.id });
+        } else result = { file: { id: session.file_id }, completed: true };
+      }
       if (!valid(t)) return;
       busy = false;
       dirty = false;
       closeDialog(true);
       await load();
-      if (valid(t)) notice("Đã lưu tệp. Nội dung chưa được quét virus.");
+      if (valid(t))
+        notice(
+          operation.cancel
+            ? "Tệp đã lưu xong trước khi hủy; nội dung vẫn được giữ."
+            : "Đã lưu tệp. Nội dung chưa được quét virus.",
+        );
       return result;
     } catch (error) {
       if (valid(t)) {
-        notice(error.message, true);
+        if (textName === null) {
+          busy = false;
+          await load();
+        }
+        if (!valid(t)) return;
+        notice(
+          error.message +
+            (textName === null && error.code !== "LoiDinhDangVanPhong"
+              ? " Chọn lại cùng tệp để tiếp tục, hoặc hủy phiên tải dở."
+              : ""),
+          true,
+        );
         const target = document.querySelector("#office-dialog-error");
         if (target) target.textContent = error.message;
       }
@@ -389,6 +532,34 @@
         if (input) input.value = "";
         drawControls();
         lockDialog(false);
+        clearProgress();
+        if (transfer === operation) transfer = null;
+      }
+    }
+  }
+  async function cancelPending(id) {
+    if (busy || !current()) return;
+    const t = ticket();
+    busy = true;
+    drawControls();
+    try {
+      const result = await call("huy_tai", { id });
+      if (!valid(t)) return;
+      busy = false;
+      await load();
+      if (valid(t))
+        notice(
+          result.cancelled
+            ? "Đã hủy phiên tải dở và giải phóng chỗ giữ."
+            : "Tệp đã hoàn tất, không bị xóa.",
+        );
+    } catch (error) {
+      if (valid(t)) notice(error.message, true);
+    } finally {
+      if (valid(t)) {
+        busy = false;
+        drawControls();
+        drawTransfers();
       }
     }
   }
@@ -399,7 +570,9 @@
     const label = document.querySelector(".office-upload");
     label?.classList.toggle("disabled", !write() || loading || busy);
     document
-      .querySelectorAll("#office-project,[data-office-tab]")
+      .querySelectorAll(
+        "#office-project,[data-office-tab],[data-office-cancel]",
+      )
       .forEach((e) => (e.disabled = busy));
   }
   async function download(version) {
@@ -407,11 +580,63 @@
     const file = activeFile,
       t = ticket();
     busy = true;
+    const operation = { cancel: false };
+    transfer = operation;
     try {
       const result = await call("doc", { id: file.id, version });
       if (!valid(t)) return;
+      if (
+        !Number.isSafeInteger(result.size) ||
+        result.size < 0 ||
+        result.size > 8388608
+      )
+        throw new Error("Dung lượng tệp không hợp lệ.");
+      let raw;
+      if (typeof result.content_base64 === "string")
+        raw = decode(result.content_base64);
+      else {
+        raw = new Uint8Array(result.size);
+        let offset = 0;
+        while (offset < result.size) {
+          if (!valid(t)) return;
+          if (operation.cancel) {
+            document.querySelector("#office-dialog-error").textContent =
+              "Đã hủy tải xuống.";
+            return;
+          }
+          progress("Đang tải xuống", offset, result.size);
+          const part = await call("doc_phan", { id: file.id, version, offset });
+          if (!valid(t)) return;
+          const content = decode(part.content_base64);
+          if (
+            part.offset !== offset ||
+            part.sha256 !== result.sha256 ||
+            part.size !== result.size ||
+            part.version !== version ||
+            part.next_offset !== offset + content.length ||
+            !content.length ||
+            part.next_offset > result.size
+          )
+            throw new Error("Phần tải không khớp; chưa lưu tệp vào máy.");
+          raw.set(content, offset);
+          offset = part.next_offset;
+        }
+      }
+      const digest = [
+        ...new Uint8Array(await crypto.subtle.digest("SHA-256", raw)),
+      ]
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      if (!valid(t)) return;
+      if (operation.cancel) {
+        document.querySelector("#office-dialog-error").textContent =
+          "Đã hủy tải xuống.";
+        return;
+      }
+      if (digest !== result.sha256 || raw.length !== result.size)
+        throw new Error("Dấu kiểm không khớp; chưa lưu tệp vào máy.");
       const url = URL.createObjectURL(
-        new Blob([decode(result.content_base64)], {
+        new Blob([raw], {
           type: "application/octet-stream",
         }),
       );
@@ -431,7 +656,11 @@
         document.querySelector("#office-dialog-error").textContent =
           error.message;
     } finally {
-      if (valid(t)) busy = false;
+      if (valid(t)) {
+        busy = false;
+        clearProgress();
+        if (transfer === operation) transfer = null;
+      }
     }
   }
   document.addEventListener("input", (event) => {
@@ -456,6 +685,12 @@
     if (event.target.closest("[data-office-login]")) return auth(open);
     if (event.target.closest("[data-office-close]")) return closeDialog();
     if (!current()) return;
+    if (event.target.closest("[data-office-stop]")) {
+      if (transfer) transfer.cancel = true;
+      return;
+    }
+    const cancelling = event.target.closest("[data-office-cancel]");
+    if (cancelling) return cancelPending(cancelling.dataset.officeCancel);
     if (event.target.closest("[data-office-new]")) return createText();
     const tab = event.target.closest("[data-office-tab]");
     if (tab && !busy) {

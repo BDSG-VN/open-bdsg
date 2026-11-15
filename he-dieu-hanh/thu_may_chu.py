@@ -115,6 +115,29 @@ class ThuCong(unittest.TestCase):
         self.assertTrue(forged["ok"], forged)
         self.assertEqual(forged["ket_qua"]["owner"], "chu-quan")
 
+    def test_office_parts_use_existing_upload_route_without_expanding_tools_body(self):
+        import base64
+        import hashlib
+        project = self.result(self.rpc("operator-a", "du_an.tao", {"name":"Office phan thu"}))
+        _, _, headers = self.request("/api/login", {"username":"chu-quan","password":"mat-khau-chi-trong-test"}, {"Origin":self.app.origin})
+        hdr = {"Origin":self.app.origin,"Cookie":headers["Set-Cookie"].split(";")[0]}
+        raw = b"x" * 600000
+        status, result, _ = self.request("/api/tools", {"name":"van_phong.bat_dau_tai","arguments":{
+            "project_id":project["id"],"name":"large.txt","total":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"request_key":"a"*32,
+        }}, hdr)
+        self.assertEqual(status,200)
+        self.assertTrue(result["ok"],result)
+        upload = result["ket_qua"]
+        for offset in (0,524288):
+            body={"destination":"office-part","id":upload["id"],"offset":offset,"content_base64":base64.b64encode(raw[offset:offset+524288]).decode()}
+            status,result,_=self.request("/api/upload",body,hdr)
+            self.assertEqual(status,200)
+            self.assertTrue(result["ok"],result)
+        status,result,_=self.request("/api/tools",{"name":"van_phong.ket_thuc_tai","arguments":{"id":upload["id"]}},hdr)
+        self.assertTrue(result["ok"],result)
+        self.assertEqual(self.request("/api/upload",{"destination":"unknown"},hdr)[0],400)
+        self.assertEqual(self.request("/api/tools",{"x":"x"*66000},hdr)[0],400)
+
     def test_web_session_csrf_logout(self):
         payload = {"username": "chu-quan", "password": "mat-khau-chi-trong-test"}
         self.assertEqual(self.request("/api/login", payload)[0], 403)
