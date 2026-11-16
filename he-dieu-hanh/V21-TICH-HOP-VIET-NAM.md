@@ -68,6 +68,27 @@ cấp qua form riêng; tự OAuth/refresh theo từng nhà cung cấp còn ở �
 
 ## Nghiệm thu và phần việc tiếp theo
 
+### Checkpoint đồng bộ đọc
+
+Nhóm công cụ `tich_hop_vn.dong_bo_*` có tạo phiên, danh sách metadata, chạy
+một bước, tạm dừng/tiếp tục/hủy và xem từng trang snapshot. Mỗi bước đi qua
+nhân với quyền ghi nội bộ; chưa chạy theo lịch. Tạo phiên không gọi mạng.
+Cursor lấy từ adapter đã kiểm hợp đồng; không nhận URL phân trang tùy ý.
+Chỉ chốt một trang khi revision kết nối và generation phiên còn nguyên.
+Thu hồi hoặc hủy khi request đang chạy không chốt dữ liệu đến sau.
+
+Ngày 16/11/2026: giới hạn mỗi phiên tối đa 100 trang, 10.000 bản ghi và
+5 MiB kết quả đã chuẩn hóa; mặc định 20 trang. Đạt giới hạn trang thì dừng,
+không dùng resume để vượt trần. Lỗi giữ checkpoint và yêu cầu tiếp tục rõ
+ràng; Retry-After phải hết trước tiếp tục. Khởi động lại chuyển lượt đang
+chạy sang paused/interrupted, không tự gọi lại provider. Snapshot dùng ledger
+đã lọc, không sao chép token hoặc tự nhập dữ liệu vào sổ nghiệp vụ. Snapshot
+cũ bị chặn khi kết nối hết hạn, đổi revision hoặc bị thu hồi.
+
+Đây là công cụ backend/MCP, chưa có bảng điều khiển đồng bộ trong giao diện.
+Chưa phải CDC, snapshot nhất quán xuyên trang hoặc cam kết exactly-once với
+provider: dữ liệu phía nhà cung cấp có thể thay đổi giữa các trang.
+
 Kiểm hợp đồng dùng transport và dữ liệu tổng hợp; chưa chứng minh tài khoản
 thật hoạt động. Phải kiểm bằng tenant thử đã được cấp trước mở quyền rộng.
 Mỗi đầu nối có trạng thái: có mã, đã kiểm hợp đồng, đã đọc thật tại thời điểm

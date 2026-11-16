@@ -290,9 +290,36 @@ class TichHopVietNam:
             ).fetchall()
         return {"runs": [dict(row) for row in rows]}
 
+    def validate_read(self, actor, identifier, operation, arguments):
+        """Kiểm hợp đồng cục bộ trước tạo lịch; không gọi API hoặc trả chứng thư."""
+        self._auth(actor)
+        with self.kho.ket_noi() as db:
+            row = self._row(db, actor, identifier)
+        if not row["enabled"] or row["cipher"] is None:
+            raise LoiTichHop("connection_changed")
+        if not isinstance(operation, str) or operation not in json.loads(
+            row["operations"]
+        ):
+            raise LoiTichHop("permission_denied")
+        credentials = self._decrypt(row)
+        try:
+            prepare(
+                row["provider"],
+                json.loads(row["settings"]),
+                credentials,
+                operation,
+                arguments,
+            )
+        finally:
+            credentials.clear()
+        return row["revision"]
+
     def read(self, actor, arguments):
         self._auth(actor)
-        self._arguments(arguments, ("id", "operation", "arguments", "request_key"))
+        self._arguments(
+            arguments,
+            ("id", "operation", "arguments", "request_key", "expected_revision"),
+        )
         request_key = arguments.get("request_key")
         if not isinstance(request_key, str) or not re.fullmatch(
             r"[A-Za-z0-9_-]{8,100}", request_key
@@ -321,6 +348,11 @@ class TichHopVietNam:
         now = self.clock()
         with self.kho.ket_noi() as db:
             row = self._row(db, actor, arguments["id"])
+        expected = arguments.get("expected_revision")
+        if expected is not None and (
+            type(expected) is not int or expected != row["revision"]
+        ):
+            raise LoiTichHop("connection_changed")
         if not row["enabled"] or row["cipher"] is None:
             raise LoiTichHop("connection_changed")
         if row["expires"] is not None and row["expires"] <= now:

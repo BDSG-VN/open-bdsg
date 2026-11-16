@@ -34,6 +34,7 @@ from ho_tro_khach import HoTroKhach, QuaHanHoTro
 from ket_noi_chatgpt import KetNoiChatGPT
 from van_hanh_may_chu import VanHanhMayChu, MayChuCoGioiHan
 from tich_hop_viet_nam import TichHopVietNam
+from vn_dong_bo import DongBoVietNam
 
 
 class UngDung:
@@ -65,6 +66,7 @@ class UngDung:
         self.office_editor = SoanThaoOffice(self.office, self.origin)
         self.google_office = GoogleOffice(self.office, self.origin)
         self.vn_integrations = TichHopVietNam(self.kho)
+        self.vn_sync = DongBoVietNam(self.vn_integrations)
         self.office.editor_status = self.office_editor.status
         self.tasks.documents = self.documents
         self.runtime = RuntimeTacVu(self.kho, self.tasks)

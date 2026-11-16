@@ -633,6 +633,15 @@ class DieuPhoi:
         actor = lambda: self.actor.get()
         declarations = {
             "tich_hop_vn": [
+                ("dong_bo_tao", lambda a: app.vn_sync.create(actor(), a), True,
+                 {"connection_id": text, "operation": text, "label": text, "arguments": obj,
+                  "max_pages": integer, "request_key": text}, ["connection_id", "operation", "label", "request_key"]),
+                ("dong_bo_danh_sach", lambda a: app.vn_sync.list(actor(), a), False, {}, []),
+                ("dong_bo_buoc", lambda a: app.vn_sync.step(actor(), a), True, {"id": text}, ["id"]),
+                ("dong_bo_dieu_khien", lambda a: app.vn_sync.control(actor(), a), True,
+                 {"id": text, "action": text}, ["id", "action"]),
+                ("dong_bo_trang", lambda a: app.vn_sync.page(actor(), a), False,
+                 {"id": text, "page": integer}, ["id", "page"]),
                 ("danh_sach", lambda a: app.vn_integrations.list(actor(), a), False, {}, []),
                 ("luu", lambda a: app.vn_integrations.save(actor(), a), True,
                  {"id": text, "provider": text, "label": text, "settings": obj, "credentials": obj,
@@ -641,7 +650,7 @@ class DieuPhoi:
                 ("ngat", lambda a: app.vn_integrations.disconnect(actor(), a), True,
                  {"id": text, "expected_revision": integer}, ["id", "expected_revision"]),
                 ("doc", lambda a: app.vn_integrations.read(actor(), a), False,
-                 {"id": text, "operation": text, "arguments": obj, "request_key": text},
+                   {"id": text, "operation": text, "arguments": obj, "request_key": text, "expected_revision": integer},
                  ["id", "operation", "request_key"]),
                 ("lich_su", lambda a: app.vn_integrations.runs(actor(), a), False,
                  {"id": text}, ["id"]),
