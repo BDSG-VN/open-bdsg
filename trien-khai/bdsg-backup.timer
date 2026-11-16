@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily verified BDSG backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Ho_Chi_Minh
+RandomizedDelaySec=600
+Persistent=true
+Unit=bdsg-backup.service
+
+[Install]
+WantedBy=timers.target

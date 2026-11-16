@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+Tiếp nối: [V20 — readiness, giới hạn kết nối và sao lưu–phục hồi](V20-VAN-HANH-MAY-CHU.md).
+
 V16: [38 trợ lý nền tảng với bộ cấu hình riêng](V16-TRO-LY-NEN-TANG.md) và
 [danh sách đầy đủ](DANH-SACH-TRO-LY.md). Kết nối ChatGPT đang chờ cấp quyền,
 xem [V15](V15-CHATGPT-VA-HO-TRO.md).

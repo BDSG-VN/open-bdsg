@@ -6,8 +6,10 @@ import json
 import os
 import secrets
 import sys
+import signal
+import threading
 from http.cookies import SimpleCookie, CookieError
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs, quote
 
@@ -30,6 +32,7 @@ from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
 from ket_noi_chatgpt import KetNoiChatGPT
+from van_hanh_may_chu import VanHanhMayChu, MayChuCoGioiHan
 
 
 class UngDung:
@@ -87,6 +90,7 @@ class UngDung:
             self.projects,
         )
         self.core.dang_ky_mo_rong(self)
+        self.operations = VanHanhMayChu(self)
 
     def catalog(self):
         p = self.kho.root / "web-status.json"
@@ -182,6 +186,19 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             path = urlsplit(self.path).path
+            if path == "/api/ready":
+                state = app.operations.readiness()
+                return self.send(200 if state["status"] == "ready" else 503,
+                                 {"status": state["status"]})
+            if path == "/api/system":
+                actor = self.actor()
+                if not actor:
+                    return self.send(401, {"error": "Cần đăng nhập"})
+                if actor["role"] != "quan-tri":
+                    return self.send(403, {"error": "Chỉ chủ quản xem vận hành"})
+                return self.send(200, app.operations.report())
+            if app.operations.draining.is_set() and path != "/api/suc-khoe":
+                return self.send(503, {"error": "Đang dừng dịch vụ; thử lại sau"}, headers={"Retry-After": "5"})
             if path == "/api/google/callback":
                 try:
                     cookie = SimpleCookie(self.headers.get("Cookie", ""))
@@ -302,6 +319,8 @@ def tao_may_chu(app, port=8766):
                     return self.send(200, app.office_editor.callback(self.body(), self.headers.get("Authorization", "")))
                 except (ValueError, PermissionError, OSError):
                     return self.send(200, {"error": 1})
+            if app.operations.draining.is_set():
+                return self.send(503, {"error": "Đang dừng dịch vụ; thử lại sau"}, headers={"Retry-After": "5"})
             if not self.origin_ok(required=path != "/mcp"):
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             actor = self.actor(path == "/mcp")
@@ -448,8 +467,7 @@ def tao_may_chu(app, port=8766):
         def do_OPTIONS(self):
             self.send(405, {"error": "Không mở CORS"}, headers={"Allow": "GET, POST"})
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), XuLy)
-    server.daemon_threads = True
+    server = MayChuCoGioiHan(("127.0.0.1", port), XuLy)
     return server
 
 
@@ -512,7 +530,22 @@ def main():
     server = tao_may_chu(app, args.port)
     app.schedules.start()
     print("BDSG HTTP/MCP đang nghe tại loopback", flush=True)
-    server.serve_forever()
+    def stop_service(*_):
+        if not app.operations.draining.is_set():
+            app.operations.draining.set()
+            # shutdown phải chạy ngoài luồng serve_forever để tránh deadlock.
+            threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, stop_service)
+    signal.signal(signal.SIGINT, stop_service)
+    try:
+        server.serve_forever()
+    finally:
+        app.operations.draining.set()
+        server.server_close()
+        app.schedules.close()
+        app.tasks.close()
+        app.core.audit.close()
 
 
 if __name__ == "__main__":
