@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V22 — nhân sự Agent từ 36 nguồn kỹ năng quốc tế](../nhan-su/README.md).
+
 [V21 — tích hợp ứng dụng Việt Nam và mục tiêu mã nguồn](V21-TICH-HOP-VIET-NAM.md).
 
 Tiếp nối: [V20 — readiness, giới hạn kết nối và sao lưu–phục hồi](V20-VAN-HANH-MAY-CHU.md).

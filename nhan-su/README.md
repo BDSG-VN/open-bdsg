@@ -45,6 +45,9 @@ python3 he-dieu-hanh/thu_doi_ngu.py -v
 - Tối đa sáu chuyên môn/lượt, ba chuyên môn song song; phụ thuộc phải có
   đầu ra thật trước bàn giao. Mỗi chuyên môn có ngữ cảnh riêng, cùng quyền
   đã cấp cho tác vụ; không có đệ quy tự phân việc cho tác vụ khác.
+- Agent tổng nhận bản xem trước tài liệu đã chọn và hai kết quả gần nhất để
+  phân công đúng chuyên môn. Mỗi bản xem trước tối đa 2000 byte UTF-8, có
+  đánh dấu nội dung chưa đầy đủ; chuyên môn vẫn nhận ngữ cảnh tác vụ gốc.
 - Mỗi kết quả chuyên môn tối đa 6000 byte UTF-8; vượt hạn báo lỗi, không
   cắt thầm. Agent tổng tổng hợp từ kết quả thật. Có lưu tên, hash kỹ năng,
   phần việc, trạng thái, thời điểm và đầu ra của từng vai trò.
@@ -54,6 +57,8 @@ python3 he-dieu-hanh/thu_doi_ngu.py -v
 - Kết quả vai trò thành tệp Markdown ngay khi bàn giao xong, giữ được khi
   phần tiếp theo thất bại; báo cáo tổng chỉ có khi tổng hợp thành công. Tiếp tục
   tạo lượt mới, giữ lịch sử; restart đánh dấu đội đang chạy bị gián đoạn.
+  Khi nhiều chuyên môn kết thúc cùng đợt, hệ thống thu hết kết quả thành
+  công trước khi chuyển lỗi của chuyên môn khác sang trạng thái thất bại.
 - Không có mô hình: trạng thái chờ cấu hình, không tạo kết quả chuyên gia.
 
 ## Giao việc và theo dõi

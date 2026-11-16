@@ -10,7 +10,10 @@ import threading
 import time
 import unittest
 import zipfile
+from concurrent.futures import ALL_COMPLETED
+from concurrent.futures import wait as real_wait
 from pathlib import Path
+from unittest.mock import patch
 
 from cong_viec import CongViec
 from doi_ngu import DoiNgu
@@ -241,6 +244,80 @@ class ThuDoiNgu(unittest.TestCase):
 
         self.engine.run("Tóm tắt cuộc họp", {}, call, self.emit, lambda: False)
         self.assertEqual(len(count), 3)
+
+    def test_finished_success_is_preserved_when_same_batch_also_fails(self):
+        rendezvous = threading.Barrier(2)
+
+        def call(prompt, context, on_event, cancelled):
+            if "workforce_catalogue" in context:
+                return self.plan(
+                    [assignment("bdsg-ban-hang"), assignment("bdsg-marketing")]
+                )
+            rendezvous.wait(timeout=3)
+            if context["assignment"]["skill_id"] == "bdsg-marketing":
+                raise LoiMoHinhBDSG("Lỗi mô hình tổng hợp có chủ đích")
+            return "Kết quả bán hàng đã hoàn tất"
+
+        def failure_first(futures, **kwargs):
+            done, pending = real_wait(futures, timeout=3, return_when=ALL_COMPLETED)
+            self.assertFalse(pending)
+            return sorted(done, key=lambda future: future.exception() is None), pending
+
+        with patch("doi_ngu.wait", failure_first), self.assertRaises(LoiMoHinhBDSG):
+            self.engine.run("Hai phần việc độc lập", {}, call, self.emit, lambda: False)
+        team = [e[2]["team"] for e in self.events if e[0] == "team-state"][-1]
+        nodes = {node["skill_id"]: node for node in team["agents"]}
+        self.assertEqual(nodes["bdsg-ban-hang"]["state"], "completed")
+        self.assertEqual(
+            nodes["bdsg-ban-hang"]["output"], "Kết quả bán hàng đã hoàn tất"
+        )
+        self.assertEqual(nodes["bdsg-marketing"]["state"], "failed")
+
+    def test_planner_receives_bounded_authorized_document_and_previous_result(self):
+        context = {
+            "documents": [
+                {
+                    "id": "doc-test",
+                    "name": "hop-dong.txt",
+                    "version": 1,
+                    "sha256": "a" * 64,
+                    "text": "Hợp đồng xây dựng. " * 2000,
+                    "truncated": False,
+                }
+            ],
+            "previous_artifacts": ["Báo cáo trước: " + "đ" * 10000],
+            "execution_scope": {"python": True},
+        }
+        original = copy.deepcopy(context)
+
+        def call(prompt, supplied, on_event, cancelled):
+            if "workforce_catalogue" in supplied:
+                doc = supplied["documents"][0]
+                self.assertEqual(doc["id"], "doc-test")
+                self.assertTrue(doc["text"].startswith("Hợp đồng"))
+                self.assertTrue(doc["truncated"])
+                self.assertLessEqual(len(doc["text"].encode()), 2000)
+                self.assertTrue(
+                    supplied["previous_artifacts"][0]["text"].startswith(
+                        "Báo cáo trước"
+                    )
+                )
+                self.assertTrue(supplied["previous_artifacts"][0]["truncated"])
+                self.assertLess(
+                    len(json.dumps(supplied, ensure_ascii=False).encode()), 48000
+                )
+                self.assertEqual(supplied["execution_scope"], {})
+                return self.plan([assignment("bdsg-nghien-cuu")])
+            return "Kết quả kiểm từ dữ liệu tổng hợp"
+
+        self.engine.run(
+            "Tiếp tục phân tích tài liệu đã chọn",
+            context,
+            call,
+            self.emit,
+            lambda: False,
+        )
+        self.assertEqual(context, original)
 
     def test_cancel_after_planning_never_starts_specialist(self):
         stop = threading.Event()
