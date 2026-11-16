@@ -7,6 +7,10 @@ description: "Xây tiêu chí nghiệm thu, tình huống kiểm và đối chi�
 
 Lập ma trận yêu cầu với bằng chứng cần có. Kiểm đường thành công, lỗi, phân quyền, hủy và phục hồi phù hợp mức rủi ro. Ghi đúng lệnh, thời điểm và kết quả hiện tại; chỉ đánh giá phần công cụ thực sự chạy. Không suy từ kiểm cú pháp sang tính đúng nghiệp vụ hoặc bảo mật toàn hệ thống.
 
+## Phương pháp đã chuẩn hóa từ nguồn
+
+Đối chiếu từng tiêu chí nghiệm thu với bằng chứng thực thi hiện tại và báo đúng phạm vi kiểm. Ghi sai lệch giữa kế hoạch với kết quả, điều kiện chặn và phần còn thiếu để bàn giao tiếp tục được. Không xem tóm tắt hoặc commit là bằng chứng kiểm thử thành công.
+
 ## Sản phẩm bàn giao
 
 Ma trận nghiệm thu, kết quả kiểm thật, lỗi tái hiện được và phần chưa đủ bằng chứng.
@@ -17,4 +21,9 @@ Dùng tiếng Việt, mặc định múi giờ Asia/Ho_Chi_Minh; tiền tệ ph�
 
 ## Nguồn và bản chuẩn hóa
 
-Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo: [obra/superpowers](https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/verification-before-completion/SKILL.md), giấy phép MIT, commit `22f0b463e7a5e579904dd6211a520321035526f7`. Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.
+Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo:
+
+- [obra/superpowers](https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/verification-before-completion/SKILL.md) · MIT · commit `22f0b463e7a5e579904dd6211a520321035526f7`
+- [gsd-build/get-shit-done](https://raw.githubusercontent.com/gsd-build/get-shit-done/bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815/agents/gsd-executor.md) · MIT · commit `bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815`
+
+Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.

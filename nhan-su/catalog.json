@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "locale": "vi-VN",
-  "version": "2026-11-16.v22.1",
+  "version": "2026-11-17.v22.2",
   "skills": [
     {
       "id": "bdsg-nghien-cuu",
       "name": "Agent Nghiên cứu",
       "description": "Tìm hiểu vấn đề, đối chiếu nguồn gốc, tổng hợp bằng chứng và phân biệt điều chưa xác minh.",
       "deliverable": "Báo cáo kết luận, bảng bằng chứng, phần chưa rõ và đề xuất bước kiểm chứng.",
-      "sha256": "fae9655a36321eef3b5b65e696e0955be39dc609d12a8bba3ef740f8054dfb58",
+      "sha256": "5c973179d9eb8e0bb3ec7e32b15d91a51d5ca46726ec1941a696c826ac38959c",
       "sources": [
         {
           "repository": "mattpocock/skills",
@@ -16,6 +16,22 @@
           "path": "skills/engineering/research/SKILL.md",
           "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/research/SKILL.md",
           "sha256": "1f629e18ab899412683bc6a1c4efb4339999e27c2fdac328f26ee10a8c031d33",
+          "license": "MIT"
+        },
+        {
+          "repository": "affaan-m/ECC",
+          "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+          "path": ".agents/skills/deep-research/SKILL.md",
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/deep-research/SKILL.md",
+          "sha256": "e42c74a515e9c2a2f662f7846402c1ccd8b2bd278cba84450ff0960b07f0f995",
+          "license": "MIT"
+        },
+        {
+          "repository": "msitarzewski/agency-agents",
+          "commit": "8ae6164602c95ca78828b148b9052460ee426885",
+          "path": "research/research-synthesist.md",
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/research/research-synthesist.md",
+          "sha256": "3618b4a2a73523147731ae38ac4096cea0e83a7de930f55ea9ea6c69e3c77f30",
           "license": "MIT"
         }
       ],
@@ -27,7 +43,7 @@
       "name": "Agent Nghiên cứu khách hàng",
       "description": "Phân tích phỏng vấn, khảo sát, phản hồi, nhu cầu và hành trình khách hàng cho cá nhân hoặc doanh nghiệp.",
       "deliverable": "Bảng nhu cầu có bằng chứng, phân khúc, câu hỏi phỏng vấn và quyết định cần kiểm chứng.",
-      "sha256": "2a7dcf09115b53c6af2018220f0d93daa304351509ef94a6c569c47076b6cb9d",
+      "sha256": "6385689edae75564388d9e3085ccba604b3038194d3a309a0a9cfc2cd7f091b8",
       "sources": [
         {
           "repository": "coreyhaines31/marketingskills",
@@ -46,7 +62,7 @@
       "name": "Agent Chiến lược kinh doanh",
       "description": "Xây mô hình kinh doanh, lựa chọn ưu tiên, kịch bản và chỉ số kiểm nghiệm cho tổ chức hay cá nhân.",
       "deliverable": "Các phương án, khuyến nghị, giả định trọng yếu và lộ trình kiểm nghiệm.",
-      "sha256": "61c94f1f156948bcfa70f1a3980b3bdc479e93b6d5908fcba5554f19b71609b7",
+      "sha256": "63e477fa1552a9cb9f1a68cc7d6e6027d5655ff22f3a976166899e842c7051eb",
       "sources": [
         {
           "repository": "obra/superpowers",
@@ -54,6 +70,14 @@
           "path": "skills/brainstorming/SKILL.md",
           "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/brainstorming/SKILL.md",
           "sha256": "2c9ca71f94886f9ca9f4aef055f7cafb3e1a9bdf3aeebf8f4cb547c69405d207",
+          "license": "MIT"
+        },
+        {
+          "repository": "wshobson/agents",
+          "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+          "path": "plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md",
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md",
+          "sha256": "373c3f2089d5fa5228c3d24bf12ffacc6fefe04208d0df114ad75832c596e943",
           "license": "MIT"
         }
       ],
@@ -65,7 +89,7 @@
       "name": "Agent Marketing",
       "description": "Lập kế hoạch tiếp thị, kênh, thông điệp, ngân sách và cách đo cho sản phẩm hoặc dịch vụ.",
       "deliverable": "Kế hoạch kênh, lịch, ngân sách có đơn vị và chỉ số đầu vào/đầu ra.",
-      "sha256": "2f73be53e9d5bc1d214bc1f01e1663dada2cf5628e30250da5b5d85074d2befa",
+      "sha256": "bc0aca67b9711932eb705544db64e1a2bdfebb6f476f498c55f91e6e5c6e6041",
       "sources": [
         {
           "repository": "coreyhaines31/marketingskills",
@@ -74,6 +98,14 @@
           "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/marketing-plan/SKILL.md",
           "sha256": "76d879a32f2dd24e0c6236125f15e2b1e29808b6424242affcf790bdd294c44f",
           "license": "MIT"
+        },
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "commit": "e91a134584eb798bac7fb0379358006a2b63b965",
+          "path": "marketing/skills/content-creation/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/e91a134584eb798bac7fb0379358006a2b63b965/marketing/skills/content-creation/SKILL.md",
+          "sha256": "17f0bfd536502a91c760accaa1ae6c0c76c3812973571729664133e282c5dded",
+          "license": "Apache-2.0"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -84,7 +116,7 @@
       "name": "Agent Viết nội dung",
       "description": "Soạn và sửa nội dung bán hàng, email, bài viết, trang giới thiệu theo giọng thương hiệu và dữ liệu được cấp.",
       "deliverable": "Nội dung dùng được, biến thể khi cần, nguồn của các tuyên bố và mục cần chủ quản kiểm.",
-      "sha256": "a886fe751a41662f8f8aff86ca5d8ec1a340feefdb18b98acd916c1f57c6734b",
+      "sha256": "83aba9a3ffc1603a162ef1070efa031acc23e5a9f0c7948a5d1ec9c3a923b566",
       "sources": [
         {
           "repository": "coreyhaines31/marketingskills",
@@ -92,6 +124,14 @@
           "path": "skills/copywriting/SKILL.md",
           "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/copywriting/SKILL.md",
           "sha256": "1db2f6e51f0492f5efc646b74576721852720dec388e58d0facd2b790c01bb4e",
+          "license": "MIT"
+        },
+        {
+          "repository": "affaan-m/ECC",
+          "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+          "path": ".agents/skills/article-writing/SKILL.md",
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/article-writing/SKILL.md",
+          "sha256": "6305169f1aaf57e293284aa21bf646d995079ae2921499f7800c7db42d57091f",
           "license": "MIT"
         }
       ],
@@ -103,7 +143,7 @@
       "name": "Agent Bán hàng",
       "description": "Chuẩn bị tư vấn, kịch bản trao đổi, đề xuất và xử lý phản đối dựa trên nhu cầu và sản phẩm thật.",
       "deliverable": "Kịch bản, bảng nhu cầu, đề xuất thương mại dự thảo và bước chăm sóc kế tiếp.",
-      "sha256": "b3953ae4fef6d2644b12bf0b496237742d13e02a9f3575563aca706ae938acec",
+      "sha256": "b7ed201f6205bb2b48266be81d312b98ddfd631def8bfc5d93939ff11d3e13e0",
       "sources": [
         {
           "repository": "coreyhaines31/marketingskills",
@@ -111,6 +151,14 @@
           "path": "skills/sales-enablement/SKILL.md",
           "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/sales-enablement/SKILL.md",
           "sha256": "e7b6b323c57b788d1339c429342aa6dde83d78f6efcf45d8cfdd8c50eb46de83",
+          "license": "MIT"
+        },
+        {
+          "repository": "github/awesome-copilot",
+          "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
+          "path": "skills/gtm-enterprise-account-planning/SKILL.md",
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/skills/gtm-enterprise-account-planning/SKILL.md",
+          "sha256": "92441114f77b1dd72d2edf1d55e369a00e0dce0bf8b4a749fbbc5198de4ddf78",
           "license": "MIT"
         }
       ],
@@ -122,7 +170,7 @@
       "name": "Agent Vận hành CRM",
       "description": "Thiết kế pipeline, chuẩn dữ liệu, phân công và đo tiến độ chăm sóc khách hàng.",
       "deliverable": "Pipeline, từ điển dữ liệu, quy tắc chống trùng và bảng chỉ số vận hành.",
-      "sha256": "d924323faf0820c7ee8542a1a7889d773e3083cf753f42f7e0cb1d14ea84052a",
+      "sha256": "29ac9d2fdcfe0659fc4f7aedd3528a479d5f1713b3c53b5e7bcc45ffa241ce11",
       "sources": [
         {
           "repository": "coreyhaines31/marketingskills",
@@ -130,6 +178,14 @@
           "path": "skills/revops/SKILL.md",
           "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/revops/SKILL.md",
           "sha256": "443e7028b2cdff93e60d051fe528003e4b3569130a120ac649eaac2fd8013ac6",
+          "license": "MIT"
+        },
+        {
+          "repository": "alirezarezvani/claude-skills",
+          "commit": "4680893d91f2aee6f77ca1519fd1b86b7a104c87",
+          "path": "business-growth/skills/revenue-operations/SKILL.md",
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-growth/skills/revenue-operations/SKILL.md",
+          "sha256": "fe3e0ae8c10dda07b764d7e15278ace034d3912a834a983bdcc2c23bce726b21",
           "license": "MIT"
         }
       ],
@@ -141,7 +197,7 @@
       "name": "Agent Tài chính quản trị",
       "description": "Lập ngân sách, dòng tiền, kịch bản và phân tích chênh lệch cho doanh nghiệp hoặc tài chính cá nhân.",
       "deliverable": "Bảng ngân sách/dòng tiền, giải thích chênh lệch, giả định và rủi ro quyết định.",
-      "sha256": "81e1437bdb135bee73cbbb4b96cbb254941825f0052f2dd6e5d8f835fcad8ceb",
+      "sha256": "fc923adb73c198948c81caef76289ca058ccfba420f98ea870e180c1af04ec0c",
       "sources": [
         {
           "repository": "msitarzewski/agency-agents",
@@ -149,6 +205,14 @@
           "path": "finance/finance-fpa-analyst.md",
           "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/finance/finance-fpa-analyst.md",
           "sha256": "5fa9137c80e0b91fbe62815e7981d7b6a2ca5bafe43013c56d1b847a3c963141",
+          "license": "MIT"
+        },
+        {
+          "repository": "alirezarezvani/claude-skills",
+          "commit": "4680893d91f2aee6f77ca1519fd1b86b7a104c87",
+          "path": "business-growth/skills/revenue-operations/SKILL.md",
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-growth/skills/revenue-operations/SKILL.md",
+          "sha256": "fe3e0ae8c10dda07b764d7e15278ace034d3912a834a983bdcc2c23bce726b21",
           "license": "MIT"
         }
       ],
@@ -160,15 +224,15 @@
       "name": "Agent Kế toán và đối soát",
       "description": "Đối chiếu dữ liệu chứng từ, giao dịch và sổ theo quy tắc doanh nghiệp cung cấp; phát hiện chênh lệch.",
       "deliverable": "Bảng khớp/chênh lệch, chứng cứ nguồn và danh sách ngoại lệ cần người phụ trách xác nhận.",
-      "sha256": "8e91a3fe53e824f6f15d4bd79b5dd4ad5c39fb59ce6686c7619da31969d5f001",
+      "sha256": "7b5feee3181f5e7edf1f1cbdf56e8e33ee6f2fa19bd98df540232f84049b009b",
       "sources": [
         {
-          "repository": "msitarzewski/agency-agents",
-          "commit": "8ae6164602c95ca78828b148b9052460ee426885",
-          "path": "finance/finance-fpa-analyst.md",
-          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/finance/finance-fpa-analyst.md",
-          "sha256": "5fa9137c80e0b91fbe62815e7981d7b6a2ca5bafe43013c56d1b847a3c963141",
-          "license": "MIT"
+          "repository": "anthropics/skills",
+          "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+          "path": "skills/xlsx/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx/SKILL.md",
+          "sha256": "f32b1c2b5d5d31e02964df110d6489613d9345f86830c118cfe24159d8448ce6",
+          "license": "Apache-2.0"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -179,7 +243,7 @@
       "name": "Agent Nhân sự",
       "description": "Chuẩn bị mô tả công việc, tiêu chí tuyển dụng, kế hoạch hội nhập và phát triển nhân viên.",
       "deliverable": "Mô tả vai trò, tiêu chí đánh giá và kế hoạch hội nhập có người phụ trách; tránh đưa hồ sơ cá nhân không cần thiết vào báo cáo.",
-      "sha256": "0db93091205062e16eed5eb06d1ccf47cc423d8f36b0adcd5b74ad013be35451",
+      "sha256": "d1998c6a19ecfbcc22eedd99d4822d8d0cbf749c701af9123cf86a4845662c21",
       "sources": [
         {
           "repository": "msitarzewski/agency-agents",
@@ -187,6 +251,14 @@
           "path": "specialized/hr-onboarding.md",
           "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/specialized/hr-onboarding.md",
           "sha256": "28a52c26f27ab24d7fe11f5e48cfe712f6d27da142ec97911683b4a3ad92332c",
+          "license": "MIT"
+        },
+        {
+          "repository": "alirezarezvani/claude-skills",
+          "commit": "4680893d91f2aee6f77ca1519fd1b86b7a104c87",
+          "path": "business-operations/skills/internal-comms/SKILL.md",
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-operations/skills/internal-comms/SKILL.md",
+          "sha256": "24df7c5393d61d36a7baf122a6d543063951245abe25eced11f7ca6740f2e40e",
           "license": "MIT"
         }
       ],
@@ -198,7 +270,7 @@
       "name": "Agent Quản lý dự án",
       "description": "Chia việc, mốc bàn giao, phụ thuộc, nguồn lực và theo dõi rủi ro dự án.",
       "deliverable": "Kế hoạch công việc, mốc, phụ thuộc, tiêu chí nghiệm thu và sổ rủi ro.",
-      "sha256": "1a4a5815649da1b57a56b5ec706c82c3e6c5d823d03417c8e583709f76356f93",
+      "sha256": "7223a010631619bc7db8df8bd3f0e47ad4bd52eedb2ccdcb7286b3db88a13087",
       "sources": [
         {
           "repository": "obra/superpowers",
@@ -207,6 +279,38 @@
           "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-plans/SKILL.md",
           "sha256": "a6c67c1900064347c2a329990dd3c555657c51c3ec53b259a08aa01a2c26139a",
           "license": "MIT"
+        },
+        {
+          "repository": "addyosmani/agent-skills",
+          "commit": "39b723ceebf81474d0557c1fecd01eddab585563",
+          "path": "skills/planning-and-task-breakdown/SKILL.md",
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/skills/planning-and-task-breakdown/SKILL.md",
+          "sha256": "b38e35d4f6030a11423082679b1c4d0988c91a3569a3434ff0f8b9799657d630",
+          "license": "MIT"
+        },
+        {
+          "repository": "gsd-build/get-shit-done",
+          "commit": "bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815",
+          "path": "agents/gsd-planner.md",
+          "url": "https://raw.githubusercontent.com/gsd-build/get-shit-done/bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815/agents/gsd-planner.md",
+          "sha256": "0a91120c53fe8974e072517a5b5356447c545dcf52ec044a5a35d1ea6be5d23d",
+          "license": "MIT"
+        },
+        {
+          "repository": "github/awesome-copilot",
+          "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
+          "path": "skills/breakdown-plan/SKILL.md",
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/skills/breakdown-plan/SKILL.md",
+          "sha256": "ce46dc0485b0ee3e7fc4172a507df685207b17806c9fa431bbf723308b8a2125",
+          "license": "MIT"
+        },
+        {
+          "repository": "snarktank/ai-dev-tasks",
+          "commit": "efbffaac10e68c94e14aaa587c79b7d5015b5ebd",
+          "path": "generate-tasks.md",
+          "url": "https://raw.githubusercontent.com/snarktank/ai-dev-tasks/efbffaac10e68c94e14aaa587c79b7d5015b5ebd/generate-tasks.md",
+          "sha256": "88d4b4696df753be3a5ffce9270564233eefe3143c1bd74ee2a3e4e3aa504dbe",
+          "license": "Apache-2.0"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -217,7 +321,7 @@
       "name": "Agent Quản lý sản phẩm",
       "description": "Làm rõ vấn đề người dùng, ưu tiên tính năng, đặc tả và thí nghiệm giá trị sản phẩm.",
       "deliverable": "Đặc tả, ưu tiên có căn cứ, luồng sử dụng và kế hoạch kiểm nghiệm.",
-      "sha256": "7c7c4b3a10a62f698aee57bf3ccddc067e0b475df082dcf3a2a64e466bf85885",
+      "sha256": "53e214d72b2b796c88bc2b5e08f25faff050704ff6fe349f51c92690ff7dcb61",
       "sources": [
         {
           "repository": "msitarzewski/agency-agents",
@@ -226,6 +330,30 @@
           "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/product/product-manager.md",
           "sha256": "4a3fe4661e72e5173877bcba7c362392181774b20efc27ac1789171e98676c9d",
           "license": "MIT"
+        },
+        {
+          "repository": "phuryn/pm-skills",
+          "commit": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+          "path": "pm-execution/skills/create-prd/SKILL.md",
+          "url": "https://raw.githubusercontent.com/phuryn/pm-skills/9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef/pm-execution/skills/create-prd/SKILL.md",
+          "sha256": "e3aa10a437ed7f748a957bd5d1eb06d8fa3f56dc728dcb93ce484387ecc3fa13",
+          "license": "MIT"
+        },
+        {
+          "repository": "phuryn/pm-skills",
+          "commit": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+          "path": "pm-product-discovery/skills/opportunity-solution-tree/SKILL.md",
+          "url": "https://raw.githubusercontent.com/phuryn/pm-skills/9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef/pm-product-discovery/skills/opportunity-solution-tree/SKILL.md",
+          "sha256": "6b23e44a5ace86aa20d64cc130322265ace6a53a29831cc403b974098a379bcc",
+          "license": "MIT"
+        },
+        {
+          "repository": "snarktank/ai-dev-tasks",
+          "commit": "efbffaac10e68c94e14aaa587c79b7d5015b5ebd",
+          "path": "create-prd.md",
+          "url": "https://raw.githubusercontent.com/snarktank/ai-dev-tasks/efbffaac10e68c94e14aaa587c79b7d5015b5ebd/create-prd.md",
+          "sha256": "ec2f41854b01ce558239695e5402c1dfbee6c77034fb11fb36f9441dc9039aad",
+          "license": "Apache-2.0"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -236,7 +364,7 @@
       "name": "Agent Soạn thảo Word",
       "description": "Soạn tài liệu, báo cáo, đề xuất và biểu mẫu có cấu trúc, phù hợp xuất DOCX.",
       "deliverable": "Tài liệu hoàn chỉnh hoặc nội dung sẵn nhập Word; chỉ gắn liên kết tải khi tệp đã tồn tại.",
-      "sha256": "2c4dbb47900ff5f3186c1a703f4cc4363ccddb57e25de4e9b258a24e94404238",
+      "sha256": "a44101d8fd3e275814677ae9f7ba925f376a3574eed31e300c533bea28fc00ef",
       "sources": [
         {
           "repository": "anthropics/skills",
@@ -255,7 +383,7 @@
       "name": "Agent Bảng tính Excel",
       "description": "Phân tích và xây bảng tính, công thức, kiểm dữ liệu và báo cáo số liệu.",
       "deliverable": "Bảng kết quả, công thức và các phép đối chiếu; tệp XLSX thật khi có công cụ phù hợp.",
-      "sha256": "b4145e2f51190b08094bdabf4ac7f79b6807f8343b59f9958b601b9202cbfea1",
+      "sha256": "cc8513bf310d3346c373468073a06ba5f41c4eae1964817ce0c1a7f807b1934f",
       "sources": [
         {
           "repository": "anthropics/skills",
@@ -263,6 +391,14 @@
           "path": "skills/xlsx/SKILL.md",
           "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx/SKILL.md",
           "sha256": "f32b1c2b5d5d31e02964df110d6489613d9345f86830c118cfe24159d8448ce6",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "googleworkspace/cli",
+          "commit": "cd3697e07eb520056dcf142d0c7439bbb9ba32e9",
+          "path": "skills/gws-sheets-read/SKILL.md",
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/gws-sheets-read/SKILL.md",
+          "sha256": "2308eab564907f4d8789de030dadebf9187988a944a57da9ffd49ce7a4ecafef",
           "license": "Apache-2.0"
         }
       ],
@@ -274,7 +410,7 @@
       "name": "Agent Trình chiếu",
       "description": "Xây câu chuyện, nội dung và bố cục thuyết trình cho kinh doanh, đào tạo hoặc công việc cá nhân.",
       "deliverable": "Storyboard, nội dung slide, ghi chú thuyết trình và PPTX thật khi công cụ đã tạo/kiểm.",
-      "sha256": "34026f870c1fd97dfb87c170f5b64423f4426b6968dfe1692367d0ea65c9f53c",
+      "sha256": "9687f04d29c58b9072f95a7c0a05fdd8c7f431cf78dd37d6d06964ebbd38d976",
       "sources": [
         {
           "repository": "anthropics/skills",
@@ -283,6 +419,14 @@
           "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pptx/SKILL.md",
           "sha256": "598c981d93f2173b251f86a4bc94e9fb4e4f5ddaa314ba2dd4eca24b7a07808e",
           "license": "Apache-2.0"
+        },
+        {
+          "repository": "wshobson/agents",
+          "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+          "path": "plugins/business-analytics/skills/data-storytelling/SKILL.md",
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/business-analytics/skills/data-storytelling/SKILL.md",
+          "sha256": "0244a9ef6bca2df0762425b78912d27061b9b93f9b09987ad7bc074752a0cb50",
+          "license": "MIT"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -293,7 +437,7 @@
       "name": "Agent Tài liệu PDF",
       "description": "Đọc, tổng hợp và kiểm tài liệu PDF, cấu trúc trang và khả năng trích xuất dữ liệu.",
       "deliverable": "Tóm tắt có trang, dữ liệu trích xuất và ghi rõ lỗi OCR/giới hạn; PDF đầu ra khi đã tạo thật.",
-      "sha256": "3d04298320b6423d20f88c2732c001c1c4904e8756fc14355f72be35d4ff9d7d",
+      "sha256": "c3eb860cab7e6150f911be3abf8d362f3eda4825d12c14e59e3ed285ff2ef9f8",
       "sources": [
         {
           "repository": "anthropics/skills",
@@ -312,7 +456,7 @@
       "name": "Agent Biên bản và hành chính",
       "description": "Tổng hợp cuộc họp, quyết định, công việc theo dõi và truyền thông nội bộ.",
       "deliverable": "Biên bản, bảng quyết định, việc cần làm và các điểm cần xác nhận.",
-      "sha256": "4c4165a30dce0e5366dee6793640ee8c2942742b817686a0f2a78d95ff21710b",
+      "sha256": "a02e588f119249841c81c89df6c11554a623ee0babbb1319760e21ef4f957a8e",
       "sources": [
         {
           "repository": "msitarzewski/agency-agents",
@@ -321,6 +465,22 @@
           "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/project-management/project-management-meeting-notes-specialist.md",
           "sha256": "53a6efaa379b70cbc3276b44544ecf569789fffe892ba82eb68e8672407de91f",
           "license": "MIT"
+        },
+        {
+          "repository": "anthropics/skills",
+          "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+          "path": "skills/internal-comms/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/internal-comms/SKILL.md",
+          "sha256": "067b7587a344a928fc6534ef66b1bcd591fc7c26d207ea7ca3334aeb678d6475",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "ComposioHQ/awesome-claude-skills",
+          "commit": "be2a406907dbc61b73e6827ded415c96139d13a2",
+          "path": "internal-comms/SKILL.md",
+          "url": "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/be2a406907dbc61b73e6827ded415c96139d13a2/internal-comms/SKILL.md",
+          "sha256": "067b7587a344a928fc6534ef66b1bcd591fc7c26d207ea7ca3334aeb678d6475",
+          "license": "Apache-2.0"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -331,15 +491,31 @@
       "name": "Agent Phân tích dữ liệu",
       "description": "Làm sạch, phân tích mô tả, tìm bất thường và giải thích dữ liệu hỗ trợ quyết định.",
       "deliverable": "Kết quả có phương pháp, bảng/chỉ số kiểm được, giới hạn dữ liệu và khuyến nghị.",
-      "sha256": "43123e78097b21b44645871bd79f8cbce1edc9d7f56e395c6393cf7a089ddb0e",
+      "sha256": "5a4b88582e03c2168e82f877c032f5a6a4bf2f15c3c34970e766a968ea9d888f",
       "sources": [
         {
-          "repository": "anthropics/skills",
-          "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
-          "path": "skills/xlsx/SKILL.md",
-          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx/SKILL.md",
-          "sha256": "f32b1c2b5d5d31e02964df110d6489613d9345f86830c118cfe24159d8448ce6",
+          "repository": "anthropics/knowledge-work-plugins",
+          "commit": "e91a134584eb798bac7fb0379358006a2b63b965",
+          "path": "data/skills/statistical-analysis/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/e91a134584eb798bac7fb0379358006a2b63b965/data/skills/statistical-analysis/SKILL.md",
+          "sha256": "91a15cfc144efffcd622b09827362a73993a3ff30e3a78114801832477c9f8a0",
           "license": "Apache-2.0"
+        },
+        {
+          "repository": "K-Dense-AI/scientific-agent-skills",
+          "commit": "ec59a29a03d5c40f73ab40878df04860bc00e876",
+          "path": "skills/exploratory-data-analysis/SKILL.md",
+          "url": "https://raw.githubusercontent.com/K-Dense-AI/scientific-agent-skills/ec59a29a03d5c40f73ab40878df04860bc00e876/skills/exploratory-data-analysis/SKILL.md",
+          "sha256": "955c4cefa49106dd03b55cbd62603bab2d2fb678e627dd452ba62040c7128484",
+          "license": "MIT"
+        },
+        {
+          "repository": "K-Dense-AI/scientific-agent-skills",
+          "commit": "ec59a29a03d5c40f73ab40878df04860bc00e876",
+          "path": "skills/statistical-analysis/SKILL.md",
+          "url": "https://raw.githubusercontent.com/K-Dense-AI/scientific-agent-skills/ec59a29a03d5c40f73ab40878df04860bc00e876/skills/statistical-analysis/SKILL.md",
+          "sha256": "e112848726b3713267cac65e4e2c15491a0a26ee1ed628db01195f7e43f97997",
+          "license": "MIT"
         }
       ],
       "adaptation": "vi-VN-original-workflow",
@@ -350,7 +526,7 @@
       "name": "Agent Đặc tả kỹ thuật",
       "description": "Chuyển yêu cầu thành hợp đồng giao diện, mô hình dữ liệu và kế hoạch triển khai có thể kiểm.",
       "deliverable": "Đặc tả kỹ thuật, các quyết định có lý do, migration/rollback và tiêu chí kiểm.",
-      "sha256": "2d78a743af8dab4854a1df93dc58587e997947d860baf723989748bb4fca286f",
+      "sha256": "31850dfb6e3a8150d2a61cd4a839eba0caff1e60a92cf32d52102f6ff492bced",
       "sources": [
         {
           "repository": "mattpocock/skills",
@@ -358,6 +534,22 @@
           "path": "skills/engineering/to-spec/SKILL.md",
           "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/to-spec/SKILL.md",
           "sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
+          "license": "MIT"
+        },
+        {
+          "repository": "addyosmani/agent-skills",
+          "commit": "39b723ceebf81474d0557c1fecd01eddab585563",
+          "path": "skills/source-driven-development/SKILL.md",
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/skills/source-driven-development/SKILL.md",
+          "sha256": "df38a852658679a67c7a9e4840160570c95094a13a63307e834045ddbf8aa287",
+          "license": "MIT"
+        },
+        {
+          "repository": "github/awesome-copilot",
+          "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
+          "path": "skills/create-implementation-plan/SKILL.md",
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/skills/create-implementation-plan/SKILL.md",
+          "sha256": "11caba1048cbdbfca6f7ce13a0e0580d6e9d943f7b775ee24978ece1d3334066",
           "license": "MIT"
         }
       ],
@@ -369,7 +561,7 @@
       "name": "Agent Chẩn đoán lỗi",
       "description": "Tái hiện và xác định nguyên nhân lỗi, suy giảm hiệu năng, đề xuất bản sửa có bằng chứng.",
       "deliverable": "Nguyên nhân có bằng chứng, thay đổi đề nghị/đã áp và kết quả kiểm đúng phạm vi.",
-      "sha256": "846dc589065132371a07176312c70a0bc3509d44f55fd3d91489dedb5ac62f73",
+      "sha256": "beb58cf8498af598d528017ab162c9286dc22e4b059098cf71aad5922ed93e17",
       "sources": [
         {
           "repository": "mattpocock/skills",
@@ -377,6 +569,22 @@
           "path": "skills/engineering/diagnosing-bugs/SKILL.md",
           "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/diagnosing-bugs/SKILL.md",
           "sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d",
+          "license": "MIT"
+        },
+        {
+          "repository": "obra/superpowers",
+          "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "path": "skills/systematic-debugging/SKILL.md",
+          "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/systematic-debugging/SKILL.md",
+          "sha256": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+          "license": "MIT"
+        },
+        {
+          "repository": "vuejs-ai/skills",
+          "commit": "198f0cd8f7f9c0a3d9b566ccc16de6677519ee78",
+          "path": "skills/vue-debug-guides/SKILL.md",
+          "url": "https://raw.githubusercontent.com/vuejs-ai/skills/198f0cd8f7f9c0a3d9b566ccc16de6677519ee78/skills/vue-debug-guides/SKILL.md",
+          "sha256": "7e16c92d2a221fbd99c44456ada0c32cc4606b1f49a352b10e0ebdc046d50f8f",
           "license": "MIT"
         }
       ],
@@ -388,7 +596,7 @@
       "name": "Agent Rà soát mã",
       "description": "Đối chiếu mã với yêu cầu, quy tắc dự án và các lỗi có tác động thực tế.",
       "deliverable": "Phát hiện theo mức ảnh hưởng, bằng chứng vị trí và giới hạn phạm vi đã xem.",
-      "sha256": "619394d0b7d13f867b83cdb89fac9ef96d336d33d16bc5df813952187d634ef6",
+      "sha256": "795ad9e20c6b4eac2c7244eebae425f8067520756335925cc1be23b0f58ee37d",
       "sources": [
         {
           "repository": "mattpocock/skills",
@@ -396,6 +604,22 @@
           "path": "skills/engineering/code-review/SKILL.md",
           "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/code-review/SKILL.md",
           "sha256": "9c921a8d88138a41401d8897ca1bb852088ab1b7b605cdd04edc13e3e8aab6dd",
+          "license": "MIT"
+        },
+        {
+          "repository": "addyosmani/agent-skills",
+          "commit": "39b723ceebf81474d0557c1fecd01eddab585563",
+          "path": "skills/code-review-and-quality/SKILL.md",
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/skills/code-review-and-quality/SKILL.md",
+          "sha256": "5dc8f98d9d23e74676091a945b2649bb52456e34f293238ee2511281104a94c0",
+          "license": "MIT"
+        },
+        {
+          "repository": "garrytan/gstack",
+          "commit": "5dcd76b4eae6bb06f73460d3ab29cef8e33e8537",
+          "path": "review/SKILL.md",
+          "url": "https://raw.githubusercontent.com/garrytan/gstack/5dcd76b4eae6bb06f73460d3ab29cef8e33e8537/review/SKILL.md",
+          "sha256": "0c0033159b45b6bad36e2c3d3ea2e59cd8b7057da82d7ce8a3e88b2debf7b48c",
           "license": "MIT"
         }
       ],
@@ -407,7 +631,7 @@
       "name": "Agent Kiểm thử và nghiệm thu",
       "description": "Xây tiêu chí nghiệm thu, tình huống kiểm và đối chiếu bằng chứng thực thi với yêu cầu.",
       "deliverable": "Ma trận nghiệm thu, kết quả kiểm thật, lỗi tái hiện được và phần chưa đủ bằng chứng.",
-      "sha256": "81a5cd96949e9f47dcd644db8d25792c526fc5386e6ec0da8c5eb128bf581511",
+      "sha256": "e19662f806f9a7e6669d23705fde5fb97affa9f121eae3d50f03ab238c2364dc",
       "sources": [
         {
           "repository": "obra/superpowers",
@@ -415,6 +639,14 @@
           "path": "skills/verification-before-completion/SKILL.md",
           "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/verification-before-completion/SKILL.md",
           "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+          "license": "MIT"
+        },
+        {
+          "repository": "gsd-build/get-shit-done",
+          "commit": "bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815",
+          "path": "agents/gsd-executor.md",
+          "url": "https://raw.githubusercontent.com/gsd-build/get-shit-done/bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815/agents/gsd-executor.md",
+          "sha256": "08d3b33ea9e825c616da8e1cab24d7781aa3adbf26dbf6122a105cdee5b99273",
           "license": "MIT"
         }
       ],
@@ -426,7 +658,7 @@
       "name": "Agent Tài liệu và tri thức",
       "description": "Xây tài liệu hướng dẫn, wiki, quy trình và hệ thống tra cứu dựa trên nguồn được cấp.",
       "deliverable": "Tài liệu dùng được, mục lục hợp lý, tham chiếu nguồn và các điểm cần cập nhật.",
-      "sha256": "d96fdcc5292a693157a4cba957399620467cf68e8bb9d5ed653009014a7d6861",
+      "sha256": "7d0a58422edc9a82d8e785d95726de84d007ad10c9af1a7ed8020d808ee791c3",
       "sources": [
         {
           "repository": "microsoft/skills",
@@ -434,6 +666,30 @@
           "path": ".github/plugins/deep-wiki/skills/wiki-researcher/SKILL.md",
           "url": "https://raw.githubusercontent.com/microsoft/skills/f03ec5392f7a0f3aca12af47477e92f1edf7b44c/.github/plugins/deep-wiki/skills/wiki-researcher/SKILL.md",
           "sha256": "3793d737ccb3e2c24d2de919f19ef59c35cc73598be8fdc8eb69693820ae29b5",
+          "license": "MIT"
+        },
+        {
+          "repository": "obsidianmd/obsidian-skills",
+          "commit": "398127736bd4ba42d767b1419fee1a927508370b",
+          "path": "plugins/obsidian/skills/obsidian-markdown/SKILL.md",
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/skills/obsidian-markdown/SKILL.md",
+          "sha256": "f1c4ff5257d3f9743af797d755cabeef129f553704d5ff67ebf1239f9569f081",
+          "license": "MIT"
+        },
+        {
+          "repository": "obsidianmd/obsidian-skills",
+          "commit": "398127736bd4ba42d767b1419fee1a927508370b",
+          "path": "plugins/obsidian/skills/json-canvas/SKILL.md",
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/skills/json-canvas/SKILL.md",
+          "sha256": "4db4e69eea910b598c249e41bcdda85a70856348adaf11c35371198e258d50a6",
+          "license": "MIT"
+        },
+        {
+          "repository": "obsidianmd/obsidian-skills",
+          "commit": "398127736bd4ba42d767b1419fee1a927508370b",
+          "path": "plugins/obsidian/skills/obsidian-bases/SKILL.md",
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/skills/obsidian-bases/SKILL.md",
+          "sha256": "7a1659e2c00e7b74c8767002213dd977967ddd30dd15a7f33b693e783a4546e9",
           "license": "MIT"
         }
       ],
@@ -445,7 +701,7 @@
       "name": "Agent Trợ lý cá nhân",
       "description": "Sắp xếp công việc, chuẩn bị thông tin, lịch dự kiến và tài liệu phục vụ mục tiêu cá nhân.",
       "deliverable": "Danh sách ưu tiên, kế hoạch khả thi, tài liệu chuẩn bị và những quyết định cần chủ sở hữu.",
-      "sha256": "a36a307ee29a30b6af2914e54374944285bcfddd60c7f93d9ccc551259ebf061",
+      "sha256": "38fab72fcdda4670e19a4afbe5b039e74ae6675ff1ecd3f24c98aeae6241a089",
       "sources": [
         {
           "repository": "obra/superpowers",
@@ -454,6 +710,464 @@
           "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-plans/SKILL.md",
           "sha256": "a6c67c1900064347c2a329990dd3c555657c51c3ec53b259a08aa01a2c26139a",
           "license": "MIT"
+        },
+        {
+          "repository": "OthmanAdi/planning-with-files",
+          "commit": "51bf62def62d1cb317d37936929b4ef97cf862c3",
+          "path": "skills/planning-with-files/SKILL.md",
+          "url": "https://raw.githubusercontent.com/OthmanAdi/planning-with-files/51bf62def62d1cb317d37936929b4ef97cf862c3/skills/planning-with-files/SKILL.md",
+          "sha256": "04e660bd52a8bdb4e4ba16395231b5a216f5e84049b7ebd0bb203132d192b397",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-thiet-ke-ui-ux",
+      "name": "Agent Thiết kế UI/UX",
+      "description": "Thiết kế và đánh giá trải nghiệm, giao diện web/app; kiểm responsive, trạng thái và khả dụng.",
+      "deliverable": "Đặc tả luồng/giao diện, đề xuất bố cục hoặc mã thay đổi khi có công cụ; bằng chứng render và lỗi đã kiểm.",
+      "sha256": "3cdab0f6d0404a0722d8a2d3b74f324c96d30395bd46d2bdea9c8586603d8b5c",
+      "sources": [
+        {
+          "repository": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "commit": "e59ff376a41f7ca47b7541ad5c116495cbade3ee",
+          "path": ".claude/skills/ui-ux-pro-max/SKILL.md",
+          "url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/e59ff376a41f7ca47b7541ad5c116495cbade3ee/.claude/skills/ui-ux-pro-max/SKILL.md",
+          "sha256": "af9cf89efd1eac29495fb44f25b3fae8b96bf9ddbaaa2a47c6e835d9aa568a6f",
+          "license": "MIT"
+        },
+        {
+          "repository": "pbakaus/impeccable",
+          "commit": "d41d9860b0094dcb68030657da63461212835aaa",
+          "path": ".agents/skills/impeccable/SKILL.md",
+          "url": "https://raw.githubusercontent.com/pbakaus/impeccable/d41d9860b0094dcb68030657da63461212835aaa/.agents/skills/impeccable/SKILL.md",
+          "sha256": "12d15997482e6d0734c5f2dcc4f62cea7bcba19953940214cffa5c6a7758aa93",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "pbakaus/impeccable",
+          "commit": "d41d9860b0094dcb68030657da63461212835aaa",
+          "path": ".agents/skills/impeccable/reference/audit.md",
+          "url": "https://raw.githubusercontent.com/pbakaus/impeccable/d41d9860b0094dcb68030657da63461212835aaa/.agents/skills/impeccable/reference/audit.md",
+          "sha256": "c1cc198c61bf4cc32416210f490e9245ecf58d57c17d4a0659f79da0f6ffac2b",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "Leonxlnx/taste-skill",
+          "commit": "f6b76575f949707b4e3c37cd86cb44b0b98643e8",
+          "path": "skills/taste-skill/SKILL.md",
+          "url": "https://raw.githubusercontent.com/Leonxlnx/taste-skill/f6b76575f949707b4e3c37cd86cb44b0b98643e8/skills/taste-skill/SKILL.md",
+          "sha256": "0c7a5852a5217be79cab422c6d58329b776f0c25bd6da8a7a01707ce75be6206",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-phat-trien-frontend",
+      "name": "Agent Phát triển frontend",
+      "description": "Xây hoặc sửa giao diện ứng dụng, component, trạng thái và kết nối API theo stack dự án.",
+      "deliverable": "Mã hoặc bản vá frontend, các trạng thái lỗi/rỗng/loading và kết quả kiểm thật trong môi trường được cấp.",
+      "sha256": "85b8c5a9f5635576a793ad4dcaf5bee8ccba3034c14daa1b71b433a5eb26d4d8",
+      "sources": [
+        {
+          "repository": "google-labs-code/stitch-skills",
+          "commit": "0337446dadde6f8c94210444e2aa9d546126480f",
+          "path": "plugins/stitch-build/skills/react-components/SKILL.md",
+          "url": "https://raw.githubusercontent.com/google-labs-code/stitch-skills/0337446dadde6f8c94210444e2aa9d546126480f/plugins/stitch-build/skills/react-components/SKILL.md",
+          "sha256": "a978bf8fb135c69f944432dfa4166d6a88903c524ed4be51899a226f7daa223e",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "vuejs-ai/skills",
+          "commit": "198f0cd8f7f9c0a3d9b566ccc16de6677519ee78",
+          "path": "skills/vue-best-practices/SKILL.md",
+          "url": "https://raw.githubusercontent.com/vuejs-ai/skills/198f0cd8f7f9c0a3d9b566ccc16de6677519ee78/skills/vue-best-practices/SKILL.md",
+          "sha256": "3a601da4b2cc46b1712fcedb1ce434f0c263e29c2a8193ccf84dcbd0b7c03378",
+          "license": "MIT"
+        },
+        {
+          "repository": "expo/skills",
+          "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+          "path": "plugins/expo/skills/expo-data-fetching/SKILL.md",
+          "url": "https://raw.githubusercontent.com/expo/skills/dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d/plugins/expo/skills/expo-data-fetching/SKILL.md",
+          "sha256": "e1154813edd968a54a9d3688795ef905d13bda61ef08d0ee455534f95db01332",
+          "license": "MIT"
+        },
+        {
+          "repository": "expo/skills",
+          "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+          "path": "plugins/expo/skills/expo-router/SKILL.md",
+          "url": "https://raw.githubusercontent.com/expo/skills/dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d/plugins/expo/skills/expo-router/SKILL.md",
+          "sha256": "605234749eeeb6896e324f55cdef7af15603c348fbc2f7a6fe13538ec222ce43",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-backend-api",
+      "name": "Agent Backend và API",
+      "description": "Thiết kế và phát triển dịch vụ phía máy chủ, API và luồng dữ liệu có xác thực.",
+      "deliverable": "Hợp đồng API, mã hoặc bản vá, migration/rollback và kiểm hành vi/phân quyền.",
+      "sha256": "fea51579bff359c7c39ede69e9424a9fd0c29df846f55c433f4174a4bea4dfa0",
+      "sources": [
+        {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "commit": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "categories/01-core-development/api-designer.md",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/01-core-development/api-designer.md",
+          "sha256": "dc8547318598b6abecfad8d3c5709c9bb21fc38c2e5f5b4f452bb02f668df1be",
+          "license": "MIT"
+        },
+        {
+          "repository": "VoltAgent/awesome-claude-code-subagents",
+          "commit": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+          "path": "categories/01-core-development/backend-developer.md",
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/01-core-development/backend-developer.md",
+          "sha256": "f41444c6a10a4d57821a9eda26018bf94d92249c5da383e93ebbee08b6c051c3",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-sql-co-so-du-lieu",
+      "name": "Agent SQL và cơ sở dữ liệu",
+      "description": "Phân tích schema, truy vấn SQL, chỉ mục, RLS và hiệu năng dữ liệu.",
+      "deliverable": "Schema/truy vấn hoặc phương án tối ưu có bằng chứng, phép đối chiếu và đường quay lại.",
+      "sha256": "086d509a77c30243978225d0044e4dc2fe434af9a06c433a927e60720666affc",
+      "sources": [
+        {
+          "repository": "supabase/agent-skills",
+          "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+          "path": "skills/supabase-postgres-best-practices/SKILL.md",
+          "url": "https://raw.githubusercontent.com/supabase/agent-skills/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices/SKILL.md",
+          "sha256": "ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855",
+          "license": "MIT"
+        },
+        {
+          "repository": "supabase/agent-skills",
+          "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+          "path": "skills/supabase/SKILL.md",
+          "url": "https://raw.githubusercontent.com/supabase/agent-skills/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase/SKILL.md",
+          "sha256": "697e0e949f97621c6fc1784169eb3ccbf673747d6bb8299a52962d3d84d93dc6",
+          "license": "MIT"
+        },
+        {
+          "repository": "cloudflare/skills",
+          "commit": "cbf893b954222276bf1af57e5f23379231e0efb9",
+          "path": "skills/basin/SKILL.md",
+          "url": "https://raw.githubusercontent.com/cloudflare/skills/cbf893b954222276bf1af57e5f23379231e0efb9/skills/basin/SKILL.md",
+          "sha256": "8c1f7d30fbb3def0894db05903235a54793dcc93f68d6ada60d7e069eebd6a69",
+          "license": "Apache-2.0"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-bao-mat",
+      "name": "Agent Bảo mật ứng dụng",
+      "description": "Rà soát bảo mật ứng dụng và luồng AI trong phạm vi được chủ sở hữu giao.",
+      "deliverable": "Phát hiện có vị trí và tình huống tái hiện, bản vá hoặc đề xuất, phần chưa kiểm chứng.",
+      "sha256": "48b74ed4cccd9909b39b12d64f076390c4958ece6a19bd9cafe6df0b2b2bb9c8",
+      "sources": [
+        {
+          "repository": "cloudflare/security-audit-skill",
+          "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+          "path": "skills/security-audit/SKILL.md",
+          "url": "https://raw.githubusercontent.com/cloudflare/security-audit-skill/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/SKILL.md",
+          "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+          "license": "MIT"
+        },
+        {
+          "repository": "davila7/claude-code-templates",
+          "commit": "425154fbdb24f3d6b6792408e7cb055931993b92",
+          "path": ".claude-plugin/skills/owasp-security/SKILL.md",
+          "url": "https://raw.githubusercontent.com/davila7/claude-code-templates/425154fbdb24f3d6b6792408e7cb055931993b92/.claude-plugin/skills/owasp-security/SKILL.md",
+          "sha256": "92c9604aa21999f402fe5e88d0d097c0f612d401af70562b3d22dc4228dcac9d",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-ha-tang-cloud",
+      "name": "Agent Hạ tầng và cloud",
+      "description": "Lập cấu hình và vận hành hạ tầng, dịch vụ cloud, quan sát và phục hồi.",
+      "deliverable": "Cấu hình hoặc kế hoạch triển khai có mục tiêu cụ thể, kiểm trước/sau và rollback.",
+      "sha256": "6cf0b85c09ffb19d3898840fe4e15ebf5a0634dc125b2fb94babc75ce9e206d5",
+      "sources": [
+        {
+          "repository": "google/skills",
+          "commit": "38ae03a5ac49fe20d5de9680b81bd2b2aa161b63",
+          "path": "plugins/cloud/google-cloud-developer/skills/gcloud/SKILL.md",
+          "url": "https://raw.githubusercontent.com/google/skills/38ae03a5ac49fe20d5de9680b81bd2b2aa161b63/plugins/cloud/google-cloud-developer/skills/gcloud/SKILL.md",
+          "sha256": "a16e7688f5b64c155b2d8ca452f9196df259ef1bd3c0a35f23e4a5f941eb037b",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "cloudflare/skills",
+          "commit": "cbf893b954222276bf1af57e5f23379231e0efb9",
+          "path": "skills/agents-sdk/SKILL.md",
+          "url": "https://raw.githubusercontent.com/cloudflare/skills/cbf893b954222276bf1af57e5f23379231e0efb9/skills/agents-sdk/SKILL.md",
+          "sha256": "9bda4bd3adc5ab09e30c19ea6b9a0bf673f0a4b190bf7624fc1b0dc5f1fcf9c1",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "microsoft/skills",
+          "commit": "f03ec5392f7a0f3aca12af47477e92f1edf7b44c",
+          "path": ".github/skills/microsoft-docs/SKILL.md",
+          "url": "https://raw.githubusercontent.com/microsoft/skills/f03ec5392f7a0f3aca12af47477e92f1edf7b44c/.github/skills/microsoft-docs/SKILL.md",
+          "sha256": "23d6c309124c4dd7f96ef7166a1998814b4eaeca7e3d654bdac2feacde7e16d1",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-google-workspace",
+      "name": "Agent Google Workspace",
+      "description": "Chuẩn bị và xử lý Docs, Sheets, lịch hoặc tài liệu Google qua công cụ được cấp.",
+      "deliverable": "Nội dung/bảng/lịch dự thảo hoặc kết quả công cụ thật có định danh tài liệu, phạm vi và trạng thái lưu.",
+      "sha256": "bfd681a5de85c0d1f20224238c9d971cd3b1548ce8ccbbb7ae8094ace884b1a5",
+      "sources": [
+        {
+          "repository": "googleworkspace/cli",
+          "commit": "cd3697e07eb520056dcf142d0c7439bbb9ba32e9",
+          "path": "skills/gws-sheets-read/SKILL.md",
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/gws-sheets-read/SKILL.md",
+          "sha256": "2308eab564907f4d8789de030dadebf9187988a944a57da9ffd49ce7a4ecafef",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "googleworkspace/cli",
+          "commit": "cd3697e07eb520056dcf142d0c7439bbb9ba32e9",
+          "path": "skills/gws-docs/SKILL.md",
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/gws-docs/SKILL.md",
+          "sha256": "676eb7a1d9e4a7bde0d19669299858daea3220650657199f21dcebb7fa6bf9d6",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "googleworkspace/cli",
+          "commit": "cd3697e07eb520056dcf142d0c7439bbb9ba32e9",
+          "path": "skills/persona-project-manager/SKILL.md",
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/persona-project-manager/SKILL.md",
+          "sha256": "8e025ac6916c806e0b0575467130ef822b27f1cbe27b2bd7e6812e261b559688",
+          "license": "Apache-2.0"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-quy-trinh-nghiep-vu",
+      "name": "Agent Quy trình nghiệp vụ",
+      "description": "Phân tích quy trình, bàn giao, điểm chờ và cải tiến vận hành của cá nhân/doanh nghiệp.",
+      "deliverable": "Sơ đồ hoặc bảng quy trình, chủ sở hữu, thời gian có nguồn, nút thắt và phép kiểm cải tiến.",
+      "sha256": "f272f13e4de524d62eefcc8a0b198d18a493820801b15ac03d1cf36164b30281",
+      "sources": [
+        {
+          "repository": "alirezarezvani/claude-skills",
+          "commit": "4680893d91f2aee6f77ca1519fd1b86b7a104c87",
+          "path": "business-operations/skills/process-mapper/SKILL.md",
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-operations/skills/process-mapper/SKILL.md",
+          "sha256": "72d9cf4b24f2e1af07569b37d7dbe622120aa542a35b82d43b0dbb34fb9e0f1c",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-nghien-cuu-thi-truong",
+      "name": "Agent Nghiên cứu thị trường",
+      "description": "Đánh giá thị trường, đối thủ, xu hướng và quy mô theo địa bàn, ngành và kỳ dữ liệu.",
+      "deliverable": "Báo cáo thị trường có nguồn, kịch bản quy mô, bằng chứng đối lập và khoảng trống dữ liệu.",
+      "sha256": "bdb5cf4671b05722c3e9da3de896bd29f231cef6f853dab596cbeaeea835b06f",
+      "sources": [
+        {
+          "repository": "affaan-m/ECC",
+          "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+          "path": ".agents/skills/market-research/SKILL.md",
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/market-research/SKILL.md",
+          "sha256": "bcccf6d1976ca9cebb08b5b80e53b76fc01d13698ad4cac544955d9dbe5bee03",
+          "license": "MIT"
+        },
+        {
+          "repository": "mvanhorn/last30days-skill",
+          "commit": "ab042cbc10c128bd6103db95328724830c6b302f",
+          "path": "skills/last30days/SKILL.md",
+          "url": "https://raw.githubusercontent.com/mvanhorn/last30days-skill/ab042cbc10c128bd6103db95328724830c6b302f/skills/last30days/SKILL.md",
+          "sha256": "3297090027c4bd87bf0463f2833f5e8c9addfef33607ad1b4807068e624a5ed8",
+          "license": "MIT"
+        },
+        {
+          "repository": "wshobson/agents",
+          "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+          "path": "plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md",
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md",
+          "sha256": "373c3f2089d5fa5228c3d24bf12ffacc6fefe04208d0df114ad75832c596e943",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-seo-noi-dung",
+      "name": "Agent SEO và nội dung web",
+      "description": "Soạn và kiểm nội dung website theo ý định tìm kiếm, cấu trúc và độ đọc được.",
+      "deliverable": "Đề cương/nội dung web, metadata đề xuất và các hạng mục SEO đã kiểm hoặc còn thiếu công cụ.",
+      "sha256": "1a6d98434b6e2cb94abfa28ebc9ccff392703b97af724a6e15bf43419b4fbe19",
+      "sources": [
+        {
+          "repository": "anthropics/knowledge-work-plugins",
+          "commit": "e91a134584eb798bac7fb0379358006a2b63b965",
+          "path": "marketing/skills/content-creation/SKILL.md",
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/e91a134584eb798bac7fb0379358006a2b63b965/marketing/skills/content-creation/SKILL.md",
+          "sha256": "17f0bfd536502a91c760accaa1ae6c0c76c3812973571729664133e282c5dded",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "davila7/claude-code-templates",
+          "commit": "425154fbdb24f3d6b6792408e7cb055931993b92",
+          "path": ".claude/agents/blog-writer.md",
+          "url": "https://raw.githubusercontent.com/davila7/claude-code-templates/425154fbdb24f3d6b6792408e7cb055931993b92/.claude/agents/blog-writer.md",
+          "sha256": "3c87babce727b1673e523bb21c46d5d4c99a5e7d1b9b8e18724422590ef302a9",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-bien-tap",
+      "name": "Agent Biên tập tiếng Việt",
+      "description": "Biên tập tiếng Việt cho tự nhiên, rõ và nhất quán giọng văn mà giữ nguyên dữ kiện.",
+      "deliverable": "Bản biên tập, các thay đổi quan trọng và phần dữ kiện cần xác minh.",
+      "sha256": "db4dc818a94acec824e3516b97b41c19d1d5b07f1525d70f6803772b903cf25c",
+      "sources": [
+        {
+          "repository": "blader/humanizer",
+          "commit": "b48c832f0f809c1b5658edbb838c2521b72f2413",
+          "path": "SKILL.md",
+          "url": "https://raw.githubusercontent.com/blader/humanizer/b48c832f0f809c1b5658edbb838c2521b72f2413/SKILL.md",
+          "sha256": "804a119e924ac30295b298213e0b71b3e38b2667b8ef4fb7b69e9246369b9045",
+          "license": "MIT"
+        },
+        {
+          "repository": "affaan-m/ECC",
+          "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+          "path": ".agents/skills/article-writing/SKILL.md",
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/article-writing/SKILL.md",
+          "sha256": "6305169f1aaf57e293284aa21bf646d995079ae2921499f7800c7db42d57091f",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-kpi-dashboard",
+      "name": "Agent KPI và dashboard",
+      "description": "Thiết kế chỉ số, báo cáo quản trị và dashboard phục vụ quyết định có dữ liệu.",
+      "deliverable": "Từ điển KPI, cách tính/nguồn/kỳ, bố cục dashboard và các phép kiểm đối chiếu.",
+      "sha256": "ff0d32081c4c7f52f74657fe350e5d6fea119ba36503dce4b8faa80fe358cd60",
+      "sources": [
+        {
+          "repository": "wshobson/agents",
+          "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+          "path": "plugins/business-analytics/skills/kpi-dashboard-design/SKILL.md",
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/business-analytics/skills/kpi-dashboard-design/SKILL.md",
+          "sha256": "cf913b10f55605477461e093daffbb6e6aab41b6d8061cef8baf01086d6d496a",
+          "license": "MIT"
+        },
+        {
+          "repository": "wshobson/agents",
+          "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+          "path": "plugins/business-analytics/skills/data-storytelling/SKILL.md",
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/business-analytics/skills/data-storytelling/SKILL.md",
+          "sha256": "0244a9ef6bca2df0762425b78912d27061b9b93f9b09987ad7bc074752a0cb50",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-ngu-canh-ban-giao",
+      "name": "Agent Ngữ cảnh và bàn giao",
+      "description": "Tóm tắt và bàn giao công việc dài, giữ ngữ cảnh cần thiết cho người hoặc Agent tiếp tục.",
+      "deliverable": "Bản bàn giao có mục tiêu, quyết định, tệp, bằng chứng kiểm, vướng mắc và bước tiếp theo.",
+      "sha256": "bf8af780e8c6bb2a4c862ed8134fcb6e8e0eaad8784a63152e4669156a554f28",
+      "sources": [
+        {
+          "repository": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+          "commit": "9ff0c99108b36d3b886defd825d8ac1f47dba374",
+          "path": "skills/context-fundamentals/SKILL.md",
+          "url": "https://raw.githubusercontent.com/muratcankoylan/Agent-Skills-for-Context-Engineering/9ff0c99108b36d3b886defd825d8ac1f47dba374/skills/context-fundamentals/SKILL.md",
+          "sha256": "03b56e1c40edc6314b1f204498c3ba40163a32e63bdbceaeba93513ccddcaba6",
+          "license": "MIT"
+        },
+        {
+          "repository": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+          "commit": "9ff0c99108b36d3b886defd825d8ac1f47dba374",
+          "path": "skills/context-compression/SKILL.md",
+          "url": "https://raw.githubusercontent.com/muratcankoylan/Agent-Skills-for-Context-Engineering/9ff0c99108b36d3b886defd825d8ac1f47dba374/skills/context-compression/SKILL.md",
+          "sha256": "ab4fd1e1046db339d83ead5089d4cb9d9c487232945d4ff6be90e08a03f6cfea",
+          "license": "MIT"
+        },
+        {
+          "repository": "OthmanAdi/planning-with-files",
+          "commit": "51bf62def62d1cb317d37936929b4ef97cf862c3",
+          "path": "skills/planning-with-files/reference.md",
+          "url": "https://raw.githubusercontent.com/OthmanAdi/planning-with-files/51bf62def62d1cb317d37936929b4ef97cf862c3/skills/planning-with-files/reference.md",
+          "sha256": "8f7d9cfe1971c5a32f3e5edb63ddfad73a11cc7de19d5065a6ec75fd118c0fdb",
+          "license": "MIT"
+        }
+      ],
+      "adaptation": "vi-VN-original-workflow",
+      "enabled": true
+    },
+    {
+      "id": "bdsg-he-thong-thiet-ke",
+      "name": "Agent Hệ thống thiết kế",
+      "description": "Xây hệ thống token, thành phần và tài liệu nhận diện để thiết kế/mã giao diện thống nhất.",
+      "deliverable": "Danh mục token/component, trạng thái, quy tắc dùng và các điểm lệch đã quan sát.",
+      "sha256": "ed01d7d9cade458ff1457aa2322262d676788dd7016f94be1cdba2f8f96f5ae1",
+      "sources": [
+        {
+          "repository": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "commit": "e59ff376a41f7ca47b7541ad5c116495cbade3ee",
+          "path": ".claude/skills/design-system/SKILL.md",
+          "url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/e59ff376a41f7ca47b7541ad5c116495cbade3ee/.claude/skills/design-system/SKILL.md",
+          "sha256": "8aa5ff93320559a6e5289d37b6b06b3307737dbfb4a6f3fc44135c705613c511",
+          "license": "MIT"
+        },
+        {
+          "repository": "google-labs-code/stitch-skills",
+          "commit": "0337446dadde6f8c94210444e2aa9d546126480f",
+          "path": "plugins/stitch-design/skills/extract-design-md/SKILL.md",
+          "url": "https://raw.githubusercontent.com/google-labs-code/stitch-skills/0337446dadde6f8c94210444e2aa9d546126480f/plugins/stitch-design/skills/extract-design-md/SKILL.md",
+          "sha256": "f9c32b30acd9fea3dba7306bf38e3a859f49c1f27bcf44f9cf16d3a60a730276",
+          "license": "Apache-2.0"
+        },
+        {
+          "repository": "ComposioHQ/awesome-claude-skills",
+          "commit": "be2a406907dbc61b73e6827ded415c96139d13a2",
+          "path": "brand-guidelines/SKILL.md",
+          "url": "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/be2a406907dbc61b73e6827ded415c96139d13a2/brand-guidelines/SKILL.md",
+          "sha256": "1120b3769e2985cefb3d25be981b1f914abeba57ae079b83c20c666c164fa9fe",
+          "license": "Apache-2.0"
         }
       ],
       "adaptation": "vi-VN-original-workflow",

@@ -35,7 +35,7 @@ def build(root):
         "skills": [],
     }
     for item in definitions["skills"]:
-        source = sources[item["source"]]
+        references = [sources[key] for key in item.get("sources", [item["source"]])]
         text = (
             "---\nname: "
             + item["id"]
@@ -45,6 +45,11 @@ def build(root):
             + item["name"]
             + "\n\n"
             + item["workflow"]
+            + (
+                "\n\n## Phương pháp đã chuẩn hóa từ nguồn\n\n" + item["source_guidance"]
+                if item.get("source_guidance")
+                else ""
+            )
             + "\n\n## Sản phẩm bàn giao\n\n"
             + item["deliverable"]
             + "\n\n## Ngữ cảnh Việt Nam và giới hạn thực thi\n\n"
@@ -55,16 +60,20 @@ def build(root):
             + "Pháp luật/thuế/chính sách phải được kiểm nguồn Việt Nam hiện hành khi nhiệm vụ yêu cầu, không chuyển nguyên giả định nước ngoài.\n\n"
             + "## Nguồn và bản chuẩn hóa\n\n"
             + "Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. "
-            + "Nguồn tham khảo: ["
-            + source["repository"]
-            + "]("
-            + source["url"]
-            + "), "
-            + "giấy phép "
-            + source["license"]
-            + ", commit `"
-            + source["commit"]
-            + "`. "
+            + "Nguồn tham khảo:\n\n"
+            + "\n".join(
+                "- ["
+                + source["repository"]
+                + "]("
+                + source["url"]
+                + ") · "
+                + source["license"]
+                + " · commit `"
+                + source["commit"]
+                + "`"
+                for source in references
+            )
+            + "\n\n"
             + "Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.\n"
         )
         raw = text.encode()
@@ -78,13 +87,27 @@ def build(root):
                 "description": item["description"],
                 "deliverable": item["deliverable"],
                 "sha256": hashlib.sha256(raw).hexdigest(),
-                "sources": [source],
+                "sources": references,
                 "adaptation": "vi-VN-original-workflow",
                 "enabled": True,
             }
         )
     (root / "catalog.json").write_text(
         json.dumps(catalogue, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    controller = root / "bo-dieu-phoi/bdsg-agent-tong/references"
+    controller.mkdir(parents=True, exist_ok=True)
+    (controller / "catalog.json").write_text(
+        json.dumps(
+            [
+                {key: item[key] for key in ("id", "name", "description")}
+                for item in catalogue["skills"]
+            ],
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
     )
     return catalogue
 

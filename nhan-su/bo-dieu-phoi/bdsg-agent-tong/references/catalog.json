@@ -1,0 +1,192 @@
+[
+  {
+    "id": "bdsg-nghien-cuu",
+    "name": "Agent Nghiên cứu",
+    "description": "Tìm hiểu vấn đề, đối chiếu nguồn gốc, tổng hợp bằng chứng và phân biệt điều chưa xác minh."
+  },
+  {
+    "id": "bdsg-nghien-cuu-khach-hang",
+    "name": "Agent Nghiên cứu khách hàng",
+    "description": "Phân tích phỏng vấn, khảo sát, phản hồi, nhu cầu và hành trình khách hàng cho cá nhân hoặc doanh nghiệp."
+  },
+  {
+    "id": "bdsg-chien-luoc",
+    "name": "Agent Chiến lược kinh doanh",
+    "description": "Xây mô hình kinh doanh, lựa chọn ưu tiên, kịch bản và chỉ số kiểm nghiệm cho tổ chức hay cá nhân."
+  },
+  {
+    "id": "bdsg-marketing",
+    "name": "Agent Marketing",
+    "description": "Lập kế hoạch tiếp thị, kênh, thông điệp, ngân sách và cách đo cho sản phẩm hoặc dịch vụ."
+  },
+  {
+    "id": "bdsg-viet-noi-dung",
+    "name": "Agent Viết nội dung",
+    "description": "Soạn và sửa nội dung bán hàng, email, bài viết, trang giới thiệu theo giọng thương hiệu và dữ liệu được cấp."
+  },
+  {
+    "id": "bdsg-ban-hang",
+    "name": "Agent Bán hàng",
+    "description": "Chuẩn bị tư vấn, kịch bản trao đổi, đề xuất và xử lý phản đối dựa trên nhu cầu và sản phẩm thật."
+  },
+  {
+    "id": "bdsg-van-hanh-crm",
+    "name": "Agent Vận hành CRM",
+    "description": "Thiết kế pipeline, chuẩn dữ liệu, phân công và đo tiến độ chăm sóc khách hàng."
+  },
+  {
+    "id": "bdsg-tai-chinh",
+    "name": "Agent Tài chính quản trị",
+    "description": "Lập ngân sách, dòng tiền, kịch bản và phân tích chênh lệch cho doanh nghiệp hoặc tài chính cá nhân."
+  },
+  {
+    "id": "bdsg-ke-toan-doi-soat",
+    "name": "Agent Kế toán và đối soát",
+    "description": "Đối chiếu dữ liệu chứng từ, giao dịch và sổ theo quy tắc doanh nghiệp cung cấp; phát hiện chênh lệch."
+  },
+  {
+    "id": "bdsg-nhan-su",
+    "name": "Agent Nhân sự",
+    "description": "Chuẩn bị mô tả công việc, tiêu chí tuyển dụng, kế hoạch hội nhập và phát triển nhân viên."
+  },
+  {
+    "id": "bdsg-quan-ly-du-an",
+    "name": "Agent Quản lý dự án",
+    "description": "Chia việc, mốc bàn giao, phụ thuộc, nguồn lực và theo dõi rủi ro dự án."
+  },
+  {
+    "id": "bdsg-quan-ly-san-pham",
+    "name": "Agent Quản lý sản phẩm",
+    "description": "Làm rõ vấn đề người dùng, ưu tiên tính năng, đặc tả và thí nghiệm giá trị sản phẩm."
+  },
+  {
+    "id": "bdsg-soan-thao-word",
+    "name": "Agent Soạn thảo Word",
+    "description": "Soạn tài liệu, báo cáo, đề xuất và biểu mẫu có cấu trúc, phù hợp xuất DOCX."
+  },
+  {
+    "id": "bdsg-bang-tinh-excel",
+    "name": "Agent Bảng tính Excel",
+    "description": "Phân tích và xây bảng tính, công thức, kiểm dữ liệu và báo cáo số liệu."
+  },
+  {
+    "id": "bdsg-trinh-chieu",
+    "name": "Agent Trình chiếu",
+    "description": "Xây câu chuyện, nội dung và bố cục thuyết trình cho kinh doanh, đào tạo hoặc công việc cá nhân."
+  },
+  {
+    "id": "bdsg-tai-lieu-pdf",
+    "name": "Agent Tài liệu PDF",
+    "description": "Đọc, tổng hợp và kiểm tài liệu PDF, cấu trúc trang và khả năng trích xuất dữ liệu."
+  },
+  {
+    "id": "bdsg-bien-ban",
+    "name": "Agent Biên bản và hành chính",
+    "description": "Tổng hợp cuộc họp, quyết định, công việc theo dõi và truyền thông nội bộ."
+  },
+  {
+    "id": "bdsg-phan-tich-du-lieu",
+    "name": "Agent Phân tích dữ liệu",
+    "description": "Làm sạch, phân tích mô tả, tìm bất thường và giải thích dữ liệu hỗ trợ quyết định."
+  },
+  {
+    "id": "bdsg-dac-ta-ky-thuat",
+    "name": "Agent Đặc tả kỹ thuật",
+    "description": "Chuyển yêu cầu thành hợp đồng giao diện, mô hình dữ liệu và kế hoạch triển khai có thể kiểm."
+  },
+  {
+    "id": "bdsg-debug",
+    "name": "Agent Chẩn đoán lỗi",
+    "description": "Tái hiện và xác định nguyên nhân lỗi, suy giảm hiệu năng, đề xuất bản sửa có bằng chứng."
+  },
+  {
+    "id": "bdsg-review-code",
+    "name": "Agent Rà soát mã",
+    "description": "Đối chiếu mã với yêu cầu, quy tắc dự án và các lỗi có tác động thực tế."
+  },
+  {
+    "id": "bdsg-kiem-thu",
+    "name": "Agent Kiểm thử và nghiệm thu",
+    "description": "Xây tiêu chí nghiệm thu, tình huống kiểm và đối chiếu bằng chứng thực thi với yêu cầu."
+  },
+  {
+    "id": "bdsg-tai-lieu-tri-thuc",
+    "name": "Agent Tài liệu và tri thức",
+    "description": "Xây tài liệu hướng dẫn, wiki, quy trình và hệ thống tra cứu dựa trên nguồn được cấp."
+  },
+  {
+    "id": "bdsg-tro-ly-ca-nhan",
+    "name": "Agent Trợ lý cá nhân",
+    "description": "Sắp xếp công việc, chuẩn bị thông tin, lịch dự kiến và tài liệu phục vụ mục tiêu cá nhân."
+  },
+  {
+    "id": "bdsg-thiet-ke-ui-ux",
+    "name": "Agent Thiết kế UI/UX",
+    "description": "Thiết kế và đánh giá trải nghiệm, giao diện web/app; kiểm responsive, trạng thái và khả dụng."
+  },
+  {
+    "id": "bdsg-phat-trien-frontend",
+    "name": "Agent Phát triển frontend",
+    "description": "Xây hoặc sửa giao diện ứng dụng, component, trạng thái và kết nối API theo stack dự án."
+  },
+  {
+    "id": "bdsg-backend-api",
+    "name": "Agent Backend và API",
+    "description": "Thiết kế và phát triển dịch vụ phía máy chủ, API và luồng dữ liệu có xác thực."
+  },
+  {
+    "id": "bdsg-sql-co-so-du-lieu",
+    "name": "Agent SQL và cơ sở dữ liệu",
+    "description": "Phân tích schema, truy vấn SQL, chỉ mục, RLS và hiệu năng dữ liệu."
+  },
+  {
+    "id": "bdsg-bao-mat",
+    "name": "Agent Bảo mật ứng dụng",
+    "description": "Rà soát bảo mật ứng dụng và luồng AI trong phạm vi được chủ sở hữu giao."
+  },
+  {
+    "id": "bdsg-ha-tang-cloud",
+    "name": "Agent Hạ tầng và cloud",
+    "description": "Lập cấu hình và vận hành hạ tầng, dịch vụ cloud, quan sát và phục hồi."
+  },
+  {
+    "id": "bdsg-google-workspace",
+    "name": "Agent Google Workspace",
+    "description": "Chuẩn bị và xử lý Docs, Sheets, lịch hoặc tài liệu Google qua công cụ được cấp."
+  },
+  {
+    "id": "bdsg-quy-trinh-nghiep-vu",
+    "name": "Agent Quy trình nghiệp vụ",
+    "description": "Phân tích quy trình, bàn giao, điểm chờ và cải tiến vận hành của cá nhân/doanh nghiệp."
+  },
+  {
+    "id": "bdsg-nghien-cuu-thi-truong",
+    "name": "Agent Nghiên cứu thị trường",
+    "description": "Đánh giá thị trường, đối thủ, xu hướng và quy mô theo địa bàn, ngành và kỳ dữ liệu."
+  },
+  {
+    "id": "bdsg-seo-noi-dung",
+    "name": "Agent SEO và nội dung web",
+    "description": "Soạn và kiểm nội dung website theo ý định tìm kiếm, cấu trúc và độ đọc được."
+  },
+  {
+    "id": "bdsg-bien-tap",
+    "name": "Agent Biên tập tiếng Việt",
+    "description": "Biên tập tiếng Việt cho tự nhiên, rõ và nhất quán giọng văn mà giữ nguyên dữ kiện."
+  },
+  {
+    "id": "bdsg-kpi-dashboard",
+    "name": "Agent KPI và dashboard",
+    "description": "Thiết kế chỉ số, báo cáo quản trị và dashboard phục vụ quyết định có dữ liệu."
+  },
+  {
+    "id": "bdsg-ngu-canh-ban-giao",
+    "name": "Agent Ngữ cảnh và bàn giao",
+    "description": "Tóm tắt và bàn giao công việc dài, giữ ngữ cảnh cần thiết cho người hoặc Agent tiếp tục."
+  },
+  {
+    "id": "bdsg-he-thong-thiet-ke",
+    "name": "Agent Hệ thống thiết kế",
+    "description": "Xây hệ thống token, thành phần và tài liệu nhận diện để thiết kế/mã giao diện thống nhất."
+  }
+]

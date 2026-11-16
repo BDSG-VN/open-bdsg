@@ -633,6 +633,7 @@ class DieuPhoi:
         actor = lambda: self.actor.get()
         declarations = {
             "nhan_su": [
+                ("xuat_bo", lambda a: app.tasks.staff.export_bundle(a), False, {"format": text}, ["format"]),
                 ("danh_sach", lambda a: app.tasks.staff.catalogue(), False, {}, []),
                 ("chi_tiet", lambda a: app.tasks.staff.detail(a.get("id")), False, {"id": text}, ["id"]),
             ],

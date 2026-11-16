@@ -101,6 +101,7 @@ const titles = {
   office: "Văn phòng BDSG",
   work: "Giao việc",
   tasks: "Công việc của tôi",
+  staff: "Nhân sự Agent",
   modules: "Mô-đun BDSG",
   overview: "Tổng quan",
   platforms: "Nền tảng BDSG",
@@ -417,6 +418,7 @@ function render() {
     office: () => window.BDSGOffice?.open(),
     work: () => window.BDSGTasks?.home(),
     tasks: () => window.BDSGTasks?.tasks(),
+    staff: () => window.BDSGStaff?.open(),
     modules: () => window.BDSGTasks?.modules(),
     overview,
     platforms,
@@ -650,6 +652,7 @@ $("#profile").addEventListener("click", async () => {
     state.user = null;
     window.BDSGProjects?.clearSelected();
     window.BDSGTasks?.reset();
+    window.BDSGStaff?.reset();
     window.BDSGStudio?.reset();
     window.BDSGOffice?.reset();
     window.BDSGConnectors?.reset();

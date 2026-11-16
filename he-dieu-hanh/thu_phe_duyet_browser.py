@@ -56,6 +56,7 @@ class ThuPheDuyetBrowser(unittest.TestCase):
             A,
             {
                 "prompt": "Prepare synthetic business form",
+                "template": "de-xuat-giai-phap",
                 "browser_hosts": ["example.com"],
                 "allow_action_drafts": True,
             },

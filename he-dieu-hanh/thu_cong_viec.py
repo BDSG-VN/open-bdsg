@@ -95,7 +95,7 @@ class ThuCongViec(unittest.TestCase):
         self.tmp.cleanup()
 
     def create(self, actor=A, **args):
-        return self.tasks.create(actor, {"prompt": "Đề xuất triển khai bất động sản Thanh Hoá", **args})["id"]
+        return self.tasks.create(actor, {"prompt": "Đề xuất triển khai bất động sản Thanh Hoá", "template": "de-xuat-giai-phap", **args})["id"]
 
     def completed(self, actor, task_id):
         deadline = time.monotonic() + 5

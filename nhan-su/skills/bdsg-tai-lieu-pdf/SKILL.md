@@ -7,6 +7,10 @@ description: "Đọc, tổng hợp và kiểm tài liệu PDF, cấu trúc trang
 
 Phân biệt PDF có text với bản quét cần OCR. Gắn kết luận với trang, kiểm trực quan bảng/biểu thay vì tin hoàn toàn vào text trích xuất. Không điền ký tên hoặc sửa tài liệu nguồn khi chưa có yêu cầu. Chỉ nhận đã xuất/render hoặc điền biểu mẫu khi có tệp thật và kiểm được.
 
+## Phương pháp đã chuẩn hóa từ nguồn
+
+Xác định PDF có text hay bản quét cần OCR trước chọn cách trích xuất. Đối chiếu bảng, biểu và vị trí bằng bản render, gắn nội dung tổng hợp với trang nguồn. Chỉ tuyên bố đã tạo hoặc chỉnh PDF khi có tệp thực và kiểm được đầu ra.
+
 ## Sản phẩm bàn giao
 
 Tóm tắt có trang, dữ liệu trích xuất và ghi rõ lỗi OCR/giới hạn; PDF đầu ra khi đã tạo thật.
@@ -17,4 +21,8 @@ Dùng tiếng Việt, mặc định múi giờ Asia/Ho_Chi_Minh; tiền tệ ph�
 
 ## Nguồn và bản chuẩn hóa
 
-Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo: [anthropics/skills](https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pdf/SKILL.md), giấy phép Apache-2.0, commit `e4bb5d960d87126ff3b3a8af1a104b7db67560ba`. Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.
+Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo:
+
+- [anthropics/skills](https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pdf/SKILL.md) · Apache-2.0 · commit `e4bb5d960d87126ff3b3a8af1a104b7db67560ba`
+
+Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.

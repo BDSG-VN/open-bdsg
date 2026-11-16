@@ -7,6 +7,10 @@ description: "Phân tích phỏng vấn, khảo sát, phản hồi, nhu cầu v�
 
 Xác định tập khách hàng và phương pháp thu mẫu. Tách lời khách nói khỏi suy diễn; chỉ trích dẫn đoạn thật có nguồn. Mã hóa nhu cầu, động lực, trở ngại và lựa chọn thay thế theo phân khúc. Với mẫu ít hoặc lệch phải nêu giới hạn, không suy rộng tỷ lệ thị trường.
 
+## Phương pháp đã chuẩn hóa từ nguồn
+
+Phân biệt phân tích tài liệu sẵn có, khai thác tín hiệu công khai và phỏng vấn/khảo sát mới. Trích nguyên văn có nguồn về việc cần làm, trở ngại, thời điểm kích hoạt và lựa chọn thay thế; phân nhóm theo phân khúc trước tổng hợp. Phản hồi công khai có thiên lệch tự chọn, không suy thành tỷ lệ đại diện thị trường.
+
 ## Sản phẩm bàn giao
 
 Bảng nhu cầu có bằng chứng, phân khúc, câu hỏi phỏng vấn và quyết định cần kiểm chứng.
@@ -17,4 +21,8 @@ Dùng tiếng Việt, mặc định múi giờ Asia/Ho_Chi_Minh; tiền tệ ph�
 
 ## Nguồn và bản chuẩn hóa
 
-Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo: [coreyhaines31/marketingskills](https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/customer-research/SKILL.md), giấy phép MIT, commit `1f837447b20bb6f0e72d87b80ece1c221c362c7d`. Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.
+Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo:
+
+- [coreyhaines31/marketingskills](https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/customer-research/SKILL.md) · MIT · commit `1f837447b20bb6f0e72d87b80ece1c221c362c7d`
+
+Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.

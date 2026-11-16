@@ -64,7 +64,7 @@ class ThuCong(unittest.TestCase):
         args = {"name": "Du an thu Thanh Hoa", "instructions": "Chi doc", "context": "Ngu canh ban dau"}
         project = self.result(self.rpc("operator-a", "du_an.tao", args))
         self.assertTrue(self.rpc("agent-a", "du_an.danh_sach")["isError"])
-        task = self.result(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Tong hop ke hoach du an thu", "project_id": project["id"]}))
+        task = self.result(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Tong hop ke hoach du an thu", "project_id": project["id"], "template": "de-xuat-giai-phap"}))
         self.result(self.rpc("operator-a", "du_an.cap_nhat", {**args, "id": project["id"], "context": "Ngu canh thay doi"}))
         self.result(self.rpc("operator-a", "du_an.luu_tru", {"id": project["id"]}))
         self.assertTrue(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Khong duoc tao trong luu tru", "project_id": project["id"]})["isError"])
@@ -201,7 +201,7 @@ class ThuCong(unittest.TestCase):
         self.assertEqual(self.request("/api/login", {"username": "chu-quan", "password": "sai"}, {"Origin": self.app.origin})[0], 429)
 
     def test_task_via_mcp_and_scoped_http(self):
-        job = self.result(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Lap de xuat dung CRM tai Thanh Hoa", "module_ids": ["bdsg_crm"]}))
+        job = self.result(self.rpc("operator-a", "cong_viec.tao", {"prompt": "Lap de xuat dung CRM tai Thanh Hoa", "module_ids": ["bdsg_crm"], "template": "de-xuat-giai-phap"}))
         task = None
         for _ in range(100):
             task = self.result(self.rpc("operator-a", "cong_viec.chi_tiet", {"id": job["id"]}))

@@ -41,7 +41,7 @@ class ThuMoRong(unittest.TestCase):
 
     def task(self, actor=A, **extra):
         result = self.app.tasks.create(
-            actor, {"prompt": "Tong hop nhu cau kinh doanh thu nghiem", **extra}
+            actor, {"prompt": "Tong hop nhu cau kinh doanh thu nghiem", "template": "de-xuat-giai-phap", **extra}
         )
         for _ in range(100):
             doc = self.app.tasks.detail(actor, result["id"])
@@ -349,7 +349,7 @@ class ThuMoRong(unittest.TestCase):
 
         self.app.tasks.model = MoHinhBDSG(environ=ENV, opener=SlowTransport())
         created = self.app.tasks.create(
-            A, {"prompt": "Tong hop thong tin yeu cau thu nghiem"}
+            A, {"prompt": "Tong hop thong tin yeu cau thu nghiem", "template": "de-xuat-giai-phap"}
         )
         self.assertTrue(entered.wait(2))
         result = self.app.core.goi(OWNER, "nguoi_dung.thu_hoi", {"id": A["id"]})

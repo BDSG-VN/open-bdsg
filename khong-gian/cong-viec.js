@@ -3,7 +3,7 @@
   const draft = {
     prompt: "",
     module_ids: [],
-    template: "de-xuat-giai-phap",
+    template: "nhan-su-chuyen-mon",
     project_id: "",
     allow_module_reads: false,
     allow_delegation: false,
@@ -32,6 +32,14 @@
     done: "Hoàn tất",
   };
   const templates = [
+    {
+      id: "nhan-su-chuyen-mon",
+      icon: "route",
+      title: "Agent tổng và chuyên môn",
+      text: "Tự phân công chuyên môn phù hợp, phối hợp và tổng hợp kết quả.",
+      prompt:
+        "Phân tích nhu cầu khách hàng, lập kế hoạch tiếp thị và dự báo dòng tiền cho một dịch vụ mới tại Thanh Hoá. Nêu dữ liệu còn cần để thực hiện.",
+    },
     {
       id: "de-xuat-giai-phap",
       icon: "briefcase",
@@ -93,6 +101,7 @@
       : "Quy trình có kịch bản · API mô hình chưa cấu hình";
   }
   function taskMode(task) {
+    if (task.team?.state === "awaiting_model" || (task.template === "nhan-su-chuyen-mon" && task.mode === "quy-trinh")) return "Chưa cấu hình AI";
     return task.mode === "quy-trinh" ? "Quy trình" : "API mô hình";
   }
   async function getModules() {
@@ -224,6 +233,14 @@
       slot.textContent = e.message;
     }
   }
+  function refreshWorkflowLabel() {
+    const note = $(".bdsg-composer-mode > span");
+    if (note)
+      note.textContent =
+        draft.template === "nhan-su-chuyen-mon" && !latestModel.configured
+          ? "Agent tổng cần mô hình AI được cấu hình để thực thi"
+          : modeLabel(latestModel);
+  }
   async function home() {
     const ticket = ++revision;
     main.innerHTML = `<section class="bdsg-work-home"><div class="bdsg-work-intro"><h1>Bạn muốn làm gì hôm nay?</h1><p>Phát triển kinh doanh cùng các nền tảng BDSG tại Thanh Hoá.</p></div><div id="bdsg-composer-slot" class="bdsg-composer-loading">Đang mở không gian giao việc…</div></section>`;
@@ -238,9 +255,17 @@
       main
         .querySelector(".bdsg-work-footnote")
         .insertAdjacentHTML("beforeend", setupButton());
-      $("#bdsg-task-create").insertAdjacentHTML("beforeend", `<details class="bdsg-composer-settings"><summary>${icon("plus")}Ngữ cảnh và công cụ<span>Dự án, tài liệu, quyền thực hiện</span></summary><div>${scopePicker()}${executionPicker()}</div></details>`);
+      $("#bdsg-task-create").insertAdjacentHTML(
+        "beforeend",
+        `<details class="bdsg-composer-settings"><summary>${icon("plus")}Ngữ cảnh và công cụ<span>Dự án, tài liệu, quyền thực hiện</span></summary><div>${scopePicker()}${executionPicker()}</div></details>`,
+      );
       refreshConsent();
       refreshDocuments();
+      $("#bdsg-task-create").insertAdjacentHTML(
+        "beforeend",
+        `<label class="bdsg-workflow-picker">Cách thực hiện<select id="bdsg-workflow">${templates.map((item) => `<option value="${item.id}" ${draft.template === item.id ? "selected" : ""}>${esc(item.title)}</option>`).join("")}</select><a href="#staff">Xem nhân sự chuyên môn</a></label>`,
+      );
+      refreshWorkflowLabel();
       if (state.user) {
         const data = unwrap(await api("/api/tasks"));
         const slot = $("#bdsg-recent-jobs");
@@ -367,8 +392,22 @@
     currentTask = task;
     const trace = $("#bdsg-task-trace");
     if (!trace) return;
-    trace.innerHTML = traceMarkup(task);
+    const opened = new Set(
+      Array.from(
+        trace.querySelectorAll("details[open][data-staff-section]"),
+      ).map((node) => node.dataset.staffSection),
+    );
+    trace.innerHTML = (window.BDSGStaff?.trace(task) || "") + traceMarkup(task);
+    trace.querySelectorAll("details[data-staff-section]").forEach((node) => {
+      node.open = opened.has(node.dataset.staffSection);
+    });
     $("#bdsg-task-results").innerHTML = artifactMarkup(task);
+    document
+      .querySelectorAll("#bdsg-task-results .bdsg-task-artifact")
+      .forEach((node, index) => {
+        node.id = "bdsg-result-" + task.artifacts[index].id;
+        node.tabIndex = -1;
+      });
     $("#bdsg-task-conversation").innerHTML = conversationMarkup(task);
     $("#bdsg-task-status").innerHTML = status(task.status);
     let scope = $("#bdsg-task-scope");
@@ -416,10 +455,10 @@
       )
         return;
       main.innerHTML = `<section class="bdsg-work-page bdsg-task-detail"><a class="bdsg-back-link" href="#tasks">← Công việc</a><div class="bdsg-work-page-heading"><div><h1>${esc(task.title || "Công việc")}</h1><div class="bdsg-task-detail-meta"><span id="bdsg-task-status"></span><span class="bdsg-task-mode-label"></span><span>Tạo ${esc(stamp(task.created))}</span></div></div><button type="button" class="button" id="bdsg-task-stop" data-bdsg-stop>Dừng tác vụ</button></div><div class="bdsg-task-layout"><div class="bdsg-task-content"><section class="bdsg-task-context"><div class="bdsg-context-heading">${icon("briefcase")}Ngữ cảnh công việc</div><div id="bdsg-task-conversation"></div><div class="bdsg-task-module-chips">${(task.module_ids || []).map((mid) => `<span>${icon("grid")}${esc(moduleName(mid))}</span>`).join("") || "<small>Đối chiếu theo danh mục hệ sinh thái</small>"}</div></section><div id="bdsg-task-results"></div><form id="bdsg-task-followup" class="bdsg-task-followup"><label for="bdsg-followup-text">Tiếp tục công việc</label><textarea id="bdsg-followup-text" name="text" rows="2" minlength="10" maxlength="4000" required placeholder="Bổ sung nhu cầu hoặc điều chỉnh phạm vi…"></textarea><div><small id="bdsg-task-followup-note"></small><button type="submit" class="button primary">Tiếp tục ${icon("arrow")}</button></div></form></div><aside class="bdsg-task-trace" id="bdsg-task-trace" aria-label="Tiến trình công việc"></aside></div></section>`;
-      main.querySelector(".bdsg-task-detail .bdsg-task-mode-label").textContent =
-        task.mode === "quy-trinh"
-          ? "Chế độ: Quy trình"
-          : "Chế độ: API mô hình";
+      main.querySelector(
+        ".bdsg-task-detail .bdsg-task-mode-label",
+      ).textContent =
+        task.mode === "quy-trinh" ? "Chế độ: Quy trình" : "Chế độ: API mô hình";
       updateTask(task);
     } catch (e) {
       if (ticket === revision)
@@ -490,6 +529,10 @@
       $("#bdsg-module-grid").innerHTML = modulesMarkup(e.target.value);
   });
   document.addEventListener("change", (e) => {
+    if (e.target.id === "bdsg-workflow") {
+      draft.template = e.target.value;
+      refreshWorkflowLabel();
+    }
     if (e.target.id === "bdsg-allow-delegation")
       draft.allow_delegation = e.target.checked;
     if (e.target.id === "bdsg-allow-python")
@@ -563,6 +606,8 @@
       if (t) {
         draft.prompt = t.prompt;
         draft.template = t.id;
+        if ($("#bdsg-workflow")) $("#bdsg-workflow").value = t.id;
+        refreshWorkflowLabel();
         const input = $("#bdsg-task-prompt");
         if (input) {
           input.value = t.prompt;
@@ -730,6 +775,7 @@
     moduleCache = [];
     Object.assign(draft, {
       prompt: "",
+      template: "nhan-su-chuyen-mon",
       module_ids: [],
       project_id: "",
       document_ids: [],

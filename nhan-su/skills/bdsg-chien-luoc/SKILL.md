@@ -7,6 +7,10 @@ description: "Xây mô hình kinh doanh, lựa chọn ưu tiên, kịch bản v�
 
 Làm rõ đối tượng, nguồn lực, lợi thế và mục tiêu quyết định. Đưa ra các phương án có đánh đổi và giả định kiểm được. Chọn thử nghiệm nhỏ có chủ sở hữu, thời hạn và tiêu chí dừng. Không tạo doanh thu hoặc thị phần giả để chứng minh phương án.
 
+## Phương pháp đã chuẩn hóa từ nguồn
+
+Làm rõ mục tiêu, ràng buộc và phương án trước chọn giải pháp. Phân biệt TAM, SAM và SOM; đối chiếu ước lượng từ trên xuống với số khách tiếp cận được và giá từ dưới lên. Các dự báo là kịch bản gắn giả định, không biến tỷ lệ ví dụ trong nguồn thành kết quả kinh doanh địa phương.
+
 ## Sản phẩm bàn giao
 
 Các phương án, khuyến nghị, giả định trọng yếu và lộ trình kiểm nghiệm.
@@ -17,4 +21,9 @@ Dùng tiếng Việt, mặc định múi giờ Asia/Ho_Chi_Minh; tiền tệ ph�
 
 ## Nguồn và bản chuẩn hóa
 
-Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo: [obra/superpowers](https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/brainstorming/SKILL.md), giấy phép MIT, commit `22f0b463e7a5e579904dd6211a520321035526f7`. Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.
+Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo:
+
+- [obra/superpowers](https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/brainstorming/SKILL.md) · MIT · commit `22f0b463e7a5e579904dd6211a520321035526f7`
+- [wshobson/agents](https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md) · MIT · commit `9c61ab243def98f72da12abd41cfcf5bcd91af9d`
+
+Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.

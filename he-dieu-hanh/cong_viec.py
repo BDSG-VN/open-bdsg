@@ -207,6 +207,32 @@ class CongViec:
         )
         task["events"] = task["events"][-200:]
 
+    @staticmethod
+    def _keep_team_outputs(task, snapshot):
+        # Bàn giao xong phải đọc được ngay, kể cả khi chuyên môn khác thất bại.
+        names = {artifact["name"] for artifact in task["artifacts"]}
+        additions = []
+        for specialist in snapshot.get("agents", []):
+            name = specialist["skill_id"] + "-luot-" + str(task["run"]) + ".md"
+            if (
+                specialist["state"] == "completed"
+                and specialist.get("output")
+                and name not in names
+            ):
+                additions.append(
+                    {
+                        "id": secrets.token_hex(8),
+                        "name": name,
+                        "title": specialist["name"],
+                        "mime_type": "text/markdown",
+                        "content": specialist["output"],
+                        "created": time.time(),
+                        "run": task["run"],
+                    }
+                )
+        kiem_han_ket_qua(task["artifacts"], additions)
+        task["artifacts"].extend(additions)
+
     def _visible(self, actor, task):
         self._auth(actor)
         if task["owner"] != actor["id"] and actor["role"] != "quan-tri":
@@ -272,7 +298,7 @@ class CongViec:
             )
         ):
             raise ValueError("Phạm vi trình duyệt cần tối đa 5 tên miền chính xác")
-        template = args.get("template", "de-xuat-giai-phap")
+        template = args.get("template", "nhan-su-chuyen-mon")
         if template not in TEMPLATES:
             raise ValueError("Quy trình chưa được hỗ trợ")
         ids = args.get("module_ids", [])
@@ -712,6 +738,7 @@ class CongViec:
                         current = self._load(task_id)
                         if kind == "team-state":
                             snapshot = extra.pop("team")
+                            self._keep_team_outputs(current, snapshot)
                             current["team"] = {**snapshot, "run": current["run"]}
                         if kind == "model-usage":
                             usage = current.setdefault(
@@ -743,9 +770,13 @@ class CongViec:
 
                 if task["template"] == "nhan-su-chuyen-mon":
                     content = self.workforce.run(
-                        prompt, context,
-                        lambda p, c, event, stop: model.run(p, c, self.core, actor, event, stop),
-                        on_event, cancelled,
+                        prompt,
+                        context,
+                        lambda p, c, event, stop: model.run(
+                            p, c, self.core, actor, event, stop
+                        ),
+                        on_event,
+                        cancelled,
                     )
                 else:
                     content = model.run(
@@ -757,10 +788,17 @@ class CongViec:
                 if task["template"] == "nhan-su-chuyen-mon":
                     with self.lock:
                         current = self._load(task_id)
-                        current["team"] = {"state": "awaiting_model", "agents": [], "run": current["run"],
-                                           "version": self.staff.version, "execution_kind": "not_executed"}
+                        current["team"] = {
+                            "state": "awaiting_model",
+                            "agents": [],
+                            "run": current["run"],
+                            "version": self.staff.version,
+                            "execution_kind": "not_executed",
+                        }
                         self._save(current)
-                    raise LoiMoHinhBDSG("Cần cấu hình mô hình AI trước khi Agent tổng phân công và thực thi chuyên môn.")
+                    raise LoiMoHinhBDSG(
+                        "Cần cấu hình mô hình AI trước khi Agent tổng phân công và thực thi chuyên môn."
+                    )
                 content = self._report(task, products, connections)
             with self.lock:
                 task = self._load(task_id)
@@ -775,13 +813,6 @@ class CongViec:
                         "run": task["run"],
                     }
                 ]
-                if task.get("team", {}).get("run") == task["run"]:
-                    for specialist in task["team"].get("agents", []):
-                        if specialist["state"] == "completed" and specialist.get("output"):
-                            additions.append({"id": secrets.token_hex(8),
-                                "name": specialist["skill_id"] + "-luot-" + str(task["run"]) + ".md",
-                                "title": specialist["name"], "mime_type": "text/markdown",
-                                "content": specialist["output"], "created": time.time(), "run": task["run"]})
                 kiem_han_ket_qua(task["artifacts"], additions)
                 task["artifacts"].extend(additions)
                 self._save(task)

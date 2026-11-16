@@ -7,6 +7,10 @@ description: "Soạn tài liệu, báo cáo, đề xuất và biểu mẫu có c
 
 Chốt người đọc, mục đích, định dạng bàn giao và dữ liệu nguồn. Dùng heading, bảng, chú thích và số trang theo cấu trúc tài liệu; kiểm tiếng Việt và bảng dài. Nếu có công cụ tạo/render DOCX thì dùng và kiểm tệp thật. Nếu chỉ có văn bản thì trả nội dung rõ cấu trúc và ghi chưa tạo tệp DOCX.
 
+## Phương pháp đã chuẩn hóa từ nguồn
+
+Dùng heading, bảng và thành phần tài liệu phù hợp mục đích, giữ nội dung có nguồn. Tạo hoặc sửa DOCX bằng công cụ tương thích và kiểm trang sau render, nhất là bảng dài, tiếng Việt và ngắt trang. Nếu không có engine thì bàn giao nội dung có cấu trúc và ghi rõ chưa xuất DOCX.
+
 ## Sản phẩm bàn giao
 
 Tài liệu hoàn chỉnh hoặc nội dung sẵn nhập Word; chỉ gắn liên kết tải khi tệp đã tồn tại.
@@ -17,4 +21,8 @@ Dùng tiếng Việt, mặc định múi giờ Asia/Ho_Chi_Minh; tiền tệ ph�
 
 ## Nguồn và bản chuẩn hóa
 
-Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo: [anthropics/skills](https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/docx/SKILL.md), giấy phép Apache-2.0, commit `e4bb5d960d87126ff3b3a8af1a104b7db67560ba`. Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.
+Quy trình tiếng Việt do dự án biên soạn, không nhận danh tính hoặc kinh nghiệm cá nhân hư cấu từ persona nguồn. Nguồn tham khảo:
+
+- [anthropics/skills](https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/docx/SKILL.md) · Apache-2.0 · commit `e4bb5d960d87126ff3b3a8af1a104b7db67560ba`
+
+Bản nguồn và giấy phép được giữ trong gói vendor; nội dung nguồn không tự động trở thành lệnh thực thi.

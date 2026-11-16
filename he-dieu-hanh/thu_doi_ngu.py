@@ -1,11 +1,15 @@
 """Kiểm điều phối bằng mô hình tổng hợp; không tuyên bố đã gọi nhà cung cấp AI."""
 
+import base64
 import copy
+import hashlib
+import io
 import json
 import tempfile
 import threading
 import time
 import unittest
+import zipfile
 from pathlib import Path
 
 from cong_viec import CongViec
@@ -46,6 +50,16 @@ class ThuDoiNgu(unittest.TestCase):
         self.assertGreaterEqual(len(catalogue["agents"]), 24)
         self.assertFalse(catalogue["grants_permissions"])
         self.assertEqual(
+            len(
+                {
+                    source["repository"]
+                    for agent in catalogue["agents"]
+                    for source in agent["sources"]
+                }
+            ),
+            36,
+        )
+        self.assertEqual(
             len({s["sha256"] for s in catalogue["agents"]}), len(catalogue["agents"])
         )
         changed = self.registry.detail("bdsg-ban-hang")
@@ -75,6 +89,79 @@ class ThuDoiNgu(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 NhanSu(root)
+
+    def test_portable_bundles_keep_skill_hashes_licenses_and_no_private_files(self):
+        for format_id, prefix in (
+            ("portable", "skills/"),
+            ("codex", ".agents/skills/"),
+            ("claude", "skills/"),
+        ):
+            with self.subTest(format=format_id):
+                result = self.registry.export_bundle({"format": format_id})
+                raw = base64.b64decode(result["content_base64"])
+                self.assertEqual(hashlib.sha256(raw).hexdigest(), result["sha256"])
+                self.assertEqual(
+                    result["sha256"],
+                    self.registry.export_bundle({"format": format_id})["sha256"],
+                )
+                with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+                    names = archive.namelist()
+                    self.assertFalse(
+                        any(
+                            ".." in Path(name).parts
+                            or name.endswith((".env", ".key", ".db", ".py", ".sh"))
+                            for name in names
+                        )
+                    )
+                    self.assertTrue(
+                        any(
+                            name.startswith("third_party/") and "LICENSE" in name
+                            for name in names
+                        )
+                    )
+                    for item in self.registry.skills.values():
+                        self.assertEqual(
+                            hashlib.sha256(
+                                archive.read(prefix + item["id"] + "/SKILL.md")
+                            ).hexdigest(),
+                            item["sha256"],
+                        )
+                    if format_id == "portable":
+                        self.assertIn(
+                            "$schema", json.loads(archive.read("plugin.json"))
+                        )
+                    if format_id == "claude":
+                        self.assertIn(prefix + "bdsg-agent-tong/SKILL.md", names)
+                        self.assertEqual(
+                            len(
+                                json.loads(
+                                    archive.read(
+                                        prefix
+                                        + "bdsg-agent-tong/references/catalog.json"
+                                    )
+                                )
+                            ),
+                            len(self.registry.skills),
+                        )
+                        identifier = "bdsg-ban-hang"
+                        with zipfile.ZipFile(
+                            io.BytesIO(
+                                archive.read("individual/" + identifier + ".zip")
+                            )
+                        ) as individual:
+                            self.assertIn(
+                                identifier + "/SKILL.md", individual.namelist()
+                            )
+                            self.assertTrue(
+                                any(
+                                    "third_party/" in name
+                                    for name in individual.namelist()
+                                )
+                            )
+        with self.assertRaises(ValueError):
+            self.registry.export_bundle({"format": "../../private"})
+        with self.assertRaises(ValueError):
+            self.registry._zip({"../outside": b"test"})
 
     def test_unknown_duplicate_cycle_and_extra_permissions_are_rejected(self):
         cases = [
@@ -230,7 +317,6 @@ class ThuDoiNguTrongTacVu(unittest.TestCase):
             A,
             {
                 "prompt": "Soạn biên bản từ nội dung cuộc họp tổng hợp",
-                "template": "nhan-su-chuyen-mon",
             },
         )["id"]
 
@@ -290,6 +376,33 @@ class ThuDoiNguTrongTacVu(unittest.TestCase):
             self.assertEqual(recovered["team"]["agents"][0]["state"], "interrupted")
         finally:
             restarted.close()
+
+    def test_finished_handoff_is_retained_when_downstream_fails(self):
+        class SyntheticFailure(MoHinhTat):
+            configured = True
+
+            def run(model_self, prompt, context, core, actor, event, cancelled):
+                if "workforce_catalogue" in context:
+                    return json.dumps(
+                        {
+                            "summary": "Nghiên cứu trước bán hàng",
+                            "assignments": [
+                                assignment("bdsg-nghien-cuu"),
+                                assignment("bdsg-ban-hang", ["bdsg-nghien-cuu"]),
+                            ],
+                        }
+                    )
+                if context["assignment"]["skill_id"] == "bdsg-nghien-cuu":
+                    return "# Bàn giao nghiên cứu đã tạo trong bài kiểm tổng hợp"
+                raise LoiMoHinhBDSG("Lỗi có chủ đích sau bàn giao")
+
+        self.tasks.model = SyntheticFailure()
+        task = self.finish(self.create())
+        self.assertEqual(task["status"], "failed")
+        self.assertEqual(task["team"]["state"], "failed")
+        self.assertEqual(len(task["artifacts"]), 1)
+        self.assertTrue(task["artifacts"][0]["name"].startswith("bdsg-nghien-cuu-"))
+        self.assertIn("Bàn giao nghiên cứu", task["artifacts"][0]["content"])
 
 
 if __name__ == "__main__":

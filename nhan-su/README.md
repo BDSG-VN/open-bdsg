@@ -21,8 +21,11 @@ nghiên cứu có giả định chuyên ngành không tự kích hoạt chỉ v�
 
 `chuyen-mon.json` là quy trình chuyên môn tiếng Việt do dự án biên soạn,
 tham khảo các nguồn có attribution, không nhập persona hư cấu hoặc đặc
-quyền trong prompt nguồn. `dung_bo_nhan_su.py` tạo 24 thư mục SKILL.md và
+quyền trong prompt nguồn. Ngày 17/11/2026, `dung_bo_nhan_su.py` tạo 38 thư mục SKILL.md và
 catalog có hash. Hệ thống kiểm hash trước nạp; không chạy mã kèm nguồn.
+Các quy trình đã chuẩn hóa có 86 tham chiếu tới đủ 36 nguồn. Đây là tích
+hợp phương pháp chuyên môn đã chọn, không phải kích hoạt mọi script hoặc
+mọi kỹ năng của từng kho. Có thêm kỹ năng Agent tổng cho gói dùng ngoài.
 
 ```sh
 python3 trien-khai/dung_bo_nhan_su.py
@@ -32,6 +35,9 @@ python3 he-dieu-hanh/thu_doi_ngu.py -v
 ## Lõi đang có
 
 - Công cụ `nhan_su.danh_sach`, `nhan_su.chi_tiet` đi qua nhân xác thực.
+- `nhan_su.xuat_bo` xuất ba gói kỹ năng: Agent Plugins, thư mục Codex và
+  các zip từng kỹ năng cho Claude. Có 38 chuyên môn và một kỹ năng điều
+  phối; giữ giấy phép nguồn, SHA, không chứa chứng thư hoặc dữ liệu vận hành.
 - Tác vụ `template=nhan-su-chuyen-mon` dùng Agent tổng lập kế hoạch ngữ
   nghĩa qua mô hình đã cấu hình, chọn từ catalog được duyệt. JSON kế hoạch
   có ID, phần việc, sản phẩm và phụ thuộc; không nhận công cụ hoặc quyền
@@ -45,20 +51,42 @@ python3 he-dieu-hanh/thu_doi_ngu.py -v
 - Mọi lượt gọi mô hình vẫn giữ ngân sách/usage hiện có; hủy hoặc thu hồi
   danh tính chặn bước tiếp theo. Lỗi chuyên môn chặn phần phụ thuộc và
   không chạy tổng hợp thành công giả.
-- Kết quả vai trò thành tệp Markdown riêng cùng báo cáo tổng. Tiếp tục
+- Kết quả vai trò thành tệp Markdown ngay khi bàn giao xong, giữ được khi
+  phần tiếp theo thất bại; báo cáo tổng chỉ có khi tổng hợp thành công. Tiếp tục
   tạo lượt mới, giữ lịch sử; restart đánh dấu đội đang chạy bị gián đoạn.
 - Không có mô hình: trạng thái chờ cấu hình, không tạo kết quả chuyên gia.
 
-## Chưa hoàn tất
+## Giao việc và theo dõi
 
-Màn theo dõi và danh mục nhân sự trong giao diện chưa được triển khai ở
-đợt nền này. Chế độ đội ngũ chưa thay mặc định giao việc hiện hành. Các
-nguồn bổ sung còn cần ánh xạ chuyên môn và kiểm nội dung trước kích hoạt.
-Chưa có bộ xuất/nhập đa hệ AI hoặc nghiệm thu nhà cung cấp mô hình thật.
-Không có tuyên bố toàn bộ 36 kho đã chuyển thành kỹ năng thực thi.
+Chế độ mặc định của tác vụ mới là Agent tổng/chuyên môn; các quy trình cũ
+vẫn chọn rõ bằng `template`. Trang **Nhân sự Agent** có tìm kiếm, nguồn kỹ
+năng và tải bộ kỹ năng. Trang tác vụ hiển thị Agent tổng, từng vai trò,
+phụ thuộc, trạng thái, thời gian, sản phẩm, dừng và lịch sử lượt tiếp tục.
+Không hiện suy luận nội bộ hay phần trăm hoàn thành tự đoán.
 
-Ngày 16/11/2026: 24 SKILL.md đạt trình kiểm cấu trúc; 10 bài kiểm mới đạt,
-kiểm kế hoạch, song song, phụ thuộc, hủy, giới hạn, lưu lịch sử, ACL và
-restart bằng mô hình tổng hợp. Toàn bộ kiểm lõi Linux: 198 bài, 183 đạt và
-15 bỏ qua theo môi trường. Kiểm tổng hợp không chứng minh chất lượng suy
-luận của mô hình thực tế hoặc khả năng thao tác Office/CRM chưa được cấp.
+Đóng gói ngoại tuyến:
+
+```sh
+python3 trien-khai/xuat_bo_nhan_su.py --destination /thu-muc-moi
+```
+
+Gói Agent Plugins theo [đặc tả công bố](https://developers.openai.com/plugins/build/plugins),
+kỹ năng theo [Agent Skills](https://agentskills.io/specification).
+Claude dùng [custom skills](https://platform.claude.com/docs/en/managed-agents/skills).
+Gói chưa được công bố lên thư mục plugin ChatGPT và chưa nghiệm thu nhập
+trên mọi sản phẩm/tài khoản. Cần kết nối công cụ và xác thực riêng nếu dùng
+dữ liệu sống; đóng gói không cấp quyền tài khoản.
+
+## Nghiệm thu và giới hạn
+
+Đã kiểm cấu trúc các kỹ năng, kế hoạch đơn/đa chuyên môn, DAG sai, song song,
+bàn giao, hủy, lỗi, lưu sản phẩm từng phần, lịch sử, ACL và restart bằng
+mô hình tổng hợp. QA gateway thật trong kho riêng kiểm danh mục/tìm kiếm,
+mặc định giao việc, tiến trình/phụ thuộc, tải zip, kết quả từng Agent,
+dừng, tiếp tục, đăng xuất và không tràn ngang trang trên desktop/mobile.
+
+Máy chủ chưa có cấu hình mô hình AI được chủ quản cấp nên còn chờ lượt
+nghiệm thu mô hình thật. Kiểm tổng hợp không chứng minh chất lượng suy
+luận của mọi mô hình hoặc khả năng thao tác Office/CRM chưa được cấp.
+Kỹ năng không tự thêm công cụ còn thiếu; khi chỉ có văn bản, phải trả nội
+dung/dự thảo và ghi rõ chưa tạo tệp hoặc chưa thực hiện nghiệp vụ.

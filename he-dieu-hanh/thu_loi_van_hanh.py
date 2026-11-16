@@ -33,7 +33,7 @@ def tool(name,args):
  r=app.core.goi(actor,name,args)
  if not r['ok']:raise RuntimeError(r)
  return r['ket_qua']
-job=tool('cong_viec.tao',{'prompt':'Kiem thu khoi phuc khi Python bi gian doan','allow_python':True})
+job=tool('cong_viec.tao',{'prompt':'Kiem thu khoi phuc khi Python bi gian doan','allow_python':True,'template':'de-xuat-giai-phap'})
 for _ in range(100):
  task=tool('cong_viec.chi_tiet',{'id':job['id']})
  if task['status']=='completed':break
@@ -97,7 +97,7 @@ class ThuHanMucKetQua(unittest.TestCase):
         self.addCleanup(self.close)
         job = self.tool(
             "cong_viec.tao",
-            {"prompt": "Kiem han muc dau ra duoc luu thuc te", "allow_python": True},
+            {"prompt": "Kiem han muc dau ra duoc luu thuc te", "allow_python": True, "template": "de-xuat-giai-phap"},
         )
         self.identifier = job["id"]
         for _ in range(100):
