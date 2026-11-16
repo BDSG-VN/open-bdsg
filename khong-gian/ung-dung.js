@@ -653,6 +653,7 @@ $("#profile").addEventListener("click", async () => {
     window.BDSGStudio?.reset();
     window.BDSGOffice?.reset();
     window.BDSGConnectors?.reset();
+    window.BDSGVietnam?.reset();
     window.BDSGSupport?.reset();
     state.requests = [];
     state.agents = [];

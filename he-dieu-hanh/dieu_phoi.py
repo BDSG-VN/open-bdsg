@@ -632,6 +632,20 @@ class DieuPhoi:
         integer = {"type": "integer"}
         actor = lambda: self.actor.get()
         declarations = {
+            "tich_hop_vn": [
+                ("danh_sach", lambda a: app.vn_integrations.list(actor(), a), False, {}, []),
+                ("luu", lambda a: app.vn_integrations.save(actor(), a), True,
+                 {"id": text, "provider": text, "label": text, "settings": obj, "credentials": obj,
+                  "operations": {"type": "array", "items": text}, "expires_at": {"type": ["number", "null"]},
+                  "expected_revision": integer}, ["provider", "label", "settings", "operations"]),
+                ("ngat", lambda a: app.vn_integrations.disconnect(actor(), a), True,
+                 {"id": text, "expected_revision": integer}, ["id", "expected_revision"]),
+                ("doc", lambda a: app.vn_integrations.read(actor(), a), False,
+                 {"id": text, "operation": text, "arguments": obj, "request_key": text},
+                 ["id", "operation", "request_key"]),
+                ("lich_su", lambda a: app.vn_integrations.runs(actor(), a), False,
+                 {"id": text}, ["id"]),
+            ],
             "van_phong": [
                 ("google_trang_thai", lambda a: app.google_office.status(actor(), a), False, {}, []),
                 ("google_danh_sach", lambda a: app.google_office.list(actor(), a), False, {}, []),
@@ -888,7 +902,7 @@ class DieuPhoi:
                         and name == "duyet"
                     ):
                         continue
-                    if role != "quan-tri" and namespace == "nguoi_dung":
+                    if role != "quan-tri" and namespace in ("nguoi_dung", "tich_hop_vn"):
                         continue
                     (writes if write else reads).append(namespace + "." + name)
         for role, (reads, writes) in grants.items():

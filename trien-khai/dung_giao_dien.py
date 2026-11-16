@@ -55,6 +55,8 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("cong-viec.js", doc_tep("khong-gian/cong-viec.js"))
     ghi("ket-noi.js", doc_tep("khong-gian/ket-noi.js"))
     ghi("ket-noi.css", doc_tep("khong-gian/ket-noi.css"))
+    ghi("tich-hop-vn.js", doc_tep("khong-gian/tich-hop-vn.js"))
+    ghi("tich-hop-vn.css", doc_tep("khong-gian/tich-hop-vn.css"))
     ghi("du-an.js", doc_tep("khong-gian/du-an.js"))
     ghi("du-an.css", doc_tep("khong-gian/du-an.css"))
     ghi("van-phong.js", doc_tep("khong-gian/van-phong.js"))

@@ -21,7 +21,7 @@ DATA_FILES = (
     "chatgpt-registration.json",
     "web-status.json",
 )
-SECRET_FILES = ("gateway.env", "google-client.json", "google-vault.key", "office.env")
+SECRET_FILES = ("gateway.env", "google-client.json", "google-vault.key", "office.env", "integrations-vault.key")
 ALLOWED = {
     "data/van-hanh.db",
     *("data/" + n for n in DATA_FILES),
