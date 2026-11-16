@@ -470,6 +470,7 @@
     const ticket = epoch,
       identity = state.user?.id;
     pending = true;
+    feedback("Đang lưu cấu hình…");
     event.target.querySelector('button[type="submit"]').disabled = true;
     try {
       const saved = await tool("tich_hop_vn.luu", body);

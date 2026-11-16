@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 
 from vn_chu_ky import momo_query_signature, verify_payos
 from vn_hop_dong import provider, validate_secrets, validate_settings
-from vn_transport import LoiTichHop
+from vn_transport import LoiTichHop, retry_after_seconds
 
 
 @dataclass(frozen=True)
@@ -72,6 +72,7 @@ def prepare(identifier, settings, credentials, operation, arguments):
         identity = _id(arguments, "template_id")
         query["template_id"] = identity
         headers["access_token"] = credentials["access_token"]
+        headers["Content-Type"] = "application/json"
     elif identifier == "meta_pages":
         _arguments(
             arguments, ("limit", "after") if operation == "conversations" else ()
@@ -298,6 +299,28 @@ FIELDS = {
 def _public_record(row, operation):
     if not isinstance(row, dict):
         raise LoiTichHop("invalid_response")
+    required = {
+        "oa_info": ("oa_id",),
+        "page_info": ("id",),
+        "conversations": ("id",),
+        "profile": ("open_id",),
+        "videos": ("id",),
+        "products": ("id",),
+        "orders": ("id",),
+        "invoices": ("id",),
+        "inventory": ("inventory_item_id",),
+        "banks": ("id", "bin", "name"),
+        "template_sample": ("template_id", "parameter"),
+        "payment_status": (),
+    }[operation]
+    for field in required:
+        value = row.get(field)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (str, int))
+            or str(value).strip() == ""
+        ):
+            raise LoiTichHop("invalid_response")
     record = {}
     for name in FIELDS[operation]:
         value = row.get(name)
@@ -341,15 +364,52 @@ def decode(plan, response, credentials):
     if not isinstance(data, dict):
         raise LoiTichHop("invalid_response")
     identifier = plan.provider_id
-    if identifier.startswith("zalo_") and data.get("error") != 0:
-        raise LoiTichHop("invalid_response")
+    if identifier.startswith("zalo_"):
+        error = data.get("error")
+        if identifier == "zalo_oa" and error in (-216, -220, -219):
+            raise LoiTichHop("authorization_required")
+        if identifier == "zalo_oa" and error == -212:
+            raise LoiTichHop("permission_denied")
+        if identifier == "zalo_zbs" and error == -124:
+            raise LoiTichHop("authorization_required")
+        if identifier == "zalo_zbs" and error == -117:
+            raise LoiTichHop("permission_denied")
+        if not isinstance(error, int) or isinstance(error, bool) or error != 0:
+            raise LoiTichHop("invalid_response")
     if identifier == "meta_pages" and "error" in data:
-        raise LoiTichHop("permission_denied")
+        error = data["error"]
+        code = error.get("code") if isinstance(error, dict) else None
+        if code in (102, 190):
+            raise LoiTichHop("authorization_required")
+        if isinstance(code, int) and (code in (3, 10) or 200 <= code <= 299):
+            raise LoiTichHop("permission_denied")
+        raise LoiTichHop("invalid_response")
     if identifier == "tiktok_display" and (
         not isinstance(data.get("error"), dict) or data["error"].get("code") != "ok"
     ):
+        error = data.get("error")
+        code = error.get("code") if isinstance(error, dict) else None
+        if code == "access_token_invalid":
+            raise LoiTichHop("authorization_required")
+        if code in ("scope_not_authorized", "scope_permission_missed"):
+            raise LoiTichHop("permission_denied")
+        if code == "rate_limit_exceeded":
+            raise LoiTichHop(
+                "rate_limited", retry_after_seconds(response.headers.get("retry-after"))
+            )
         raise LoiTichHop("invalid_response")
     if identifier == "amis_act" and data.get("Success") is not True:
+        code = data.get("ErrorCode") or data.get("error_code")
+        if code in (
+            "InvalidAppID",
+            "InvalidToken",
+            "ExpiredToken",
+            "InvalidAccessToken",
+            "AppIDDisconnect",
+        ):
+            raise LoiTichHop("authorization_required")
+        if code == "DBAmisNotConnectDBACT":
+            raise LoiTichHop("configuration_required")
         raise LoiTichHop("invalid_response")
     if identifier in ("vietqr", "payos") and data.get("code") != "00":
         raise LoiTichHop("invalid_response")
@@ -382,9 +442,20 @@ def decode(plan, response, credentials):
             raise LoiTichHop("invalid_response")
         rows = []
         for parameter, value in raw.items():
-            if not isinstance(parameter, str) or not 1 <= len(parameter) <= 100 or any(char in parameter for char in "\0\r\n") or not isinstance(value, (str, int, float, bool)):
+            if (
+                not isinstance(parameter, str)
+                or not 1 <= len(parameter) <= 100
+                or any(char in parameter for char in "\0\r\n")
+                or not isinstance(value, (str, int, float, bool))
+            ):
                 raise LoiTichHop("invalid_response")
-            rows.append({"template_id": plan.identity, "parameter": parameter, "sample_value": value})
+            rows.append(
+                {
+                    "template_id": plan.identity,
+                    "parameter": parameter,
+                    "sample_value": value,
+                }
+            )
     else:
         rows = raw if isinstance(raw, list) else [raw]
     if len(rows) > plan.limit:
@@ -424,7 +495,10 @@ def decode(plan, response, credentials):
             # Bỏ URL next của nhà cung cấp; chỉ mang cursor vào route cố định.
             next_arguments = {"limit": plan.limit, "after": cursor}
     encoded_items = json.dumps(items, ensure_ascii=False)
-    if any(isinstance(value, str) and len(value) >= 6 and value in encoded_items for value in credentials.values()):
+    if any(
+        isinstance(value, str) and len(value) >= 6 and value in encoded_items
+        for value in credentials.values()
+    ):
         raise LoiTichHop("invalid_response")
     return {
         "items": items,

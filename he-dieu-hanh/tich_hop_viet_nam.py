@@ -96,6 +96,7 @@ class TichHopVietNam:
         if not self.aes:
             raise LoiTichHop("configuration_required")
         from cryptography.exceptions import InvalidTag
+
         try:
             raw = row["cipher"]
             return json.loads(self.aes.decrypt(raw[:12], raw[12:], self._aad(row)))
@@ -205,6 +206,8 @@ class TichHopVietNam:
                 if isinstance(expected, bool) or expected != before["revision"]:
                     raise LoiTichHop("connection_changed")
                 revision = before["revision"] + 1
+                if "expires_at" not in arguments:
+                    expires = before["expires"]
             else:
                 if (
                     arguments.get("id")
@@ -322,7 +325,11 @@ class TichHopVietNam:
             raise LoiTichHop("connection_changed")
         if row["expires"] is not None and row["expires"] <= now:
             raise LoiTichHop("authorization_required")
-        if row["state"] in ("authorization_required", "permission_denied"):
+        if row["state"] in (
+            "authorization_required",
+            "permission_denied",
+            "configuration_required",
+        ):
             raise LoiTichHop(row["state"])
         if row["cooldown"] > now:
             raise LoiTichHop("rate_limited", int(row["cooldown"] - now) + 1)

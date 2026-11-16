@@ -7,18 +7,20 @@ Transport không tự retry POST: adapter quyết định nghiệp vụ nào có
 import http.client
 import ipaddress
 import json
+import math
 import socket
 import ssl
 import threading
 import time
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlencode, urlsplit
 
 
 class LoiTichHop(ValueError):
     def __init__(self, code, retry_after=0):
         self.code = code
-        self.retry_after = min(300, max(0, retry_after))
+        self.retry_after = max(0, retry_after)
         super().__init__(
             {
                 "configuration_required": "Cần cấu hình hợp lệ trước khi kết nối",
@@ -42,6 +44,21 @@ class PhanHoi:
     status: int
     headers: dict
     data: dict
+
+
+def retry_after_seconds(value, now=None):
+    now = time.time() if now is None else now
+    if not isinstance(value, str):
+        return 60
+    value = value.strip()
+    if value.isascii() and value.isdigit():
+        # Giá trị lớn không được rút ngắn thành vài phút và gọi lại quá sớm.
+        return int(value) if len(value) <= 12 else max(0, math.ceil(253402300799 - now))
+    try:
+        timestamp = parsedate_to_datetime(value).timestamp()
+        return max(0, math.ceil(timestamp - now))
+    except (ValueError, TypeError, OverflowError):
+        return 60
 
 
 class KetNoiGhimIP(http.client.HTTPSConnection):
@@ -158,9 +175,9 @@ class VanChuyenHTTPS:
                         else "permission_denied"
                     )
                 if status == 429:
-                    retry = result_headers.get("retry-after", "60")
                     raise LoiTichHop(
-                        "rate_limited", int(retry) if retry.isdigit() else 60
+                        "rate_limited",
+                        retry_after_seconds(result_headers.get("retry-after")),
                     )
                 if status >= 500:
                     raise LoiTichHop("provider_unavailable", 30)

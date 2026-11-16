@@ -18,7 +18,7 @@ from tich_hop_viet_nam import TichHopVietNam
 from vn_adapters import decode, prepare
 from vn_chu_ky import momo_query_signature, payos_preimage, verify_payos
 from vn_hop_dong import catalogue, validate_settings
-from vn_transport import LoiTichHop, PhanHoi, VanChuyenHTTPS
+from vn_transport import LoiTichHop, PhanHoi, VanChuyenHTTPS, retry_after_seconds
 
 OWNER = {"id": "chu-quan", "name": "Chu thu nghiem", "role": "quan-tri"}
 KEY = "fake-token-only-for-local-contract-test"
@@ -141,8 +141,33 @@ class ThuHopDong(unittest.TestCase):
             {"template_id": "1"},
         )
         self.assertEqual(sample.host, "business.openapi.zalo.me")
-        result = decode(sample, PhanHoi(200, {}, {"error": 0, "data": {"balance_debt": 2000, "customer_name": "customer_name_sample"}}), {})
-        self.assertEqual(result["items"], [{"template_id": "1", "parameter": "balance_debt", "sample_value": 2000}, {"template_id": "1", "parameter": "customer_name", "sample_value": "customer_name_sample"}])
+        self.assertEqual(sample.headers["Content-Type"], "application/json")
+        result = decode(
+            sample,
+            PhanHoi(
+                200,
+                {},
+                {
+                    "error": 0,
+                    "data": {
+                        "balance_debt": 2000,
+                        "customer_name": "customer_name_sample",
+                    },
+                },
+            ),
+            {},
+        )
+        self.assertEqual(
+            result["items"],
+            [
+                {"template_id": "1", "parameter": "balance_debt", "sample_value": 2000},
+                {
+                    "template_id": "1",
+                    "parameter": "customer_name",
+                    "sample_value": "customer_name_sample",
+                },
+            ],
+        )
         with self.assertRaises(LoiTichHop):
             decode(request, PhanHoi(200, {}, {"error": -216, "message": KEY}), {})
 
@@ -548,6 +573,109 @@ class ThuKhoTichHop(unittest.TestCase):
             "authorization_required",
         )
 
+    def test_missing_expiry_does_not_extend_access_during_label_edit(self):
+        self.integration.clock = lambda: 1000
+        row = self.save(expires_at=2000)
+        updated = self.save(id=row["id"], expected_revision=1, label="Doi ten")
+        self.assertEqual(updated["expires_at"], 2000)
+        self.integration.clock = lambda: 3000
+        with self.assertRaises(LoiTichHop):
+            self.read(updated)
+        self.assertEqual(len(self.transport.calls), 0)
+
+    def test_http200_expired_token_is_persisted_and_not_called_again(self):
+        cases = [
+            ("zalo_oa", {}, "oa_info", {}, {"error": -220}, "authorization_required"),
+            (
+                "zalo_zbs",
+                {},
+                "template_sample",
+                {"template_id": "1"},
+                {"error": -124},
+                "authorization_required",
+            ),
+            (
+                "zalo_zbs",
+                {},
+                "template_sample",
+                {"template_id": "1"},
+                {"error": -117},
+                "permission_denied",
+            ),
+            (
+                "meta_pages",
+                {"page_id": "123", "graph_version": "v26.0"},
+                "page_info",
+                {},
+                {"error": {"code": 190}},
+                "authorization_required",
+            ),
+            (
+                "tiktok_display",
+                {},
+                "profile",
+                {},
+                {"error": {"code": "access_token_invalid"}},
+                "authorization_required",
+            ),
+            (
+                "amis_act",
+                {"app_id": "app-thu"},
+                "inventory",
+                {},
+                {"Success": False, "ErrorCode": "ExpiredToken"},
+                "authorization_required",
+            ),
+        ]
+        for case_index, (
+            provider_id,
+            settings,
+            operation,
+            arguments,
+            response,
+            state,
+        ) in enumerate(cases):
+            with self.subTest(provider=provider_id):
+                self.transport.calls.clear()
+                self.transport.data = response
+                row = self.save(
+                    provider=provider_id,
+                    settings=settings,
+                    credentials={"access_token": KEY},
+                    operations=[operation],
+                )
+                for index in range(2):
+                    with self.assertRaises(LoiTichHop) as failure:
+                        self.read(
+                            row,
+                            key=provider_id
+                            + "-request-"
+                            + str(case_index)
+                            + "-"
+                            + str(index),
+                            operation=operation,
+                            arguments=arguments,
+                        )
+                    self.assertEqual(failure.exception.code, state)
+                self.assertEqual(len(self.transport.calls), 1)
+
+    def test_empty_page_record_cannot_be_marked_as_read_success(self):
+        self.transport.data = {}
+        row = self.save(
+            provider="meta_pages",
+            settings={"page_id": "123", "graph_version": "v26.0"},
+            credentials={"access_token": KEY},
+            operations=["page_info"],
+        )
+        with self.assertRaises(LoiTichHop):
+            self.read(row, operation="page_info")
+        state = next(
+            item["state"]
+            for item in self.integration.list(OWNER)["connections"]
+            if item["id"] == row["id"]
+        )
+        self.assertNotEqual(state, "last_read_succeeded")
+
     def test_cooldown_and_rate_limit_survive_restart_without_replaying_calls(self):
         row = self.save()
         self.transport.error = LoiTichHop("rate_limited", 60)
@@ -620,6 +748,17 @@ class FakeConnection:
 
 
 class ThuVanChuyen(unittest.TestCase):
+    def test_retry_after_seconds_and_http_date_are_not_shortened(self):
+        self.assertEqual(LoiTichHop("rate_limited", 3600).retry_after, 3600)
+        self.assertEqual(retry_after_seconds("3600", now=0), 3600)
+        self.assertEqual(
+            retry_after_seconds("Thu, 01 Jan 1970 01:00:00 GMT", now=0), 3600
+        )
+        self.assertEqual(
+            retry_after_seconds("Thu, 01 Jan 1970 00:00:00 GMT", now=3600), 0
+        )
+        self.assertEqual(retry_after_seconds("invalid", now=0), 60)
+
     @staticmethod
     def resolver(host, port, **kwargs):
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 443))]
@@ -627,7 +766,9 @@ class ThuVanChuyen(unittest.TestCase):
     def test_private_dns_and_redirect_are_not_followed(self):
         for address in ("127.0.0.1", "10.0.0.1", "169.254.169.254", "::1"):
             transport = VanChuyenHTTPS(
-                resolver=lambda *args, _address=address, **kwargs: [(0, 0, 0, "", (_address, 443))]
+                resolver=lambda *args, _address=address, **kwargs: [
+                    (0, 0, 0, "", (_address, 443))
+                ]
             )
             with self.subTest(address=address), self.assertRaises(LoiTichHop):
                 transport.request("example.test", "GET", "/path")
@@ -652,7 +793,9 @@ class ThuVanChuyen(unittest.TestCase):
         for response in cases:
             connection = FakeConnection()
             connection.response = response
-            transport = VanChuyenHTTPS(self.resolver, lambda *args, _connection=connection: _connection)
+            transport = VanChuyenHTTPS(
+                self.resolver, lambda *args, _connection=connection: _connection
+            )
             with (
                 self.subTest(status=response.status),
                 self.assertRaises(LoiTichHop) as failure,
