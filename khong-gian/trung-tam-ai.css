@@ -85,6 +85,9 @@
 .bdsg-ai-form .button {
   justify-self: start;
 }
+.bdsg-ai-form [data-ai-form-status][hidden] {
+  display: none;
+}
 .bdsg-ai-model-choice {
   display: grid;
   gap: 8px;

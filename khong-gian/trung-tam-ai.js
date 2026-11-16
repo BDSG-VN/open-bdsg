@@ -69,7 +69,7 @@
       ${field("skills", "Mã kỹ năng ưu tiên (tùy chọn, cách nhau bằng dấu phẩy)", model.skills.join(", "), "text", 'maxlength="2000"')}
       <div class="bdsg-ai-columns">${field("input_price", "Giá input USD / triệu token", model.prices.input_per_million, "number", 'required min="0" max="1000" step="any"')}${field("output_price", "Giá output USD / triệu token", model.prices.output_per_million, "number", 'required min="0" max="1000" step="any"')}</div>
       <p>Giá do chủ quản đối chiếu biểu phí chính thức. Hệ thống giữ trước ngân sách bảo thủ; số này chưa phải hóa đơn nhà cung cấp.</p>
-      <button class="button primary" type="submit">Lưu mô hình</button><button class="button" type="button" data-ai-cancel>Đóng biểu mẫu</button></form>`;
+      <p id="bdsg-ai-model-feedback" data-ai-form-status role="status" tabindex="-1" hidden></p><button class="button primary" type="submit">Lưu mô hình</button><button class="button" type="button" data-ai-cancel>Đóng biểu mẫu</button></form>`;
     document
       .querySelector('#bdsg-ai-model-form input[name="model_id"]')
       .focus();
@@ -94,15 +94,31 @@
         )
         .join("")}</div>
       <p>Hạn mức đặt lại lúc 00:00 giờ Việt Nam. Một tác vụ có thể gọi nhiều mô hình; lượt tiếp tục tính là một tác vụ tài trợ mới. Lượt API lỗi vẫn giữ dự phòng vì có thể đã bị tính phí. LiteLLM không cấp tín dụng miễn phí.</p>
-      <button class="button primary" type="submit">Lưu cấu hình tài trợ</button></form>`;
+      <p id="bdsg-ai-policy-feedback" data-ai-form-status role="status" tabindex="-1" hidden></p><button class="button primary" type="submit">Lưu cấu hình tài trợ</button></form>`;
   }
-  async function save(data) {
+  async function save(data, form = null) {
     if (saving) return;
     saving = true;
     const ticket = epoch,
       actor = state.user?.id;
     const message = document.querySelector("#bdsg-ai-status");
-    message.textContent = "Đang lưu cấu hình riêng trên máy chủ…";
+    const feedback = form?.querySelector("[data-ai-form-status]");
+    const show = (text, error = false) => {
+      message.textContent = text;
+      if (feedback?.isConnected) {
+        feedback.hidden = false;
+        feedback.textContent = text;
+        feedback.setAttribute("role", error ? "alert" : "status");
+        form.setAttribute("aria-describedby", feedback.id);
+        if (error) {
+          form
+            .querySelector('button[type="submit"]')
+            ?.scrollIntoView({ block: "center", behavior: "instant" });
+          feedback.focus({ preventScroll: true });
+        }
+      }
+    };
+    show("Đang lưu cấu hình riêng trên máy chủ…");
     document
       .querySelectorAll("#bdsg-ai-content button")
       .forEach((button) => (button.disabled = true));
@@ -114,7 +130,12 @@
       message.textContent =
         "Đã lưu cấu hình. Gateway mô hình cần nạp phiên bản mới trước khi xử lý; chưa nghiệm thu gọi API thật.";
     } catch (error) {
-      if (current(ticket, actor)) message.textContent = error.message;
+      if (current(ticket, actor))
+        show(
+          "Chưa lưu được cấu hình. Kiểm tra nhà cung cấp, tên mô hình, giá và hạn mức rồi thử lại; đợi công việc đang chạy kết thúc. " +
+            error.message,
+          true,
+        );
     } finally {
       data.models.forEach((model) => delete model.api_key);
       if (current(ticket, actor)) {
@@ -217,7 +238,7 @@
           ? values.get(key)
           : Number(values.get(key));
     }
-    save(data);
+    save(data, form);
   });
   async function picker(draft) {
     const host = document.querySelector(".bdsg-composer-mode");

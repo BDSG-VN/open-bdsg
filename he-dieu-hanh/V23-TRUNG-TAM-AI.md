@@ -82,7 +82,12 @@ thì gói bị từ chối, không nhận là phục hồi được. Hướng d�
 
 Đã có bài kiểm tổng hợp cho giới hạn đồng thời, quyền, cấu hình, định
 tuyến và rollback tệp; stock image đã kiểm mock_response, khóa truy cập,
-UID thường, rootfs chỉ đọc và loopback. UI đang qua vòng finish review.
+UID thường, rootfs chỉ đọc và loopback. Lỗi 503 từ provider tổng hợp chỉ
+được gửi một lần, không retry. Đã thử file watcher với tạo cấu hình lần
+đầu và atomic replace: dịch vụ nạp đúng alias revision mới.
+UI desktop/mobile đã đạt finish review SHIP; lỗi lưu ở cạnh nút và chuyển
+focus đúng form. Ngày 17/11/2026: 223 bài Python, 208 đạt và 15 bỏ qua theo
+môi trường; 4 bài đóng gói đạt. Kiểm tổng hợp không thay nghiệm thu AI thật.
 Chưa có API key chủ quản để nghiệm thu provider thật hoặc so sánh chất
 lượng/chi phí mô hình. Không có thuật toán riêng hay mã nguồn nội bộ Manus;
 chỉ tham chiếu cách chọn mô hình và trải nghiệm vận hành theo yêu cầu.
