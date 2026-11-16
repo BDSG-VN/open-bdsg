@@ -44,6 +44,8 @@ Bật danh mục, chọn model mặc định và trần tài trợ. Các mức b
 | Lượt API/toàn hệ thống | 500 |
 | Token input giữ trước/người | 500.000 |
 | Token output giữ trước/người | 100.000 |
+| Token output giữ trước/dự án | 131.072 |
+| Token output giữ trước/toàn hệ thống | 524.288 |
 | Dự phòng USD/người | 0,50 |
 | Dự phòng USD/toàn hệ thống | 5,00 |
 
@@ -52,6 +54,9 @@ token/chi phí bằng `BEGIN IMMEDIATE`: số byte UTF-8 của hội thoại/cô
 cộng dự phòng bao gói, và tối đa 4096 token output. Đây là tính bảo thủ theo
 giá chủ quản khai báo, chưa phải hóa đơn; không tự hoàn khi provider lỗi
 hoặc thiếu usage. Chi phí thật còn phụ thuộc biểu phí và tài khoản provider.
+Lượt API/token output đã giữ trong luồng legacy cùng ngày vẫn được cộng
+vào kiểm hạn mức mới, không đặt lại ngân sách khi đổi cấu hình. Chi phí/input
+token legacy chưa biết không được bịa thành giá trị đã đo.
 
 ## Vận hành
 
@@ -68,7 +73,8 @@ BDSG kiểm `/v1/models` có đúng alias trước nhận tác vụ và trước
 trong lúc nạp lại thì báo chờ, không trừ suất mới. Chưa kết nối provider thật
 khác việc gateway đã nạp đúng cấu hình. Không public cổng hoặc trang admin LiteLLM.
 
-Snapshot giữ SQLite/quota và cặp cấu hình. Nếu cặp đã đổi giữa lúc sao lưu
+Snapshot giữ khóa writer SQLite qua cả khoảng chụp DB và sao cặp cấu hình;
+lưu cấu hình AI cũng dùng khóa này. Nếu cặp đã đổi ngoài cơ chế khóa khi sao lưu
 thì gói bị từ chối, không nhận là phục hồi được. Hướng dẫn dịch vụ ở
 [`trien-khai/litellm`](../trien-khai/litellm/README.md).
 

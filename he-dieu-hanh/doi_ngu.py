@@ -59,6 +59,8 @@ class DoiNgu:
             "workforce_catalogue": self.registry.planning_catalogue(),
             "project": project,
             "task_id": context.get("task_id", ""),
+            "project_id": context.get("project_id", ""),
+            "model_selection": context.get("model_selection", "auto"),
             "documents": documents,
             "previous_artifacts": [
                 self._preview(text)
@@ -314,6 +316,7 @@ class DoiNgu:
                     "execution_scope": {},
                     "model_selection": context.get("model_selection", "auto"),
                     "task_id": context.get("task_id", ""),
+                    "project_id": context.get("project_id", ""),
                 },
                 model_event("agent-tong"),
                 worker_cancelled,

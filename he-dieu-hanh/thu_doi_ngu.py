@@ -252,6 +252,8 @@ class ThuDoiNgu(unittest.TestCase):
 
         def call(prompt, context, event, cancelled):
             contexts.append(copy.deepcopy(context))
+            self.assertEqual(context["model_selection"], "approved-model")
+            self.assertEqual(context["project_id"], "test-project")
             if "workforce_catalogue" in context:
                 self.assertEqual(
                     [m["id"] for m in context["available_models"]], ["approved-model"]
@@ -272,6 +274,7 @@ class ThuDoiNgu(unittest.TestCase):
             "Sửa lỗi từ dữ liệu tổng hợp",
             {
                 "model_selection": "approved-model",
+                "project_id": "test-project",
                 "task_id": "test-model-routing",
                 "available_models": [{"id": "approved-model"}, {"id": "other-model"}],
             },

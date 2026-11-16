@@ -376,15 +376,11 @@ class CongViec:
         with self.lock:
             self._capacity(actor, True)
             model = self.model
-            if model is hub and hub.configured:
-                hub.assert_ready()
-                if model_selection != "auto" and model_selection not in {m["id"] for m in hub.catalogue()["models"]}:
-                    raise ValueError("Mô hình đã chọn vừa được thay đổi; hãy tải lại danh mục")
             task["mode"] = model.public_status()["mode"]
             with self.kho.ket_noi() as db:
                 db.execute("BEGIN IMMEDIATE")
                 if self.model is hub and hub.configured:
-                    hub.budget.claim_task(db,actor,task["id"],task["run"],hub.data["policy"])
+                    hub.admit(db,actor,task["id"],task["run"],model_selection)
                 db.execute(
                     "INSERT INTO cong_viec_tasks VALUES (?,?,?,?,?,?)",
                     (
@@ -457,8 +453,6 @@ class CongViec:
                 raise ValueError("Tác vụ đã đạt giới hạn 10 lượt")
             self._capacity(actor)
             hub = getattr(self,"ai",None)
-            if self.model is hub and hub.configured:
-                hub.assert_ready()
             if task.get("team"):
                 task.setdefault("team_history", []).append(task.pop("team"))
                 task["team_history"] = task["team_history"][-9:]
@@ -476,7 +470,7 @@ class CongViec:
                 task["updated"] = time.time()
                 with self.kho.ket_noi() as db:
                     db.execute("BEGIN IMMEDIATE")
-                    hub.budget.claim_task(db,actor,task_id,task["run"],hub.data["policy"])
+                    hub.admit(db,actor,task_id,task["run"],task.get("model_selection","auto"))
                     db.execute("UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?",
                                (task["updated"],task["status"],json.dumps(task,ensure_ascii=False),task_id))
             else:
@@ -742,6 +736,7 @@ class CongViec:
                     "project": task.get("project"),
                     "documents": task.get("documents", []),
                     "task_id": task["id"],
+                    "project_id": task.get("project_id",""),
                     "execution_scope": {
                         "python": task.get("allow_python", False),
                         "browser": bool(task.get("browser_hosts")),

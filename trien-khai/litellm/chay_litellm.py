@@ -21,6 +21,7 @@ def command():
         "--tmpfs", "/tmp:rw,nosuid,nodev,size=268435456",
         "--mount", f"type=bind,src={configuration},dst=/etc/litellm/config.json,readonly",
         "--env", "HOME=/tmp", "--env", "LITELLM_TELEMETRY_DISABLED=true",
+        "--env", "DEFAULT_MAX_RETRIES=0",
         IMAGE, "--config", "/etc/litellm/config.json", "--host", "0.0.0.0",
         "--port", "4000", "--num_workers", "1", "--request_timeout", "30",
     ]

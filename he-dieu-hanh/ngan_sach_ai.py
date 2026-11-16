@@ -15,6 +15,8 @@ DEFAULT_POLICY = {
     "calls_global": 500,
     "input_tokens_per_user": 500000,
     "output_tokens_per_user": 100000,
+    "output_tokens_per_project": 131072,
+    "output_tokens_global": 524288,
     "usd_per_user": "0.50",
     "usd_global": "5.00",
 }
@@ -64,6 +66,15 @@ class NganSachAI:
                 );
                 CREATE INDEX IF NOT EXISTS ai_reservation_day ON ai_reservations(day,owner);
             """)
+            if "project_id" not in {
+                row[1] for row in db.execute("PRAGMA table_info(ai_reservations)")
+            }:
+                db.execute(
+                    "ALTER TABLE ai_reservations ADD COLUMN project_id TEXT NOT NULL DEFAULT ''"
+                )
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS ai_reservation_project ON ai_reservations(day,project_id)"
+            )
 
     def day(self):
         return int((self.clock() + 25200) // 86400)
@@ -97,8 +108,27 @@ class NganSachAI:
             "INSERT INTO ai_task_credits VALUES (?,?,?,?)", (owner, task_id, run, day)
         )
 
+    @staticmethod
+    def _legacy(db, owner, day, project_id=""):
+        if not db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='model_calls'"
+        ).fetchone():
+            return (0, 0, 0, 0, 0)
+        return db.execute(
+            "SELECT coalesce(sum(owner=?),0),coalesce(sum(CASE WHEN owner=? THEN output_reserved ELSE 0 END),0),count(*),coalesce(sum(output_reserved),0),coalesce(sum(CASE WHEN project_id=? THEN output_reserved ELSE 0 END),0) FROM model_calls WHERE created>=?",
+            (owner, owner, project_id, day * 86400 - 25200),
+        ).fetchone()
+
     def reserve(
-        self, actor, task_id, model_id, input_tokens, output_tokens, prices, policy
+        self,
+        actor,
+        task_id,
+        model_id,
+        input_tokens,
+        output_tokens,
+        prices,
+        policy,
+        project_id="",
     ):
         owner, day = self._owner(actor), self.day()
         if any(
@@ -114,19 +144,34 @@ class NganSachAI:
         )
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
+            legacy = self._legacy(db, owner, day, project_id)
             own = db.execute(
                 "SELECT count(*),coalesce(sum(input_tokens),0),coalesce(sum(output_tokens),0),coalesce(sum(micro_usd),0) FROM ai_reservations WHERE day=? AND owner=?",
                 (day, owner),
             ).fetchone()
             total = db.execute(
-                "SELECT count(*),coalesce(sum(micro_usd),0) FROM ai_reservations WHERE day=?",
+                "SELECT count(*),coalesce(sum(micro_usd),0),coalesce(sum(output_tokens),0) FROM ai_reservations WHERE day=?",
                 (day,),
             ).fetchone()
+            project = (
+                db.execute(
+                    "SELECT coalesce(sum(output_tokens),0) FROM ai_reservations WHERE day=? AND project_id=?",
+                    (day, project_id),
+                ).fetchone()[0]
+                if project_id
+                else 0
+            )
             if (
-                own[0] >= policy["calls_per_user"]
-                or total[0] >= policy["calls_global"]
+                own[0] + legacy[0] >= policy["calls_per_user"]
+                or total[0] + legacy[2] >= policy["calls_global"]
                 or own[1] + input_tokens > policy["input_tokens_per_user"]
-                or own[2] + output_tokens > policy["output_tokens_per_user"]
+                or own[2] + legacy[1] + output_tokens > policy["output_tokens_per_user"]
+                or total[2] + legacy[3] + output_tokens > policy["output_tokens_global"]
+                or (
+                    project_id
+                    and project + legacy[4] + output_tokens
+                    > policy["output_tokens_per_project"]
+                )
                 or own[3] + cost > money(policy["usd_per_user"]) * 1000000
                 or total[1] + cost > money(policy["usd_global"]) * 1000000
             ):
@@ -134,7 +179,7 @@ class NganSachAI:
                     "Đã chạm trần lượt, token hoặc chi phí AI được tài trợ trong ngày; chưa gửi yêu cầu tới nhà cung cấp."
                 )
             cursor = db.execute(
-                "INSERT INTO ai_reservations(owner,day,task_id,model_id,input_tokens,output_tokens,micro_usd,created) VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT INTO ai_reservations(owner,day,task_id,model_id,input_tokens,output_tokens,micro_usd,created,project_id) VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     owner,
                     day,
@@ -144,6 +189,7 @@ class NganSachAI:
                     output_tokens,
                     cost,
                     self.clock(),
+                    project_id,
                 ),
             )
             return cursor.lastrowid
@@ -151,6 +197,7 @@ class NganSachAI:
     def status(self, actor, policy):
         owner, day = self._owner(actor), self.day()
         with self.kho.ket_noi() as db:
+            legacy = self._legacy(db, owner, day)
             tasks = db.execute(
                 "SELECT count(*) FROM ai_task_credits WHERE owner=? AND day=?",
                 (owner, day),
@@ -164,9 +211,9 @@ class NganSachAI:
             "resets_at_unix": (day + 1) * 86400 - 25200,
             "tasks_used": tasks,
             "tasks_remaining": max(0, policy["tasks_per_user"] - tasks),
-            "calls_used": row[0],
+            "calls_used": row[0] + legacy[0],
             "input_tokens_reserved": row[1],
-            "output_tokens_reserved": row[2],
+            "output_tokens_reserved": row[2] + legacy[1],
             "usd_reserved": str(Decimal(row[3]) / 1000000),
             "policy": dict(policy),
             "accounting": "Giữ trước bảo thủ theo giá chủ quản khai báo; chưa phải hóa đơn nhà cung cấp.",

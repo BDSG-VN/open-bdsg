@@ -109,6 +109,21 @@ def verify(bundle):
 
 
 def backup(data, destination, secrets_dir=None):
+    data = Path(data).resolve()
+    if (data / "van-hanh.db").is_symlink():
+        raise ValueError("Không nhận CSDL liên kết")
+    # Chặn tất cả writer của quota/cấu hình AI trong cả khoảng chụp DB và sao JSON.
+    # Kết nối đọc riêng bên dưới tránh backup từ chính một write transaction.
+    with closing(
+        sqlite3.connect(
+            (data / "van-hanh.db").as_uri() + "?mode=rw", uri=True, timeout=10
+        )
+    ) as guard:
+        guard.execute("BEGIN IMMEDIATE")
+        return _backup_files(data, destination, secrets_dir)
+
+
+def _backup_files(data, destination, secrets_dir=None):
     data, destination = Path(data).resolve(), Path(destination).resolve()
     if destination == data or data in destination.parents:
         raise ValueError("Bản sao phải nằm ngoài kho nguồn")
@@ -158,6 +173,7 @@ def backup(data, destination, secrets_dir=None):
         "files": files,
         "limits": [
             "configuration-files-copied-after-database",
+            "ai-config-and-quota-writes-locked-through-snapshot",
             "audit-log-and-editor-cache-excluded",
             "local-copy-not-offsite",
         ],

@@ -247,6 +247,117 @@ class ThuTrungTamAI(unittest.TestCase):
             budget.status(USER, DEFAULT_POLICY)["resets_at_unix"], 2 * 86400 - 25200
         )
 
+    def test_project_and_global_output_caps_apply_across_different_users(self):
+        prices = {"input_per_million": "1", "output_per_million": "3"}
+        policy = {**DEFAULT_POLICY, "output_tokens_per_project": 4096}
+        self.hub.budget.reserve(
+            USER, "one", "test", 100, 4096, prices, policy, project_id="same-project"
+        )
+        with self.assertRaises(LoiMoHinhBDSG):
+            self.hub.budget.reserve(
+                OWNER,
+                "two",
+                "test",
+                100,
+                4096,
+                prices,
+                policy,
+                project_id="same-project",
+            )
+        self.hub.budget.reserve(
+            OWNER, "two", "test", 100, 4096, prices, policy, project_id="other-project"
+        )
+        with self.assertRaises(LoiMoHinhBDSG):
+            self.hub.budget.reserve(
+                OWNER,
+                "three",
+                "test",
+                100,
+                4096,
+                prices,
+                {**policy, "output_tokens_global": 8192},
+                project_id="third-project",
+            )
+
+    def test_switching_from_legacy_does_not_reset_project_output_budget(self):
+        with self.kho.ket_noi() as db:
+            db.execute(
+                "CREATE TABLE model_calls(owner TEXT,created REAL,project_id TEXT,output_reserved INTEGER)"
+            )
+            db.execute(
+                "INSERT INTO model_calls VALUES (?,?,?,?)",
+                (OWNER["id"], time.time(), "existing-project", 131072),
+            )
+        with self.assertRaises(LoiMoHinhBDSG):
+            self.hub.budget.reserve(
+                USER,
+                "test",
+                "test",
+                100,
+                4096,
+                {"input_per_million": "1", "output_per_million": "3"},
+                DEFAULT_POLICY,
+                project_id="existing-project",
+            )
+        self.assertEqual(
+            self.hub.budget.status(OWNER, DEFAULT_POLICY)["output_tokens_reserved"],
+            131072,
+        )
+
+    def test_backup_blocks_ai_writes_until_database_and_config_are_copied(self):
+        import sao_luu_he_thong
+
+        self.hub.save(OWNER, config())
+        original_revision = self.hub.data["revision"]
+        copying, writer_finished = threading.Event(), threading.Event()
+        original_copy = sao_luu_he_thong.private_copy
+
+        def copy_with_barrier(source, target):
+            if source.name == "ai-models-private.json":
+                copying.set()
+                self.assertFalse(
+                    writer_finished.wait(0.2),
+                    "Writer chen giữa snapshot DB và cấu hình",
+                )
+            original_copy(source, target)
+
+        def write():
+            self.assertTrue(copying.wait(3))
+            self.hub.budget.reserve(
+                USER,
+                "during-backup",
+                "test",
+                100,
+                100,
+                {"input_per_million": "1", "output_per_million": "3"},
+                DEFAULT_POLICY,
+            )
+            candidate = config()
+            candidate["models"][0]["label"] = "Cấu hình mới sau snapshot"
+            self.hub.save(OWNER, candidate)
+            writer_finished.set()
+
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = Path(directory) / "snapshot"
+            with (
+                patch.object(sao_luu_he_thong, "private_copy", copy_with_barrier),
+                ThreadPoolExecutor(max_workers=2) as pool,
+            ):
+                snapshot = pool.submit(backup, self.kho.root, bundle)
+                writing = pool.submit(write)
+                snapshot.result(timeout=5)
+                writing.result(timeout=5)
+            restored = Path(directory) / "restore"
+            restore(bundle, restored)
+            loaded = TrungTamAI(Kho(restored / "data"))
+            self.assertEqual(loaded.data["revision"], original_revision)
+            self.assertEqual(
+                loaded.budget.status(USER, DEFAULT_POLICY)["calls_used"], 0
+            )
+            self.assertEqual(
+                self.hub.budget.status(USER, DEFAULT_POLICY)["calls_used"], 1
+            )
+
 
 class ThuAITrongTacVu(unittest.TestCase):
     def setUp(self):
@@ -259,6 +370,7 @@ class ThuAITrongTacVu(unittest.TestCase):
         self.addCleanup(self.app.core.audit.close)
         self.addCleanup(self.app.tasks.close)
         self.calls = []
+        self.aliases = []
         outer = self
 
         class Fake:
@@ -285,7 +397,11 @@ class ThuAITrongTacVu(unittest.TestCase):
                     )
                 return "# Kết quả từ mô hình tổng hợp, chưa phải provider thật"
 
-        self.app.ai.factory = lambda alias, key: Fake()
+        def factory(alias, key):
+            self.aliases.append(alias)
+            return Fake()
+
+        self.app.ai.factory = factory
         self.app.ai.probe = lambda key, aliases: True
         result = self.app.core.goi(self.owner, "mo_hinh.luu", config())
         self.assertTrue(result["ok"], result)
@@ -334,6 +450,7 @@ class ThuAITrongTacVu(unittest.TestCase):
         for name, args in (("mo_hinh.cau_hinh", {}), ("mo_hinh.luu", config())):
             self.assertFalse(self.app.core.goi(USER, name, args)["ok"])
         self.assertTrue(self.app.core.goi(USER, "mo_hinh.danh_sach", {})["ok"])
+        self.assertNotIn("usd_global",self.app.ai.quota(USER)["policy"])
         with self.assertRaises(ValueError):
             self.app.model_settings.save(
                 self.owner,
@@ -355,6 +472,18 @@ class ThuAITrongTacVu(unittest.TestCase):
             self.app.ai.budget.status(USER, DEFAULT_POLICY)["tasks_used"], 0
         )
         self.assertEqual(self.app.tasks.list(USER)["tasks"], [])
+
+    def test_manual_model_is_used_by_planner_specialist_and_synthesis(self):
+        identifier = self.app.tasks.create(
+            USER,
+            {
+                "prompt": "Kiểm mô hình chọn tay khác mặc định cho mọi bước",
+                "model_selection": "code-model",
+            },
+        )["id"]
+        self.assertEqual(self.finish(identifier)["status"], "completed")
+        self.assertEqual(len(self.aliases), 3)
+        self.assertTrue(all(alias.startswith("code-model-") for alias in self.aliases))
 
     def test_admin_cannot_change_profile_while_task_is_in_flight(self):
         entered, release = threading.Event(), threading.Event()

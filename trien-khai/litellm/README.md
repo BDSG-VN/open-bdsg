@@ -11,7 +11,8 @@ Các unit trong thư mục này dành cho máy Thanh Hoá có Docker và tài kh
 1. Giữ release/gateway cũ và snapshot riêng có thử phục hồi.
 2. Tải image đã xác minh, không chạy installer của full repo.
 3. Đặt các unit `.service`/`.path` vào systemd, daemon-reload và enable
-   `bdsg-litellm.path`; service chỉ khởi động khi tệp config riêng tồn tại.
+   `bdsg-litellm.path` và `bdsg-litellm.service`; service chỉ khởi động khi
+   tệp config riêng tồn tại, kể cả sau khi reboot.
 4. Admin BDSG nhập model/key/giá trong Trung tâm AI. File watcher nạp
    config mới; chỉ nhận tác vụ khi `/v1/models` chứa alias đúng revision.
 5. Kiểm loopback 4000, thiếu master key bị từ chối, gateway health; dùng

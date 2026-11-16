@@ -17,6 +17,8 @@
     calls_global: "Lượt API/toàn hệ thống/ngày",
     input_tokens_per_user: "Token đầu vào giữ trước/người/ngày",
     output_tokens_per_user: "Token đầu ra giữ trước/người/ngày",
+    output_tokens_per_project: "Token đầu ra giữ trước/dự án/ngày",
+    output_tokens_global: "Token đầu ra giữ trước/toàn hệ thống/ngày",
     usd_per_user: "Trần USD/người/ngày",
     usd_global: "Trần USD/toàn hệ thống/ngày",
   };
@@ -68,7 +70,9 @@
       <div class="bdsg-ai-columns">${field("input_price", "Giá input USD / triệu token", model.prices.input_per_million, "number", 'required min="0" max="1000" step="any"')}${field("output_price", "Giá output USD / triệu token", model.prices.output_per_million, "number", 'required min="0" max="1000" step="any"')}</div>
       <p>Giá do chủ quản đối chiếu biểu phí chính thức. Hệ thống giữ trước ngân sách bảo thủ; số này chưa phải hóa đơn nhà cung cấp.</p>
       <button class="button primary" type="submit">Lưu mô hình</button><button class="button" type="button" data-ai-cancel>Đóng biểu mẫu</button></form>`;
-    document.querySelector('#bdsg-ai-model-form input[name="model_id"]').focus();
+    document
+      .querySelector('#bdsg-ai-model-form input[name="model_id"]')
+      .focus();
   }
   function renderAdmin() {
     const slot = document.querySelector("#bdsg-ai-content");

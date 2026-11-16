@@ -70,6 +70,9 @@ class TrungTamAI:
         }
         if self.path.is_file():
             self.data = json.loads(self.path.read_text(encoding="utf-8"))
+            self.data["policy"] = validate_policy(
+                {**DEFAULT_POLICY, **self.data["policy"]}
+            )
         self.configuration_error = ""
 
     @staticmethod
@@ -144,6 +147,7 @@ class TrungTamAI:
             result["policy"] = dict(self.data["policy"])
             result["configured"] = self.configured
             result["verified"] = False
+            result["revision"] = self.data["revision"]
             return result
 
     @staticmethod
@@ -166,6 +170,14 @@ class TrungTamAI:
 
     def save(self, actor, data):
         self._admin(actor)
+        # Cùng khóa SQLite với quota và snapshot: không có cấu hình mới đi với số dư cũ.
+        with self.kho.ket_noi() as db:
+            db.execute("BEGIN IMMEDIATE")
+            result = self._save_guarded(actor, data)
+        self.kho.su_kien(actor["id"], "cau-hinh-trung-tam-ai", result["revision"])
+        return result
+
+    def _save_guarded(self, actor, data):
         if not isinstance(data, dict) or set(data) != {
             "enabled",
             "default_model",
@@ -305,8 +317,25 @@ class TrungTamAI:
                     self._write(self.proxy_path, previous_proxy)
                 raise
             self.data = candidate
-        self.kho.su_kien(actor["id"], "cau-hinh-trung-tam-ai", revision)
         return self.admin(actor)
+
+    def admit(self, db, actor, task_id, run, selection="auto"):
+        """Transaction thuộc tác vụ; readiness và giữ suất dùng cùng danh mục ổn định."""
+        with self.lock:
+            self.assert_ready()
+            if selection != "auto" and selection not in {
+                model["id"] for model in self.data["models"]
+            }:
+                raise ValueError("Mô hình đã chọn vừa thay đổi; hãy tải lại danh mục")
+            self.budget.claim_task(db, actor, task_id, run, self.data["policy"])
+
+    def quota(self, actor):
+        with self.lock:
+            policy = dict(self.data["policy"])
+        result=self.budget.status(actor, policy)
+        if actor.get("role") != "quan-tri":
+            result["policy"]={key:value for key,value in result["policy"].items() if key.endswith("_per_user")}
+        return result
 
     @staticmethod
     def proxy_config(data):
@@ -317,6 +346,8 @@ class TrungTamAI:
                     "litellm_params": {
                         "model": model["upstream_model"],
                         "api_key": model["api_key"],
+                        "num_retries": 0,
+                        "max_retries": 0,
                     },
                 }
                 for model in data["models"]
@@ -397,6 +428,7 @@ class TrungTamAI:
                     4096,
                     model["prices"],
                     config["policy"],
+                    project_id=context.get("project_id", ""),
                 )
             emit(kind, message, **extra)
 

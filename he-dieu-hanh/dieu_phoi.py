@@ -635,7 +635,7 @@ class DieuPhoi:
         declarations = {
             "mo_hinh": [
                 ("danh_sach", lambda a: app.ai.catalogue(), False, {}, []),
-                ("han_muc", lambda a: app.ai.budget.status(actor(),app.ai.data["policy"]), False, {}, []),
+                ("han_muc", lambda a: app.ai.quota(actor()), False, {}, []),
                 ("cau_hinh", lambda a: app.ai.admin(actor()), False, {}, []),
                 ("luu", lambda a: app.configure_ai(actor(),a), True,
                  {"enabled":boolean,"default_model":{"type":["string","null"]},
