@@ -4,6 +4,7 @@
     prompt: "",
     module_ids: [],
     template: "nhan-su-chuyen-mon",
+    model_selection: "auto",
     project_id: "",
     allow_module_reads: false,
     allow_delegation: false,
@@ -101,7 +102,11 @@
       : "Quy trình có kịch bản · API mô hình chưa cấu hình";
   }
   function taskMode(task) {
-    if (task.team?.state === "awaiting_model" || (task.template === "nhan-su-chuyen-mon" && task.mode === "quy-trinh")) return "Chưa cấu hình AI";
+    if (
+      task.team?.state === "awaiting_model" ||
+      (task.template === "nhan-su-chuyen-mon" && task.mode === "quy-trinh")
+    )
+      return "Chưa cấu hình AI";
     return task.mode === "quy-trinh" ? "Quy trình" : "API mô hình";
   }
   async function getModules() {
@@ -266,6 +271,7 @@
         `<label class="bdsg-workflow-picker">Cách thực hiện<select id="bdsg-workflow">${templates.map((item) => `<option value="${item.id}" ${draft.template === item.id ? "selected" : ""}>${esc(item.title)}</option>`).join("")}</select><a href="#staff">Xem nhân sự chuyên môn</a></label>`,
       );
       refreshWorkflowLabel();
+      await window.BDSGAI?.picker(draft);
       if (state.user) {
         const data = unwrap(await api("/api/tasks"));
         const slot = $("#bdsg-recent-jobs");
@@ -592,7 +598,9 @@
       return;
     }
     if (e.target.closest("[data-bdsg-model-setup]")) {
-      auth(() => openModelSettings().catch((err) => toast(err.message)));
+      auth(() => {
+        location.hash = "#ai-settings";
+      });
       return;
     }
     if (e.target.closest("[data-bdsg-model-close]")) {
@@ -687,6 +695,7 @@
         prompt: draft.prompt.trim(),
         module_ids: [...draft.module_ids],
         template: draft.template,
+        model_selection: draft.model_selection,
         project_id: draft.project_id,
         allow_module_reads: draft.allow_module_reads,
         allow_delegation:
@@ -776,6 +785,7 @@
     Object.assign(draft, {
       prompt: "",
       template: "nhan-su-chuyen-mon",
+      model_selection: "auto",
       module_ids: [],
       project_id: "",
       document_ids: [],

@@ -301,6 +301,12 @@ class CongViec:
         template = args.get("template", "nhan-su-chuyen-mon")
         if template not in TEMPLATES:
             raise ValueError("Quy trình chưa được hỗ trợ")
+        model_selection = args.get("model_selection","auto")
+        if not isinstance(model_selection,str):
+            raise ValueError("Mô hình được chọn chưa hợp lệ")
+        hub = getattr(self,"ai",None)
+        if model_selection != "auto" and (self.model is not hub or model_selection not in {m["id"] for m in hub.catalogue()["models"]}):
+            raise ValueError("Mô hình không nằm trong danh mục đang hoạt động")
         ids = args.get("module_ids", [])
         valid = {p["id"] for p in self.core.catalogue}
         if (
@@ -339,6 +345,7 @@ class CongViec:
             "updated": now,
             "mode": self.model.public_status()["mode"],
             "template": template,
+            "model_selection": model_selection,
             "module_ids": ids,
             "project": project,
             "project_id": project_id,
@@ -368,7 +375,16 @@ class CongViec:
         )
         with self.lock:
             self._capacity(actor, True)
+            model = self.model
+            if model is hub and hub.configured:
+                hub.assert_ready()
+                if model_selection != "auto" and model_selection not in {m["id"] for m in hub.catalogue()["models"]}:
+                    raise ValueError("Mô hình đã chọn vừa được thay đổi; hãy tải lại danh mục")
+            task["mode"] = model.public_status()["mode"]
             with self.kho.ket_noi() as db:
+                db.execute("BEGIN IMMEDIATE")
+                if self.model is hub and hub.configured:
+                    hub.budget.claim_task(db,actor,task["id"],task["run"],hub.data["policy"])
                 db.execute(
                     "INSERT INTO cong_viec_tasks VALUES (?,?,?,?,?,?)",
                     (
@@ -380,7 +396,7 @@ class CongViec:
                         json.dumps(task, ensure_ascii=False),
                     ),
                 )
-            self.pool.submit(self._run, dict(actor), task["id"], self.model)
+            self.pool.submit(self._run, dict(actor), task["id"], model)
         return {"id": task["id"], "status": "queued"}
 
     def list(self, actor):
@@ -440,6 +456,9 @@ class CongViec:
             if task["run"] >= 10:
                 raise ValueError("Tác vụ đã đạt giới hạn 10 lượt")
             self._capacity(actor)
+            hub = getattr(self,"ai",None)
+            if self.model is hub and hub.configured:
+                hub.assert_ready()
             if task.get("team"):
                 task.setdefault("team_history", []).append(task.pop("team"))
                 task["team_history"] = task["team_history"][-9:]
@@ -452,7 +471,16 @@ class CongViec:
             self._event(
                 task, "queued", "Đã nhận yêu cầu bổ sung; giữ lại các kết quả trước."
             )
-            self._save(task)
+            hub = getattr(self,"ai",None)
+            if self.model is hub and hub.configured:
+                task["updated"] = time.time()
+                with self.kho.ket_noi() as db:
+                    db.execute("BEGIN IMMEDIATE")
+                    hub.budget.claim_task(db,actor,task_id,task["run"],hub.data["policy"])
+                    db.execute("UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?",
+                               (task["updated"],task["status"],json.dumps(task,ensure_ascii=False),task_id))
+            else:
+                self._save(task)
             self.pool.submit(self._run, dict(actor), task_id, self.model)
             return task
 
@@ -724,7 +752,10 @@ class CongViec:
                         a["content"] for a in task["artifacts"][-2:]
                     ],
                     "template": task["template"],
+                    "model_selection": task.get("model_selection","auto"),
                 }
+                if model is getattr(self,"ai",None):
+                    context["available_models"] = model.catalogue()["models"]
                 context["module_scope"] = {
                     "allow_reads": task.get("allow_module_reads", False),
                     "selected_ids": task["module_ids"],
@@ -732,7 +763,7 @@ class CongViec:
                 }
 
                 def on_event(kind, message, **extra):
-                    if kind == "model-reserve":
+                    if kind == "model-reserve" and model is not getattr(self,"ai",None):
                         self.reserve_model(actor, task.get("project_id", ""))
                     with self.lock:
                         current = self._load(task_id)

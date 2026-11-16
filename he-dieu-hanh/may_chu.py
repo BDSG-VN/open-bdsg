@@ -19,6 +19,7 @@ from kho import Kho
 from dieu_phoi import DieuPhoi
 from cong_viec import CongViec
 from cau_hinh_mo_hinh import CauHinhMoHinh
+from trung_tam_ai import TrungTamAI
 from cau_hinh_ket_noi import CauHinhKetNoi
 from du_an import DuAn
 from tai_lieu import TaiLieu
@@ -83,6 +84,10 @@ class UngDung:
         self.schedules = LichCongViec(self.kho, self.core, self.tasks)
         self.delegation = PhoiHop(self.kho, self.core, self.tasks)
         self.model_settings = CauHinhMoHinh(self.kho, self.tasks)
+        self.ai = TrungTamAI(self.kho)
+        self.tasks.ai = self.ai
+        if self.ai.path.exists():
+            self.tasks.model = self.ai
         self.connectors = CauHinhKetNoi(
             self.kho, self.core.connections, self.catalogue, self.origin
         )
@@ -95,6 +100,17 @@ class UngDung:
         )
         self.core.dang_ky_mo_rong(self)
         self.operations = VanHanhMayChu(self)
+
+    def configure_ai(self, actor, args):
+        # Giữ cùng khóa với tạo/tiếp tục tác vụ để đổi nhà cung cấp không cắt lượt đang chạy.
+        with self.tasks.lock:
+            with self.kho.ket_noi() as db:
+                active = db.execute("SELECT count(*) FROM cong_viec_tasks WHERE status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1").fetchone()[0]
+            if active:
+                raise ValueError("Đợi công việc đang chạy kết thúc trước khi đổi cấu hình AI")
+            result = self.ai.save(actor,args)
+            self.tasks.model = self.ai
+            return result
 
     def catalog(self):
         p = self.kho.root / "web-status.json"

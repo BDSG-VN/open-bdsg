@@ -394,7 +394,8 @@ class MoHinhBDSG:
             self.REQUEST_TIMEOUT.set(
                 max(0.1, min(30, self.MAX_RUN_SECONDS - (time.monotonic() - started)))
             )
-            on_event("model-reserve", "Đã giữ một lượt trong hạn mức API ngày.")
+            on_event("model-reserve", "Đã giữ một lượt trong hạn mức API ngày.",
+                     input_bytes=len(self._json({"messages":messages,"tools":tools}).encode("utf-8")))
             message = self._request(messages, tools)
             usage = message.pop("_usage", {"input_tokens": None, "output_tokens": None})
             on_event(

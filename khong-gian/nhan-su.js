@@ -45,6 +45,7 @@
           );
           return `<li><div class="bdsg-team-person"><strong>${esc(agent.name)}</strong>${badge(agent.state)}</div>
           <p>${esc(agent.mission)}</p>
+          ${team.models?.[agent.skill_id] ? `<small>Mô hình đã chọn: ${esc(team.models[agent.skill_id].label)}</small>` : ""}
           ${dependencies.length ? `<small>Nhận bàn giao: ${esc(dependencies.join(", "))}</small>` : "<small>Có thể làm độc lập</small>"}
           <details data-staff-section="${esc(agent.skill_id)}"><summary>Sản phẩm cần bàn giao</summary><p>${esc(agent.deliverable)}</p><small>Bản kỹ năng: ${esc(String(agent.skill_sha256 || "").slice(0, 12))}</small></details>
           ${artifact ? `<button type="button" class="button" data-staff-result="${esc(artifact.id)}">Xem kết quả</button>` : ""}

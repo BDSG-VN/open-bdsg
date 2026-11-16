@@ -1,0 +1,120 @@
+.bdsg-ai-page {
+  max-width: 1040px;
+}
+.bdsg-ai-heading,
+.bdsg-ai-model,
+.bdsg-ai-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bdsg-ai-heading {
+  margin: 24px 0 12px;
+}
+.bdsg-ai-page h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.bdsg-ai-page p {
+  line-height: 1.6;
+  max-width: 74ch;
+  overflow-wrap: anywhere;
+}
+.bdsg-ai-list {
+  border-top: 1px solid var(--line);
+}
+.bdsg-ai-model {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.bdsg-ai-model > div {
+  min-width: 0;
+}
+.bdsg-ai-model p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+.bdsg-ai-form {
+  display: grid;
+  gap: 18px;
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+}
+.bdsg-ai-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 14px;
+  min-width: 0;
+}
+.bdsg-ai-form input:not([type="checkbox"]),
+.bdsg-ai-form select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+.bdsg-ai-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.bdsg-ai-form fieldset {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  min-width: 0;
+}
+.bdsg-ai-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.bdsg-ai-form .bdsg-ai-toggle,
+.bdsg-ai-checks label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bdsg-ai-form .button {
+  justify-self: start;
+}
+.bdsg-ai-model-choice {
+  display: grid;
+  gap: 8px;
+  margin: 14px 20px 16px;
+  font-size: 14px;
+}
+.bdsg-ai-model-choice select {
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+.bdsg-ai-model-choice small {
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .bdsg-ai-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bdsg-ai-model {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .bdsg-ai-actions {
+    flex-wrap: wrap;
+  }
+  .bdsg-ai-heading {
+    align-items: flex-start;
+  }
+}

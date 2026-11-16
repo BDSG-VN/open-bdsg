@@ -484,6 +484,7 @@ class DieuPhoi:
                                 "prompt": text,
                                 "module_ids": {"type": "array", "items": text},
                                 "template": text,
+                                "model_selection": text,
                                 "project_id": text,
                                 "allow_module_reads": {"type": "boolean"},
                                 "document_ids": {"type": "array", "items": text},
@@ -632,6 +633,15 @@ class DieuPhoi:
         integer = {"type": "integer"}
         actor = lambda: self.actor.get()
         declarations = {
+            "mo_hinh": [
+                ("danh_sach", lambda a: app.ai.catalogue(), False, {}, []),
+                ("han_muc", lambda a: app.ai.budget.status(actor(),app.ai.data["policy"]), False, {}, []),
+                ("cau_hinh", lambda a: app.ai.admin(actor()), False, {}, []),
+                ("luu", lambda a: app.configure_ai(actor(),a), True,
+                 {"enabled":boolean,"default_model":{"type":["string","null"]},
+                  "models":{"type":"array","items":obj},"policy":obj},
+                 ["enabled","default_model","models","policy"]),
+            ],
             "nhan_su": [
                 ("xuat_bo", lambda a: app.tasks.staff.export_bundle(a), False, {"format": text}, ["format"]),
                 ("danh_sach", lambda a: app.tasks.staff.catalogue(), False, {}, []),
@@ -917,6 +927,8 @@ class DieuPhoi:
                     ):
                         continue
                     if role != "quan-tri" and namespace in ("nguoi_dung", "tich_hop_vn"):
+                        continue
+                    if namespace == "mo_hinh" and (role == "agent" or (role != "quan-tri" and name in ("cau_hinh","luu"))):
                         continue
                     (writes if write else reads).append(namespace + "." + name)
         for role, (reads, writes) in grants.items():

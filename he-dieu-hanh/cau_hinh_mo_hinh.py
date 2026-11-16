@@ -50,6 +50,8 @@ class CauHinhMoHinh:
     def save(self, actor, data):
         if actor.get("role") != "quan-tri":
             raise PermissionError("Chỉ chủ quản được cấu hình mô hình")
+        if getattr(self.engine,"ai",None) and self.engine.ai.path.exists():
+            raise ValueError("Mô hình đang do Trung tâm AI quản lý; hãy cấu hình tại mục đó")
         candidate = self.candidate(data)
         self._write(data, candidate)
         self.kho.su_kien(actor["id"], "cau-hinh-mo-hinh", data["provider"])
@@ -58,6 +60,8 @@ class CauHinhMoHinh:
     def disable(self, actor):
         if actor.get("role") != "quan-tri":
             raise PermissionError("Chỉ chủ quản được tắt mô hình")
+        if getattr(self.engine,"ai",None) and self.engine.ai.path.exists():
+            raise ValueError("Hãy tắt mô hình tại Trung tâm AI để giữ đúng chính sách ngân sách")
         # Giữ dấu tắt để lần khởi động sau không tự bật lại từ biến môi trường.
         model = MoHinhBDSG(environ={})
         self._write({"disabled": True}, model)

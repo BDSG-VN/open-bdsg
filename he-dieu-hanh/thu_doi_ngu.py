@@ -245,6 +245,48 @@ class ThuDoiNgu(unittest.TestCase):
         self.engine.run("Tóm tắt cuộc họp", {}, call, self.emit, lambda: False)
         self.assertEqual(len(count), 3)
 
+    def test_planner_can_choose_only_approved_models_and_manual_choice_is_preserved(
+        self,
+    ):
+        contexts = []
+
+        def call(prompt, context, event, cancelled):
+            contexts.append(copy.deepcopy(context))
+            if "workforce_catalogue" in context:
+                self.assertEqual(
+                    [m["id"] for m in context["available_models"]], ["approved-model"]
+                )
+                return self.plan(
+                    [{**assignment("bdsg-debug"), "model_id": "approved-model"}]
+                )
+            self.assertEqual(context["model_selection"], "approved-model")
+            event(
+                "model-selected",
+                "Tổng hợp",
+                model_id="approved-model",
+                model_label="Mô hình kiểm",
+            )
+            return "Kết quả tổng hợp"
+
+        self.engine.run(
+            "Sửa lỗi từ dữ liệu tổng hợp",
+            {
+                "model_selection": "approved-model",
+                "task_id": "test-model-routing",
+                "available_models": [{"id": "approved-model"}, {"id": "other-model"}],
+            },
+            call,
+            self.emit,
+            lambda: False,
+        )
+        self.assertEqual(len(contexts), 3)
+        for invalid in ("unapproved", True):
+            with self.assertRaises(LoiMoHinhBDSG):
+                self.engine.validate_plan(
+                    self.plan([{**assignment("bdsg-debug"), "model_id": invalid}]),
+                    {"approved-model"},
+                )
+
     def test_finished_success_is_preserved_when_same_batch_also_fails(self):
         rendezvous = threading.Barrier(2)
 

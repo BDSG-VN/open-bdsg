@@ -1,0 +1,19 @@
+[Unit]
+Description=BDSG Thanh Hoa LiteLLM gateway (loopback only)
+After=docker.service network-online.target
+Requires=docker.service
+ConditionPathExists=/var/lib/bdsg-thanhhoa/litellm-config.json
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /srv/bdsg-thanhhoa/open-bdsg/current/source/trien-khai/litellm/chay_litellm.py
+ExecStop=/usr/bin/docker stop --time 35 bdsg-thanhhoa-litellm
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+StandardOutput=null
+StandardError=null
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

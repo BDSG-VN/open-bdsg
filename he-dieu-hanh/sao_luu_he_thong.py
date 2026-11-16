@@ -17,11 +17,19 @@ from pathlib import Path
 
 DATA_FILES = (
     "model-private.json",
+    "ai-models-private.json",
+    "litellm-config.json",
     "connections-private.json",
     "chatgpt-registration.json",
     "web-status.json",
 )
-SECRET_FILES = ("gateway.env", "google-client.json", "google-vault.key", "office.env", "integrations-vault.key")
+SECRET_FILES = (
+    "gateway.env",
+    "google-client.json",
+    "google-vault.key",
+    "office.env",
+    "integrations-vault.key",
+)
 ALLOWED = {
     "data/van-hanh.db",
     *("data/" + n for n in DATA_FILES),
@@ -76,6 +84,19 @@ def verify(bundle):
             or digest(path) != expected["sha256"]
         ):
             raise ValueError("Dấu kiểm sao lưu không khớp")
+    ai_settings = bundle / "data/ai-models-private.json"
+    ai_proxy = bundle / "data/litellm-config.json"
+    if ai_settings.exists() or ai_proxy.exists():
+        from trung_tam_ai import TrungTamAI
+
+        if not (ai_settings.is_file() and ai_proxy.is_file()):
+            raise ValueError("Bản sao thiếu một trong hai tệp cấu hình Trung tâm AI")
+        if TrungTamAI.proxy_config(
+            json.loads(ai_settings.read_text(encoding="utf-8"))
+        ) != json.loads(ai_proxy.read_text(encoding="utf-8")):
+            raise ValueError(
+                "Cấu hình AI đã đổi trong khi sao lưu; tạo bản sao mới trước khi phục hồi"
+            )
     with closing(
         sqlite3.connect(
             (bundle / "data/van-hanh.db").resolve().as_uri() + "?mode=ro&immutable=1",
