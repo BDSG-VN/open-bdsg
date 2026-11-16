@@ -51,7 +51,8 @@ Bật danh mục, chọn model mặc định và trần tài trợ. Các mức b
 
 Nhận tác vụ và trừ suất cùng transaction SQLite. Mỗi request giữ trước
 token/chi phí bằng `BEGIN IMMEDIATE`: số byte UTF-8 của hội thoại/công cụ
-cộng dự phòng bao gói, và tối đa 4096 token output. Đây là tính bảo thủ theo
+cộng dự phòng bao gói, và tối đa 8192 token output (điều chỉnh 17/11/2026 sau lượt
+nghiệm thu tạo website với Claude). Đây là tính bảo thủ theo
 giá chủ quản khai báo, chưa phải hóa đơn; không tự hoàn khi provider lỗi
 hoặc thiếu usage. Chi phí thật còn phụ thuộc biểu phí và tài khoản provider.
 Lượt API/token output đã giữ trong luồng legacy cùng ngày vẫn được cộng
@@ -88,6 +89,17 @@ UID thường, rootfs chỉ đọc và loopback. Lỗi 503 từ provider tổng 
 UI desktop/mobile đã đạt finish review SHIP; lỗi lưu ở cạnh nút và chuyển
 focus đúng form. Ngày 17/11/2026: 223 bài Python, 208 đạt và 15 bỏ qua theo
 môi trường; 4 bài đóng gói đạt. Kiểm tổng hợp không thay nghiệm thu AI thật.
-Chưa có API key chủ quản để nghiệm thu provider thật hoặc so sánh chất
-lượng/chi phí mô hình. Không có thuật toán riêng hay mã nguồn nội bộ Manus;
+Ngày 17/11/2026 đã nghiệm thu Claude Sonnet 5.5 thật qua tài khoản operator:
+Agent tổng giao chuyên gia frontend tạo tệp HTML bằng Python cô lập, rồi
+tổng hợp kết quả. Lượt đạt dùng 4 request, 24.493 token input và 9.142 token
+output do API báo. Tệp HTML 9.870 byte được giữ nguyên khi kiểm trình duyệt:
+tìm kiếm, giỏ hàng, tổng tiền và đặt hàng mô phỏng đạt trên desktop/mobile;
+không có lỗi JavaScript hoặc request ra ngoài. Đây là demo dữ liệu giả lập,
+không phải hệ thống đơn hàng/thanh toán thật; kết quả sinh không đưa vào Git.
+
+Đầu nối LiteLLM bỏ temperature để tương thích Claude mới, giữ trước 8.192
+token output mỗi request và chờ tối đa 60 giây/request, vẫn giữ giới hạn
+180 giây mỗi lượt chuyên môn. 60 bài kiểm AI/adapter/tác vụ/đội ngũ đạt sau
+thay đổi; các bộ kiểm cũ ở trên thuộc mốc trước. Chưa nghiệm thu các provider
+còn lại hay so sánh chất lượng/chi phí. Không có thuật toán riêng hay mã nguồn nội bộ Manus;
 chỉ tham chiếu cách chọn mô hình và trải nghiệm vận hành theo yêu cầu.

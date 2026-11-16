@@ -15,7 +15,8 @@ from may_chu import UngDung
 from mo_hinh_bdsg import LoiMoHinhBDSG
 from ngan_sach_ai import DEFAULT_POLICY, NganSachAI, validate_policy
 from sao_luu_he_thong import backup, restore
-from trung_tam_ai import TrungTamAI
+from trung_tam_ai import TrungTamAI, MoHinhLiteLLM
+from thu_mo_hinh_bdsg import Transport, answer
 
 OWNER = {"id": "test-owner", "name": "Chủ quản kiểm", "role": "quan-tri"}
 USER = {"id": "test-user", "name": "Người dùng kiểm", "role": "operator"}
@@ -43,6 +44,16 @@ def config():
 
 
 class ThuTrungTamAI(unittest.TestCase):
+    def test_gateway_omits_sampling_and_matches_reserved_output(self):
+        # Claude hiện hành từ chối temperature; alias không bộc lộ nhà cung cấp.
+        transport = Transport([answer('Kết quả thật qua transport giả')])
+        adapter = MoHinhLiteLLM('claude-test-revision', 'synthetic-key-not-live', opener=transport)
+        adapter._request([{'role':'user','content':'Tạo website demo'}], [])
+        payload = json.loads(transport.requests[0][0].data)
+        self.assertNotIn('temperature', payload)
+        self.assertEqual(payload['max_tokens'], MoHinhLiteLLM.MAX_OUTPUT_TOKENS)
+        self.assertEqual(payload['max_tokens'], 8192)
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
@@ -416,6 +427,10 @@ class ThuAITrongTacVu(unittest.TestCase):
         self.fail("Tác vụ tổng hợp chưa kết thúc")
 
     def test_five_task_claims_persist_with_tasks_and_sixth_does_not_create_row(self):
+        # Tách trần số tác vụ khỏi trần token/chi phí, đã có các bài kiểm riêng.
+        settings = config()
+        settings['policy'].update(output_tokens_per_user=200000, usd_per_user='1.00')
+        self.app.configure_ai(self.owner, settings)
         identifiers = []
         for _ in range(5):
             identifier = self.app.tasks.create(
@@ -484,6 +499,9 @@ class ThuAITrongTacVu(unittest.TestCase):
         self.assertEqual(self.finish(identifier)["status"], "completed")
         self.assertEqual(len(self.aliases), 3)
         self.assertTrue(all(alias.startswith("code-model-") for alias in self.aliases))
+        with self.app.kho.ket_noi() as db:
+            reserved = db.execute('SELECT output_tokens FROM ai_reservations WHERE task_id=?', (identifier,)).fetchall()
+        self.assertEqual([row[0] for row in reserved], [MoHinhLiteLLM.MAX_OUTPUT_TOKENS] * 3)
 
     def test_admin_cannot_change_profile_while_task_is_in_flight(self):
         entered, release = threading.Event(), threading.Event()

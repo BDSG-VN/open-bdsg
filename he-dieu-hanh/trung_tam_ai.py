@@ -37,6 +37,9 @@ SKILL_CAPABILITIES = {
 
 
 class MoHinhLiteLLM(MoHinhBDSG):
+    MAX_OUTPUT_TOKENS = 8192
+    MAX_REQUEST_SECONDS = 60
+
     def __init__(self, alias, key, opener=None):
         # Chỉ giao tiếp loopback do vận hành sở hữu; không nhận base_url từ chat.
         super().__init__(
@@ -425,7 +428,7 @@ class TrungTamAI:
                     context.get("task_id", ""),
                     model["id"],
                     count + 4096,
-                    4096,
+                    MoHinhLiteLLM.MAX_OUTPUT_TOKENS,
                     model["prices"],
                     config["policy"],
                     project_id=context.get("project_id", ""),

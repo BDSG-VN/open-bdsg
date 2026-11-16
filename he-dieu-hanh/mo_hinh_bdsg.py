@@ -33,6 +33,7 @@ class MoHinhBDSG:
     MAX_RESPONSE = 1024 * 1024
     MAX_TURNS = 8
     MAX_RUN_SECONDS = 180
+    MAX_REQUEST_SECONDS = 30
 
     def __init__(self, environ=None, opener=None):
         env = os.environ if environ is None else environ
@@ -200,11 +201,14 @@ class MoHinhBDSG:
                 "tools": tools,
                 "tool_choice": "auto",
             }
-            payload.update(
-                {"max_completion_tokens": 4096}
-                if self.provider == "openai"
-                else {"temperature": 0.2, "max_tokens": 2400}
-            )
+            if self.provider == "openai":
+                payload["max_completion_tokens"] = 4096
+            elif self.provider == "litellm":
+                # Alias có thể trỏ tới Claude mới không nhận sampling params.
+                # Giới hạn này khớp số token đã giữ trước mỗi lời gọi gateway.
+                payload["max_tokens"] = self.MAX_OUTPUT_TOKENS
+            else:
+                payload.update({"temperature": 0.2, "max_tokens": 2400})
             headers["Authorization"] = "Bearer " + self._key
             url = self._base + "/chat/completions"
         body = self._json(payload)
@@ -392,7 +396,7 @@ class MoHinhBDSG:
                 raise LoiMoHinhBDSG("Tác vụ đã được yêu cầu dừng.")
             on_event("model-turn", "Đang xử lý bằng mô hình đã cấu hình.", turn=turn)
             self.REQUEST_TIMEOUT.set(
-                max(0.1, min(30, self.MAX_RUN_SECONDS - (time.monotonic() - started)))
+                max(0.1, min(self.MAX_REQUEST_SECONDS, self.MAX_RUN_SECONDS - (time.monotonic() - started)))
             )
             on_event("model-reserve", "Đã giữ một lượt trong hạn mức API ngày.",
                      input_bytes=len(self._json({"messages":messages,"tools":tools}).encode("utf-8")))
