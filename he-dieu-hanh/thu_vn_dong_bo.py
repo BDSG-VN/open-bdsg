@@ -217,14 +217,12 @@ class ThuDongBo(unittest.TestCase):
         original = self.app.vn_integrations.read
         def loop(*args):
             return {**original(*args), "next_arguments": {"limit": 1}}
-        with patch.object(self.app.vn_integrations, "read", side_effect=loop):
-            with self.assertRaises(LoiTichHop):
-                self.step(job)
+        with patch.object(self.app.vn_integrations, "read", side_effect=loop), self.assertRaises(LoiTichHop):
+            self.step(job)
         self.assertEqual(self.sync.list(OWNER)["jobs"][0]["pages"], 0)
         second = self.create(request_key="create-request-002")
-        with patch.object(self.sync, "MAX_BYTES", 1):
-            with self.assertRaises(LoiTichHop):
-                self.step(second)
+        with patch.object(self.sync, "MAX_BYTES", 1), self.assertRaises(LoiTichHop):
+            self.step(second)
         with self.app.kho.ket_noi() as db:
             self.assertEqual(db.execute("SELECT count(*) FROM vn_sync_pages").fetchone()[0], 0)
 
