@@ -1,0 +1,261 @@
+"""Agent tổng phân công DAG có giới hạn và tổng hợp từ đầu ra chuyên môn thật.
+
+Các vai trò là ngữ cảnh độc lập trong cùng phạm vi tác vụ; không tạo tài khoản
+OS hoặc tăng quyền. Không chạy mã upstream chỉ vì SKILL.md nhắc đến script.
+"""
+
+import copy
+import json
+import threading
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
+from mo_hinh_bdsg import LoiMoHinhBDSG
+
+
+class DoiNgu:
+    MAX_AGENTS = 6
+    MAX_PARALLEL = 3
+    MAX_OUTPUT_BYTES = 6000
+
+    def __init__(self, registry):
+        self.registry = registry
+
+    def validate_plan(self, text):
+        if not isinstance(text, str) or len(text.encode()) > 16000:
+            raise LoiMoHinhBDSG("Kế hoạch phân công vượt giới hạn.")
+        text = text.strip()
+        if text.startswith("```json\n") and text.endswith("```"):
+            text = text[8:-3].strip()
+        try:
+            plan = json.loads(text)
+        except (ValueError, TypeError):
+            raise LoiMoHinhBDSG("Agent tổng chưa trả kế hoạch JSON hợp lệ.") from None
+        if not isinstance(plan, dict) or set(plan) != {"summary", "assignments"}:
+            raise LoiMoHinhBDSG("Kế hoạch phân công chưa đúng cấu trúc.")
+        if (
+            not isinstance(plan["summary"], str)
+            or not 1 <= len(plan["summary"]) <= 1000
+        ):
+            raise LoiMoHinhBDSG("Thiếu tóm tắt kế hoạch phân công.")
+        nodes = plan["assignments"]
+        if not isinstance(nodes, list) or not 1 <= len(nodes) <= self.MAX_AGENTS:
+            raise LoiMoHinhBDSG("Mỗi lượt cần từ một đến sáu chuyên môn phù hợp.")
+        seen = set()
+        for node in nodes:
+            if not isinstance(node, dict) or set(node) != {
+                "skill_id",
+                "mission",
+                "deliverable",
+                "depends_on",
+            }:
+                raise LoiMoHinhBDSG("Phân công chứa trường ngoài hợp đồng.")
+            identifier = node["skill_id"]
+            if (
+                not isinstance(identifier, str)
+                or identifier not in self.registry.skills
+                or identifier in seen
+            ):
+                raise LoiMoHinhBDSG("Kế hoạch dùng nhân sự lặp hoặc chưa được duyệt.")
+            for name in ("mission", "deliverable"):
+                if not isinstance(node[name], str) or not 1 <= len(node[name]) <= 2000:
+                    raise LoiMoHinhBDSG("Mục tiêu hoặc sản phẩm bàn giao chưa hợp lệ.")
+            dependencies = node["depends_on"]
+            if (
+                not isinstance(dependencies, list)
+                or len(dependencies) > self.MAX_AGENTS
+                or any(
+                    not isinstance(dep, str) or dep not in seen for dep in dependencies
+                )
+                or len(set(dependencies)) != len(dependencies)
+            ):
+                raise LoiMoHinhBDSG(
+                    "Kế hoạch có phụ thuộc vòng, tương lai hoặc không tồn tại."
+                )
+            seen.add(identifier)
+        return plan
+
+    def run(self, prompt, context, call, emit, cancelled):
+        lock = threading.RLock()
+        abort = threading.Event()
+        deadline = time.monotonic() + 600
+        team = {
+            "version": self.registry.version,
+            "state": "planning",
+            "summary": "",
+            "agents": [],
+            "started": time.time(),
+            "finished": None,
+            "execution_kind": "model_api",
+            "external_writes_permitted_by_skills": False,
+        }
+
+        def publish():
+            with lock:
+                emit(
+                    "team-state",
+                    "Cập nhật đội ngũ chuyên môn.",
+                    team=copy.deepcopy(team),
+                )
+
+        def check_cancelled():
+            if cancelled():
+                raise LoiMoHinhBDSG(
+                    "Đã dừng đội ngũ theo yêu cầu hoặc quyền đã bị thu hồi."
+                )
+            if abort.is_set() or time.monotonic() >= deadline:
+                raise LoiMoHinhBDSG(
+                    "Đội ngũ dừng do lỗi chuyên môn hoặc hết thời gian lượt chạy."
+                )
+
+        def worker_cancelled():
+            return cancelled() or abort.is_set() or time.monotonic() >= deadline
+
+        def model_event(skill_id):
+            return lambda kind, message, **extra: emit(
+                kind, message, skill_id=skill_id, **extra
+            )
+
+        publish()
+        try:
+            check_cancelled()
+            planning_context = {
+                "workforce_catalogue": self.registry.planning_catalogue(),
+                "project": context.get("project"),
+                "execution_scope": {},
+            }
+            plan = self.validate_plan(
+                call(
+                    "Bạn là Agent tổng điều phối nhân sự chuyên môn tại Việt Nam. Chọn đúng kỹ năng để hoàn thành yêu cầu, "
+                    "không chọn thêm vai trò chỉ để tăng số Agent. Công việc cần nhiều chuyên môn phải có bàn giao rõ. "
+                    'Trả duy nhất JSON {"summary":"tóm tắt phân công ngắn","assignments":[{"skill_id":"ID từ danh mục",'
+                    '"mission":"phần việc cụ thể","deliverable":"đầu ra kiểm được","depends_on":[]}]}. '
+                    "Tối đa sáu vai trò, thứ tự topo, mỗi ID một lần. Không làm nghiệp vụ ở bước lập kế hoạch.\nYÊU CẦU:\n"
+                    + prompt,
+                    planning_context,
+                    model_event("agent-tong"),
+                    worker_cancelled,
+                )
+            )
+            check_cancelled()
+            team["summary"] = plan["summary"]
+            team["state"] = "working"
+            for node in plan["assignments"]:
+                skill = self.registry.detail(node["skill_id"])
+                team["agents"].append(
+                    {
+                        **node,
+                        "name": skill["name"],
+                        "skill_sha256": skill["sha256"],
+                        "state": "queued",
+                        "started": None,
+                        "finished": None,
+                        "output": None,
+                    }
+                )
+            publish()
+            outputs, pending, futures = {}, list(team["agents"]), {}
+
+            def work(node):
+                check_cancelled()
+                skill = self.registry.detail(node["skill_id"])
+                specialist_context = copy.deepcopy(context)
+                specialist_context["execution_scope"] = {
+                    **context.get("execution_scope", {}),
+                    "delegation": False,
+                }
+                specialist_context["assignment"] = {
+                    "skill_id": skill["id"],
+                    "skill_sha256": skill["sha256"],
+                    "instructions": skill["instructions"],
+                    "handoffs": {dep: outputs[dep] for dep in node["depends_on"]},
+                }
+                answer = call(
+                    "Thực hiện phần việc được giao với kỹ năng đính kèm. Kết quả Markdown tiếng Việt tối đa 6000 byte UTF-8; "
+                    "ghi nguồn/bằng chứng, giả định và phần chưa làm được. Không giả dữ liệu, không tự cấp quyền.\n"
+                    + "YÊU CẦU CHUNG:\n"
+                    + prompt
+                    + "\nPHẦN VIỆC:\n"
+                    + node["mission"]
+                    + "\nSẢN PHẨM BÀN GIAO:\n"
+                    + node["deliverable"],
+                    specialist_context,
+                    model_event(skill["id"]),
+                    worker_cancelled,
+                )
+                check_cancelled()
+                if (
+                    not isinstance(answer, str)
+                    or not answer.strip()
+                    or len(answer.encode()) > self.MAX_OUTPUT_BYTES
+                ):
+                    raise LoiMoHinhBDSG(
+                        "Đầu ra chuyên môn trống hoặc vượt giới hạn bàn giao."
+                    )
+                return answer
+
+            # Pool riêng không chiếm worker tác vụ đang chờ con trong cùng hàng đợi.
+            with ThreadPoolExecutor(
+                max_workers=self.MAX_PARALLEL, thread_name_prefix="bdsg-specialist"
+            ) as pool:
+                while pending or futures:
+                    check_cancelled()
+                    for node in list(pending):
+                        if len(futures) >= self.MAX_PARALLEL:
+                            break
+                        if all(dep in outputs for dep in node["depends_on"]):
+                            node.update(state="running", started=time.time())
+                            pending.remove(node)
+                            futures[pool.submit(work, copy.deepcopy(node))] = node
+                            publish()
+                    if not futures:
+                        raise LoiMoHinhBDSG(
+                            "Không tìm thấy chuyên môn sẵn sàng để thực thi."
+                        )
+                    done, _ = wait(futures, timeout=0.2, return_when=FIRST_COMPLETED)
+                    for future in done:
+                        node = futures.pop(future)
+                        try:
+                            answer = future.result()
+                        except Exception:
+                            abort.set()
+                            node.update(state="failed", finished=time.time())
+                            publish()
+                            raise
+                        outputs[node["skill_id"]] = answer
+                        node.update(
+                            state="completed", output=answer, finished=time.time()
+                        )
+                        publish()
+            check_cancelled()
+            team["state"] = "synthesizing"
+            publish()
+            final = call(
+                "Bạn là Agent tổng. Tổng hợp đầu ra thực tế của các chuyên môn thành sản phẩm trả cho người dùng. "
+                "Nêu điểm xung đột/chưa kiểm chứng và việc cần thực hiện tiếp; không nhận là đã gửi, mua, xuất bản hay "
+                "kết nối nếu đầu ra không có bằng chứng công cụ. Không chỉ lặp lại kế hoạch.\nYÊU CẦU:\n"
+                + prompt,
+                {"workforce_results": outputs, "plan": plan, "execution_scope": {}},
+                model_event("agent-tong"),
+                worker_cancelled,
+            )
+            check_cancelled()
+            if not isinstance(final, str) or not final.strip():
+                raise LoiMoHinhBDSG("Agent tổng chưa trả sản phẩm tổng hợp hợp lệ.")
+            team.update(state="completed", finished=time.time())
+            publish()
+            return final
+        except Exception:
+            with lock:
+                stopped = cancelled()
+                team.update(
+                    state="cancelled" if stopped else "failed", finished=time.time()
+                )
+                for node in team["agents"]:
+                    if node["state"] in ("queued", "running"):
+                        node.update(
+                            state="cancelled" if stopped else "blocked",
+                            finished=time.time(),
+                        )
+            publish()
+            raise

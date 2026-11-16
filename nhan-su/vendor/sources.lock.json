@@ -1,0 +1,1093 @@
+{
+  "schema": 1,
+  "reviewed_at": "2026-11-16",
+  "execution_enabled": false,
+  "repositories": [
+    {
+      "repository": "mattpocock/skills",
+      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "stars": 325761,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+          "bytes": 1068,
+          "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/LICENSE"
+        },
+        {
+          "path": "skills/engineering/research/SKILL.md",
+          "sha256": "1f629e18ab899412683bc6a1c4efb4339999e27c2fdac328f26ee10a8c031d33",
+          "bytes": 832,
+          "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/research/SKILL.md"
+        },
+        {
+          "path": "skills/engineering/code-review/SKILL.md",
+          "sha256": "9c921a8d88138a41401d8897ca1bb852088ab1b7b605cdd04edc13e3e8aab6dd",
+          "bytes": 6721,
+          "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/code-review/SKILL.md"
+        },
+        {
+          "path": "skills/engineering/diagnosing-bugs/SKILL.md",
+          "sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d",
+          "bytes": 8664,
+          "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/diagnosing-bugs/SKILL.md"
+        },
+        {
+          "path": "skills/engineering/prototype/SKILL.md",
+          "sha256": "714de632d116bb73f65cdb5a882db15b9369a6713b9a47c0fad827848f0bfbe3",
+          "bytes": 2931,
+          "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/prototype/SKILL.md"
+        },
+        {
+          "path": "skills/engineering/to-spec/SKILL.md",
+          "sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
+          "bytes": 3043,
+          "url": "https://raw.githubusercontent.com/mattpocock/skills/5863806dd4e15c63174bee4e7515a4256792ecfa/skills/engineering/to-spec/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "stars": 318557,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+          "bytes": 1070,
+          "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/LICENSE"
+        },
+        {
+          "path": "skills/brainstorming/SKILL.md",
+          "sha256": "2c9ca71f94886f9ca9f4aef055f7cafb3e1a9bdf3aeebf8f4cb547c69405d207",
+          "bytes": 15190,
+          "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/brainstorming/SKILL.md"
+        },
+        {
+          "path": "skills/writing-plans/SKILL.md",
+          "sha256": "a6c67c1900064347c2a329990dd3c555657c51c3ec53b259a08aa01a2c26139a",
+          "bytes": 10335,
+          "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-plans/SKILL.md"
+        },
+        {
+          "path": "skills/verification-before-completion/SKILL.md",
+          "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+          "bytes": 3646,
+          "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/verification-before-completion/SKILL.md"
+        },
+        {
+          "path": "skills/systematic-debugging/SKILL.md",
+          "sha256": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+          "bytes": 9530,
+          "url": "https://raw.githubusercontent.com/obra/superpowers/22f0b463e7a5e579904dd6211a520321035526f7/skills/systematic-debugging/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "affaan-m/ECC",
+      "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+      "stars": 304361,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "326146379f01bb137c0a5d3c54770c1aa31076705c8b88a7f6b26a460f6221b2",
+          "bytes": 1071,
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/LICENSE"
+        },
+        {
+          "path": ".agents/skills/article-writing/SKILL.md",
+          "sha256": "6305169f1aaf57e293284aa21bf646d995079ae2921499f7800c7db42d57091f",
+          "bytes": 2915,
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/article-writing/SKILL.md"
+        },
+        {
+          "path": ".agents/skills/deep-research/SKILL.md",
+          "sha256": "e42c74a515e9c2a2f662f7846402c1ccd8b2bd278cba84450ff0960b07f0f995",
+          "bytes": 4583,
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/deep-research/SKILL.md"
+        },
+        {
+          "path": ".agents/skills/market-research/SKILL.md",
+          "sha256": "bcccf6d1976ca9cebb08b5b80e53b76fc01d13698ad4cac544955d9dbe5bee03",
+          "bytes": 2227,
+          "url": "https://raw.githubusercontent.com/affaan-m/ECC/d2ef2680594f9a17526a6e1a2e18b3d242c5d17b/.agents/skills/market-research/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "stars": 195809,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "sha256": "a8ff7a84dee9dfb42ab448de281784387ceafdf63881b7c070ee2de7f6ed865c",
+          "bytes": 46162,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/THIRD_PARTY_NOTICES.md"
+        },
+        {
+          "path": "skills/docx/SKILL.md",
+          "sha256": "895d5aa6c4cd98e4aed4c995d846f056f3549086e79bcd6617afea6014f82288",
+          "bytes": 7488,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/docx/SKILL.md"
+        },
+        {
+          "path": "skills/docx/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/docx/LICENSE.txt"
+        },
+        {
+          "path": "skills/pdf/SKILL.md",
+          "sha256": "d1c7caf5f35eb7d37877dd7fc33a095037be2b34fb5d2f7f4d43bde3165bb4ee",
+          "bytes": 8058,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pdf/SKILL.md"
+        },
+        {
+          "path": "skills/pdf/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pdf/LICENSE.txt"
+        },
+        {
+          "path": "skills/pptx/SKILL.md",
+          "sha256": "598c981d93f2173b251f86a4bc94e9fb4e4f5ddaa314ba2dd4eca24b7a07808e",
+          "bytes": 28365,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pptx/SKILL.md"
+        },
+        {
+          "path": "skills/pptx/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pptx/LICENSE.txt"
+        },
+        {
+          "path": "skills/xlsx/SKILL.md",
+          "sha256": "f32b1c2b5d5d31e02964df110d6489613d9345f86830c118cfe24159d8448ce6",
+          "bytes": 9770,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx/SKILL.md"
+        },
+        {
+          "path": "skills/xlsx/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx/LICENSE.txt"
+        },
+        {
+          "path": "skills/internal-comms/SKILL.md",
+          "sha256": "067b7587a344a928fc6534ef66b1bcd591fc7c26d207ea7ca3334aeb678d6475",
+          "bytes": 1511,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/internal-comms/SKILL.md"
+        },
+        {
+          "path": "skills/internal-comms/LICENSE.txt",
+          "sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+          "bytes": 11345,
+          "url": "https://raw.githubusercontent.com/anthropics/skills/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/internal-comms/LICENSE.txt"
+        }
+      ]
+    },
+    {
+      "repository": "msitarzewski/agency-agents",
+      "commit": "8ae6164602c95ca78828b148b9052460ee426885",
+      "stars": 168743,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
+          "bytes": 1079,
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/LICENSE"
+        },
+        {
+          "path": "research/research-synthesist.md",
+          "sha256": "3618b4a2a73523147731ae38ac4096cea0e83a7de930f55ea9ea6c69e3c77f30",
+          "bytes": 10739,
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/research/research-synthesist.md"
+        },
+        {
+          "path": "project-management/project-management-meeting-notes-specialist.md",
+          "sha256": "53a6efaa379b70cbc3276b44544ecf569789fffe892ba82eb68e8672407de91f",
+          "bytes": 5616,
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/project-management/project-management-meeting-notes-specialist.md"
+        },
+        {
+          "path": "product/product-manager.md",
+          "sha256": "4a3fe4661e72e5173877bcba7c362392181774b20efc27ac1789171e98676c9d",
+          "bytes": 22687,
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/product/product-manager.md"
+        },
+        {
+          "path": "finance/finance-fpa-analyst.md",
+          "sha256": "5fa9137c80e0b91fbe62815e7981d7b6a2ca5bafe43013c56d1b847a3c963141",
+          "bytes": 16614,
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/finance/finance-fpa-analyst.md"
+        },
+        {
+          "path": "specialized/hr-onboarding.md",
+          "sha256": "28a52c26f27ab24d7fe11f5e48cfe712f6d27da142ec97911683b4a3ad92332c",
+          "bytes": 23923,
+          "url": "https://raw.githubusercontent.com/msitarzewski/agency-agents/8ae6164602c95ca78828b148b9052460ee426885/specialized/hr-onboarding.md"
+        }
+      ]
+    },
+    {
+      "repository": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "e59ff376a41f7ca47b7541ad5c116495cbade3ee",
+      "stars": 150303,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "738f69dfa83db5c347c678fb9d90e560877059f0de93a327c39001bff92dc014",
+          "bytes": 1075,
+          "url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/e59ff376a41f7ca47b7541ad5c116495cbade3ee/LICENSE"
+        },
+        {
+          "path": ".claude/skills/ui-ux-pro-max/SKILL.md",
+          "sha256": "af9cf89efd1eac29495fb44f25b3fae8b96bf9ddbaaa2a47c6e835d9aa568a6f",
+          "bytes": 18640,
+          "url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/e59ff376a41f7ca47b7541ad5c116495cbade3ee/.claude/skills/ui-ux-pro-max/SKILL.md"
+        },
+        {
+          "path": ".claude/skills/design-system/SKILL.md",
+          "sha256": "8aa5ff93320559a6e5289d37b6b06b3307737dbfb4a6f3fc44135c705613c511",
+          "bytes": 7458,
+          "url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/e59ff376a41f7ca47b7541ad5c116495cbade3ee/.claude/skills/design-system/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "garrytan/gstack",
+      "commit": "5dcd76b4eae6bb06f73460d3ab29cef8e33e8537",
+      "stars": 141779,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "e56fbb5b3d95756f3fa1cfefa24732ec79f18ece1ad08a4e79e00df57e8b198c",
+          "bytes": 1066,
+          "url": "https://raw.githubusercontent.com/garrytan/gstack/5dcd76b4eae6bb06f73460d3ab29cef8e33e8537/LICENSE"
+        },
+        {
+          "path": "autoplan/SKILL.md",
+          "sha256": "ce93e7056eb8579f6336949634478b780b66b5891f405d90c927219e9cf069bb",
+          "bytes": 43217,
+          "url": "https://raw.githubusercontent.com/garrytan/gstack/5dcd76b4eae6bb06f73460d3ab29cef8e33e8537/autoplan/SKILL.md"
+        },
+        {
+          "path": "review/SKILL.md",
+          "sha256": "0c0033159b45b6bad36e2c3d3ea2e59cd8b7057da82d7ce8a3e88b2debf7b48c",
+          "bytes": 60070,
+          "url": "https://raw.githubusercontent.com/garrytan/gstack/5dcd76b4eae6bb06f73460d3ab29cef8e33e8537/review/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "addyosmani/agent-skills",
+      "commit": "39b723ceebf81474d0557c1fecd01eddab585563",
+      "stars": 118213,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7",
+          "bytes": 1068,
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/LICENSE"
+        },
+        {
+          "path": "skills/planning-and-task-breakdown/SKILL.md",
+          "sha256": "b38e35d4f6030a11423082679b1c4d0988c91a3569a3434ff0f8b9799657d630",
+          "bytes": 10677,
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/skills/planning-and-task-breakdown/SKILL.md"
+        },
+        {
+          "path": "skills/source-driven-development/SKILL.md",
+          "sha256": "df38a852658679a67c7a9e4840160570c95094a13a63307e834045ddbf8aa287",
+          "bytes": 10104,
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/skills/source-driven-development/SKILL.md"
+        },
+        {
+          "path": "skills/code-review-and-quality/SKILL.md",
+          "sha256": "5dc8f98d9d23e74676091a945b2649bb52456e34f293238ee2511281104a94c0",
+          "bytes": 21312,
+          "url": "https://raw.githubusercontent.com/addyosmani/agent-skills/39b723ceebf81474d0557c1fecd01eddab585563/skills/code-review-and-quality/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "Leonxlnx/taste-skill",
+      "commit": "f6b76575f949707b4e3c37cd86cb44b0b98643e8",
+      "stars": 116682,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df",
+          "bytes": 1065,
+          "url": "https://raw.githubusercontent.com/Leonxlnx/taste-skill/f6b76575f949707b4e3c37cd86cb44b0b98643e8/LICENSE"
+        },
+        {
+          "path": "skills/taste-skill/SKILL.md",
+          "sha256": "0c7a5852a5217be79cab422c6d58329b776f0c25bd6da8a7a01707ce75be6206",
+          "bytes": 30970,
+          "url": "https://raw.githubusercontent.com/Leonxlnx/taste-skill/f6b76575f949707b4e3c37cd86cb44b0b98643e8/skills/taste-skill/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "pbakaus/impeccable",
+      "commit": "d41d9860b0094dcb68030657da63461212835aaa",
+      "stars": 111220,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812",
+          "bytes": 10766,
+          "url": "https://raw.githubusercontent.com/pbakaus/impeccable/d41d9860b0094dcb68030657da63461212835aaa/LICENSE"
+        },
+        {
+          "path": ".agents/skills/impeccable/SKILL.md",
+          "sha256": "12d15997482e6d0734c5f2dcc4f62cea7bcba19953940214cffa5c6a7758aa93",
+          "bytes": 12769,
+          "url": "https://raw.githubusercontent.com/pbakaus/impeccable/d41d9860b0094dcb68030657da63461212835aaa/.agents/skills/impeccable/SKILL.md"
+        },
+        {
+          "path": ".agents/skills/impeccable/reference/audit.md",
+          "sha256": "c1cc198c61bf4cc32416210f490e9245ecf58d57c17d4a0659f79da0f6ffac2b",
+          "bytes": 11964,
+          "url": "https://raw.githubusercontent.com/pbakaus/impeccable/d41d9860b0094dcb68030657da63461212835aaa/.agents/skills/impeccable/reference/audit.md"
+        }
+      ]
+    },
+    {
+      "repository": "ComposioHQ/awesome-claude-skills",
+      "commit": "be2a406907dbc61b73e6827ded415c96139d13a2",
+      "stars": 79638,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "brand-guidelines/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/be2a406907dbc61b73e6827ded415c96139d13a2/brand-guidelines/LICENSE.txt"
+        },
+        {
+          "path": "internal-comms/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/be2a406907dbc61b73e6827ded415c96139d13a2/internal-comms/LICENSE.txt"
+        },
+        {
+          "path": "brand-guidelines/SKILL.md",
+          "sha256": "1120b3769e2985cefb3d25be981b1f914abeba57ae079b83c20c666c164fa9fe",
+          "bytes": 2235,
+          "url": "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/be2a406907dbc61b73e6827ded415c96139d13a2/brand-guidelines/SKILL.md"
+        },
+        {
+          "path": "internal-comms/SKILL.md",
+          "sha256": "067b7587a344a928fc6534ef66b1bcd591fc7c26d207ea7ca3334aeb678d6475",
+          "bytes": 1511,
+          "url": "https://raw.githubusercontent.com/ComposioHQ/awesome-claude-skills/be2a406907dbc61b73e6827ded415c96139d13a2/internal-comms/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "stars": 73685,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+          "bytes": 1078,
+          "url": "https://raw.githubusercontent.com/cloudflare/security-audit-skill/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/LICENSE"
+        },
+        {
+          "path": "skills/security-audit/SKILL.md",
+          "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+          "bytes": 22026,
+          "url": "https://raw.githubusercontent.com/cloudflare/security-audit-skill/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "blader/humanizer",
+      "commit": "b48c832f0f809c1b5658edbb838c2521b72f2413",
+      "stars": 69795,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "4ac4810254ab36d45419141aeb8e69bf50652cfafe5b2dab947d06d44e5cbf96",
+          "bytes": 1066,
+          "url": "https://raw.githubusercontent.com/blader/humanizer/b48c832f0f809c1b5658edbb838c2521b72f2413/LICENSE"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "804a119e924ac30295b298213e0b71b3e38b2667b8ef4fb7b69e9246369b9045",
+          "bytes": 32394,
+          "url": "https://raw.githubusercontent.com/blader/humanizer/b48c832f0f809c1b5658edbb838c2521b72f2413/SKILL.md"
+        },
+        {
+          "path": "AGENTS.md",
+          "sha256": "0f60ef3dc762eb5eceb7dcc1393e30053d136c2eb3db0e8df857b1465acfd344",
+          "bytes": 3616,
+          "url": "https://raw.githubusercontent.com/blader/humanizer/b48c832f0f809c1b5658edbb838c2521b72f2413/AGENTS.md"
+        }
+      ]
+    },
+    {
+      "repository": "mvanhorn/last30days-skill",
+      "commit": "ab042cbc10c128bd6103db95328724830c6b302f",
+      "stars": 67943,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "31803213a789825dc419de43542381e1d570b4408cf2bcf2e8a9947a6d3fd2ab",
+          "bytes": 1070,
+          "url": "https://raw.githubusercontent.com/mvanhorn/last30days-skill/ab042cbc10c128bd6103db95328724830c6b302f/LICENSE"
+        },
+        {
+          "path": "skills/last30days/SKILL.md",
+          "sha256": "3297090027c4bd87bf0463f2833f5e8c9addfef33607ad1b4807068e624a5ed8",
+          "bytes": 31938,
+          "url": "https://raw.githubusercontent.com/mvanhorn/last30days-skill/ab042cbc10c128bd6103db95328724830c6b302f/skills/last30days/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "gsd-build/get-shit-done",
+      "commit": "bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815",
+      "stars": 64134,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "af0d31f2550b534c14251e14020f3378cf17bd21af7660e7d7b1a2ead4fcdfb4",
+          "bytes": 1075,
+          "url": "https://raw.githubusercontent.com/gsd-build/get-shit-done/bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815/LICENSE"
+        },
+        {
+          "path": "agents/gsd-planner.md",
+          "sha256": "0a91120c53fe8974e072517a5b5356447c545dcf52ec044a5a35d1ea6be5d23d",
+          "bytes": 49350,
+          "url": "https://raw.githubusercontent.com/gsd-build/get-shit-done/bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815/agents/gsd-planner.md"
+        },
+        {
+          "path": "agents/gsd-executor.md",
+          "sha256": "08d3b33ea9e825c616da8e1cab24d7781aa3adbf26dbf6122a105cdee5b99273",
+          "bytes": 36458,
+          "url": "https://raw.githubusercontent.com/gsd-build/get-shit-done/bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815/agents/gsd-executor.md"
+        }
+      ]
+    },
+    {
+      "repository": "coreyhaines31/marketingskills",
+      "commit": "1f837447b20bb6f0e72d87b80ece1c221c362c7d",
+      "stars": 60745,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+          "bytes": 1069,
+          "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/LICENSE"
+        },
+        {
+          "path": "skills/marketing-plan/SKILL.md",
+          "sha256": "76d879a32f2dd24e0c6236125f15e2b1e29808b6424242affcf790bdd294c44f",
+          "bytes": 24813,
+          "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/marketing-plan/SKILL.md"
+        },
+        {
+          "path": "skills/customer-research/SKILL.md",
+          "sha256": "d12b522641884acb385f7a919138b5bfbe4ad9b070bd13a470923eebaa682a4f",
+          "bytes": 14570,
+          "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/customer-research/SKILL.md"
+        },
+        {
+          "path": "skills/copywriting/SKILL.md",
+          "sha256": "1db2f6e51f0492f5efc646b74576721852720dec388e58d0facd2b790c01bb4e",
+          "bytes": 15044,
+          "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/copywriting/SKILL.md"
+        },
+        {
+          "path": "skills/sales-enablement/SKILL.md",
+          "sha256": "e7b6b323c57b788d1339c429342aa6dde83d78f6efcf45d8cfdd8c50eb46de83",
+          "bytes": 20497,
+          "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/sales-enablement/SKILL.md"
+        },
+        {
+          "path": "skills/revops/SKILL.md",
+          "sha256": "443e7028b2cdff93e60d051fe528003e4b3569130a120ac649eaac2fd8013ac6",
+          "bytes": 16325,
+          "url": "https://raw.githubusercontent.com/coreyhaines31/marketingskills/1f837447b20bb6f0e72d87b80ece1c221c362c7d/skills/revops/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "K-Dense-AI/scientific-agent-skills",
+      "commit": "ec59a29a03d5c40f73ab40878df04860bc00e876",
+      "stars": 57435,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE.md",
+          "sha256": "09b02a3c9df3053c55531d503357a9c7cde275970e6c3ceaa1ddf5f0e90b40c1",
+          "bytes": 1068,
+          "url": "https://raw.githubusercontent.com/K-Dense-AI/scientific-agent-skills/ec59a29a03d5c40f73ab40878df04860bc00e876/LICENSE.md"
+        },
+        {
+          "path": "skills/exploratory-data-analysis/SKILL.md",
+          "sha256": "955c4cefa49106dd03b55cbd62603bab2d2fb678e627dd452ba62040c7128484",
+          "bytes": 14722,
+          "url": "https://raw.githubusercontent.com/K-Dense-AI/scientific-agent-skills/ec59a29a03d5c40f73ab40878df04860bc00e876/skills/exploratory-data-analysis/SKILL.md"
+        },
+        {
+          "path": "skills/statistical-analysis/SKILL.md",
+          "sha256": "e112848726b3713267cac65e4e2c15491a0a26ee1ed628db01195f7e43f97997",
+          "bytes": 23585,
+          "url": "https://raw.githubusercontent.com/K-Dense-AI/scientific-agent-skills/ec59a29a03d5c40f73ab40878df04860bc00e876/skills/statistical-analysis/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "obsidianmd/obsidian-skills",
+      "commit": "398127736bd4ba42d767b1419fee1a927508370b",
+      "stars": 52928,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567",
+          "bytes": 1077,
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/LICENSE"
+        },
+        {
+          "path": "plugins/obsidian/LICENSE",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567",
+          "bytes": 1077,
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/LICENSE"
+        },
+        {
+          "path": "plugins/obsidian/skills/obsidian-markdown/SKILL.md",
+          "sha256": "f1c4ff5257d3f9743af797d755cabeef129f553704d5ff67ebf1239f9569f081",
+          "bytes": 6120,
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/skills/obsidian-markdown/SKILL.md"
+        },
+        {
+          "path": "plugins/obsidian/skills/json-canvas/SKILL.md",
+          "sha256": "4db4e69eea910b598c249e41bcdda85a70856348adaf11c35371198e258d50a6",
+          "bytes": 8748,
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/skills/json-canvas/SKILL.md"
+        },
+        {
+          "path": "plugins/obsidian/skills/obsidian-bases/SKILL.md",
+          "sha256": "7a1659e2c00e7b74c8767002213dd977967ddd30dd15a7f33b693e783a4546e9",
+          "bytes": 17121,
+          "url": "https://raw.githubusercontent.com/obsidianmd/obsidian-skills/398127736bd4ba42d767b1419fee1a927508370b/plugins/obsidian/skills/obsidian-bases/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "wshobson/agents",
+      "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+      "stars": 42578,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "f89abb55d9f073f38f1703e4518f0613c788c6174be7f13b8dfe48a1c076c746",
+          "bytes": 1068,
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/LICENSE"
+        },
+        {
+          "path": "plugins/business-analytics/skills/data-storytelling/SKILL.md",
+          "sha256": "0244a9ef6bca2df0762425b78912d27061b9b93f9b09987ad7bc074752a0cb50",
+          "bytes": 2119,
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/business-analytics/skills/data-storytelling/SKILL.md"
+        },
+        {
+          "path": "plugins/business-analytics/skills/kpi-dashboard-design/SKILL.md",
+          "sha256": "cf913b10f55605477461e093daffbb6e6aab41b6d8061cef8baf01086d6d496a",
+          "bytes": 5511,
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/business-analytics/skills/kpi-dashboard-design/SKILL.md"
+        },
+        {
+          "path": "plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md",
+          "sha256": "373c3f2089d5fa5228c3d24bf12ffacc6fefe04208d0df114ad75832c596e943",
+          "bytes": 2477,
+          "url": "https://raw.githubusercontent.com/wshobson/agents/9c61ab243def98f72da12abd41cfcf5bcd91af9d/plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "github/awesome-copilot",
+      "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
+      "stars": 41213,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823",
+          "bytes": 1059,
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/LICENSE"
+        },
+        {
+          "path": "skills/breakdown-plan/SKILL.md",
+          "sha256": "ce46dc0485b0ee3e7fc4172a507df685207b17806c9fa431bbf723308b8a2125",
+          "bytes": 15050,
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/skills/breakdown-plan/SKILL.md"
+        },
+        {
+          "path": "skills/create-implementation-plan/SKILL.md",
+          "sha256": "11caba1048cbdbfca6f7ce13a0e0580d6e9d943f7b775ee24978ece1d3334066",
+          "bytes": 8366,
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/skills/create-implementation-plan/SKILL.md"
+        },
+        {
+          "path": "skills/gtm-enterprise-account-planning/SKILL.md",
+          "sha256": "92441114f77b1dd72d2edf1d55e369a00e0dce0bf8b4a749fbbc5198de4ddf78",
+          "bytes": 15783,
+          "url": "https://raw.githubusercontent.com/github/awesome-copilot/dc0083dbe22133bfa7ce3500dee85e187e0cd47a/skills/gtm-enterprise-account-planning/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "anthropics/knowledge-work-plugins",
+      "commit": "e91a134584eb798bac7fb0379358006a2b63b965",
+      "stars": 36268,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "a6946284993aeec75c7d75906064b66210c46051e562077efb30eb6dcfe72e26",
+          "bytes": 11607,
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/e91a134584eb798bac7fb0379358006a2b63b965/LICENSE"
+        },
+        {
+          "path": "marketing/skills/content-creation/SKILL.md",
+          "sha256": "17f0bfd536502a91c760accaa1ae6c0c76c3812973571729664133e282c5dded",
+          "bytes": 8830,
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/e91a134584eb798bac7fb0379358006a2b63b965/marketing/skills/content-creation/SKILL.md"
+        },
+        {
+          "path": "data/skills/statistical-analysis/SKILL.md",
+          "sha256": "91a15cfc144efffcd622b09827362a73993a3ff30e3a78114801832477c9f8a0",
+          "bytes": 10434,
+          "url": "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/e91a134584eb798bac7fb0379358006a2b63b965/data/skills/statistical-analysis/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "davila7/claude-code-templates",
+      "commit": "425154fbdb24f3d6b6792408e7cb055931993b92",
+      "stars": 33851,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "15cc073ffa3a01bb7da145aeae2a842b473860d142c92485536ee9c91195a705",
+          "bytes": 1075,
+          "url": "https://raw.githubusercontent.com/davila7/claude-code-templates/425154fbdb24f3d6b6792408e7cb055931993b92/LICENSE"
+        },
+        {
+          "path": ".claude-plugin/skills/owasp-security/SKILL.md",
+          "sha256": "92c9604aa21999f402fe5e88d0d097c0f612d401af70562b3d22dc4228dcac9d",
+          "bytes": 29886,
+          "url": "https://raw.githubusercontent.com/davila7/claude-code-templates/425154fbdb24f3d6b6792408e7cb055931993b92/.claude-plugin/skills/owasp-security/SKILL.md"
+        },
+        {
+          "path": ".claude/agents/blog-writer.md",
+          "sha256": "3c87babce727b1673e523bb21c46d5d4c99a5e7d1b9b8e18724422590ef302a9",
+          "bytes": 20266,
+          "url": "https://raw.githubusercontent.com/davila7/claude-code-templates/425154fbdb24f3d6b6792408e7cb055931993b92/.claude/agents/blog-writer.md"
+        }
+      ]
+    },
+    {
+      "repository": "googleworkspace/cli",
+      "commit": "cd3697e07eb520056dcf142d0c7439bbb9ba32e9",
+      "stars": 32341,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "bytes": 11358,
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/LICENSE"
+        },
+        {
+          "path": "skills/gws-sheets-read/SKILL.md",
+          "sha256": "2308eab564907f4d8789de030dadebf9187988a944a57da9ffd49ce7a4ecafef",
+          "bytes": 1128,
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/gws-sheets-read/SKILL.md"
+        },
+        {
+          "path": "skills/gws-docs/SKILL.md",
+          "sha256": "676eb7a1d9e4a7bde0d19669299858daea3220650657199f21dcebb7fa6bf9d6",
+          "bytes": 1564,
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/gws-docs/SKILL.md"
+        },
+        {
+          "path": "skills/persona-project-manager/SKILL.md",
+          "sha256": "8e025ac6916c806e0b0575467130ef822b27f1cbe27b2bd7e6812e261b559688",
+          "bytes": 1457,
+          "url": "https://raw.githubusercontent.com/googleworkspace/cli/cd3697e07eb520056dcf142d0c7439bbb9ba32e9/skills/persona-project-manager/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "alirezarezvani/claude-skills",
+      "commit": "4680893d91f2aee6f77ca1519fd1b86b7a104c87",
+      "stars": 29889,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "a20126646f93d32a8989c3cf4772d59194f405034f7babe7daebeac22b8ab151",
+          "bytes": 1072,
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/LICENSE"
+        },
+        {
+          "path": "business-operations/skills/process-mapper/SKILL.md",
+          "sha256": "72d9cf4b24f2e1af07569b37d7dbe622120aa542a35b82d43b0dbb34fb9e0f1c",
+          "bytes": 8452,
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-operations/skills/process-mapper/SKILL.md"
+        },
+        {
+          "path": "business-operations/skills/internal-comms/SKILL.md",
+          "sha256": "24df7c5393d61d36a7baf122a6d543063951245abe25eced11f7ca6740f2e40e",
+          "bytes": 13247,
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-operations/skills/internal-comms/SKILL.md"
+        },
+        {
+          "path": "business-growth/skills/revenue-operations/SKILL.md",
+          "sha256": "fe3e0ae8c10dda07b764d7e15278ace034d3912a834a983bdcc2c23bce726b21",
+          "bytes": 9198,
+          "url": "https://raw.githubusercontent.com/alirezarezvani/claude-skills/4680893d91f2aee6f77ca1519fd1b86b7a104c87/business-growth/skills/revenue-operations/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "OthmanAdi/planning-with-files",
+      "commit": "51bf62def62d1cb317d37936929b4ef97cf862c3",
+      "stars": 28092,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "4f2e5ecfaa4e0833621cfe54c0bdc2f60f086c0925540d7bdc713517eafb3c84",
+          "bytes": 1066,
+          "url": "https://raw.githubusercontent.com/OthmanAdi/planning-with-files/51bf62def62d1cb317d37936929b4ef97cf862c3/LICENSE"
+        },
+        {
+          "path": "skills/planning-with-files/SKILL.md",
+          "sha256": "04e660bd52a8bdb4e4ba16395231b5a216f5e84049b7ebd0bb203132d192b397",
+          "bytes": 41938,
+          "url": "https://raw.githubusercontent.com/OthmanAdi/planning-with-files/51bf62def62d1cb317d37936929b4ef97cf862c3/skills/planning-with-files/SKILL.md"
+        },
+        {
+          "path": "skills/planning-with-files/reference.md",
+          "sha256": "8f7d9cfe1971c5a32f3e5edb63ddfad73a11cc7de19d5065a6ec75fd118c0fdb",
+          "bytes": 8455,
+          "url": "https://raw.githubusercontent.com/OthmanAdi/planning-with-files/51bf62def62d1cb317d37936929b4ef97cf862c3/skills/planning-with-files/reference.md"
+        }
+      ]
+    },
+    {
+      "repository": "phuryn/pm-skills",
+      "commit": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+      "stars": 28050,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "a2c922f9b81b4f40347ddfa79c38eda0f1278b5a6d108bd4099b4da254c774ee",
+          "bytes": 1068,
+          "url": "https://raw.githubusercontent.com/phuryn/pm-skills/9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef/LICENSE"
+        },
+        {
+          "path": "pm-execution/skills/create-prd/SKILL.md",
+          "sha256": "e3aa10a437ed7f748a957bd5d1eb06d8fa3f56dc728dcb93ce484387ecc3fa13",
+          "bytes": 7301,
+          "url": "https://raw.githubusercontent.com/phuryn/pm-skills/9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef/pm-execution/skills/create-prd/SKILL.md"
+        },
+        {
+          "path": "pm-product-discovery/skills/opportunity-solution-tree/SKILL.md",
+          "sha256": "6b23e44a5ace86aa20d64cc130322265ace6a53a29831cc403b974098a379bcc",
+          "bytes": 4281,
+          "url": "https://raw.githubusercontent.com/phuryn/pm-skills/9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef/pm-product-discovery/skills/opportunity-solution-tree/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "commit": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "stars": 26599,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "8ed27772f4430d6e3815599b849c1b6e59088671133ef67e9b1be4acef2b75da",
+          "bytes": 1065,
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/LICENSE"
+        },
+        {
+          "path": "categories/01-core-development/api-designer.md",
+          "sha256": "dc8547318598b6abecfad8d3c5709c9bb21fc38c2e5f5b4f452bb02f668df1be",
+          "bytes": 6115,
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/01-core-development/api-designer.md"
+        },
+        {
+          "path": "categories/01-core-development/backend-developer.md",
+          "sha256": "f41444c6a10a4d57821a9eda26018bf94d92249c5da383e93ebbee08b6c051c3",
+          "bytes": 6682,
+          "url": "https://raw.githubusercontent.com/VoltAgent/awesome-claude-code-subagents/ed74d115b7fb7026a22a4f816a8e3250f425e3b4/categories/01-core-development/backend-developer.md"
+        }
+      ]
+    },
+    {
+      "repository": "google/skills",
+      "commit": "38ae03a5ac49fe20d5de9680b81bd2b2aa161b63",
+      "stars": 24361,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "bytes": 11358,
+          "url": "https://raw.githubusercontent.com/google/skills/38ae03a5ac49fe20d5de9680b81bd2b2aa161b63/LICENSE"
+        },
+        {
+          "path": "plugins/cloud/google-cloud-developer/skills/gcloud/SKILL.md",
+          "sha256": "a16e7688f5b64c155b2d8ca452f9196df259ef1bd3c0a35f23e4a5f941eb037b",
+          "bytes": 15594,
+          "url": "https://raw.githubusercontent.com/google/skills/38ae03a5ac49fe20d5de9680b81bd2b2aa161b63/plugins/cloud/google-cloud-developer/skills/gcloud/SKILL.md"
+        },
+        {
+          "path": "skills/ads/data-manager-api-audience-ingestion/SKILL.md",
+          "sha256": "a6f820026dfc991de7917d8906b9a52bbf1f55b7af663976903d8e5a722b234a",
+          "bytes": 11339,
+          "url": "https://raw.githubusercontent.com/google/skills/38ae03a5ac49fe20d5de9680b81bd2b2aa161b63/skills/ads/data-manager-api-audience-ingestion/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "commit": "9ff0c99108b36d3b886defd825d8ac1f47dba374",
+      "stars": 18360,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "65bc33b0759a48b980962833b12bcb820404da9f5256bff39c00e89471bcf209",
+          "bytes": 1103,
+          "url": "https://raw.githubusercontent.com/muratcankoylan/Agent-Skills-for-Context-Engineering/9ff0c99108b36d3b886defd825d8ac1f47dba374/LICENSE"
+        },
+        {
+          "path": "skills/context-compression/SKILL.md",
+          "sha256": "ab4fd1e1046db339d83ead5089d4cb9d9c487232945d4ff6be90e08a03f6cfea",
+          "bytes": 18507,
+          "url": "https://raw.githubusercontent.com/muratcankoylan/Agent-Skills-for-Context-Engineering/9ff0c99108b36d3b886defd825d8ac1f47dba374/skills/context-compression/SKILL.md"
+        },
+        {
+          "path": "skills/context-fundamentals/SKILL.md",
+          "sha256": "03b56e1c40edc6314b1f204498c3ba40163a32e63bdbceaeba93513ccddcaba6",
+          "bytes": 17013,
+          "url": "https://raw.githubusercontent.com/muratcankoylan/Agent-Skills-for-Context-Engineering/9ff0c99108b36d3b886defd825d8ac1f47dba374/skills/context-fundamentals/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "google-labs-code/stitch-skills",
+      "commit": "0337446dadde6f8c94210444e2aa9d546126480f",
+      "stars": 9646,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "b4133a55232c0996713349891dc55469d46a16ec027c033c9e4108b2149abb42",
+          "bytes": 11273,
+          "url": "https://raw.githubusercontent.com/google-labs-code/stitch-skills/0337446dadde6f8c94210444e2aa9d546126480f/LICENSE"
+        },
+        {
+          "path": "plugins/stitch-build/skills/react-components/SKILL.md",
+          "sha256": "a978bf8fb135c69f944432dfa4166d6a88903c524ed4be51899a226f7daa223e",
+          "bytes": 8769,
+          "url": "https://raw.githubusercontent.com/google-labs-code/stitch-skills/0337446dadde6f8c94210444e2aa9d546126480f/plugins/stitch-build/skills/react-components/SKILL.md"
+        },
+        {
+          "path": "plugins/stitch-design/skills/extract-design-md/SKILL.md",
+          "sha256": "f9c32b30acd9fea3dba7306bf38e3a859f49c1f27bcf44f9cf16d3a60a730276",
+          "bytes": 14078,
+          "url": "https://raw.githubusercontent.com/google-labs-code/stitch-skills/0337446dadde6f8c94210444e2aa9d546126480f/plugins/stitch-design/skills/extract-design-md/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "snarktank/ai-dev-tasks",
+      "commit": "efbffaac10e68c94e14aaa587c79b7d5015b5ebd",
+      "stars": 7798,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/snarktank/ai-dev-tasks/efbffaac10e68c94e14aaa587c79b7d5015b5ebd/LICENSE"
+        },
+        {
+          "path": "create-prd.md",
+          "sha256": "ec2f41854b01ce558239695e5402c1dfbee6c77034fb11fb36f9441dc9039aad",
+          "bytes": 4451,
+          "url": "https://raw.githubusercontent.com/snarktank/ai-dev-tasks/efbffaac10e68c94e14aaa587c79b7d5015b5ebd/create-prd.md"
+        },
+        {
+          "path": "generate-tasks.md",
+          "sha256": "88d4b4696df753be3a5ffce9270564233eefe3143c1bd74ee2a3e4e3aa504dbe",
+          "bytes": 4520,
+          "url": "https://raw.githubusercontent.com/snarktank/ai-dev-tasks/efbffaac10e68c94e14aaa587c79b7d5015b5ebd/generate-tasks.md"
+        }
+      ]
+    },
+    {
+      "repository": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "stars": 4169,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "49c5f9c7097c9a940ff663a54c27a4c60e379df6cc2b3052df0d37a09a85df93",
+          "bytes": 1106,
+          "url": "https://raw.githubusercontent.com/expo/skills/dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d/LICENSE"
+        },
+        {
+          "path": "plugins/expo/skills/expo-data-fetching/SKILL.md",
+          "sha256": "e1154813edd968a54a9d3688795ef905d13bda61ef08d0ee455534f95db01332",
+          "bytes": 13732,
+          "url": "https://raw.githubusercontent.com/expo/skills/dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d/plugins/expo/skills/expo-data-fetching/SKILL.md"
+        },
+        {
+          "path": "plugins/expo/skills/expo-router/SKILL.md",
+          "sha256": "605234749eeeb6896e324f55cdef7af15603c348fbc2f7a6fe13538ec222ce43",
+          "bytes": 7135,
+          "url": "https://raw.githubusercontent.com/expo/skills/dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d/plugins/expo/skills/expo-router/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "cloudflare/skills",
+      "commit": "cbf893b954222276bf1af57e5f23379231e0efb9",
+      "stars": 3374,
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "bytes": 11357,
+          "url": "https://raw.githubusercontent.com/cloudflare/skills/cbf893b954222276bf1af57e5f23379231e0efb9/LICENSE"
+        },
+        {
+          "path": "skills/agents-sdk/SKILL.md",
+          "sha256": "9bda4bd3adc5ab09e30c19ea6b9a0bf673f0a4b190bf7624fc1b0dc5f1fcf9c1",
+          "bytes": 12275,
+          "url": "https://raw.githubusercontent.com/cloudflare/skills/cbf893b954222276bf1af57e5f23379231e0efb9/skills/agents-sdk/SKILL.md"
+        },
+        {
+          "path": "skills/basin/SKILL.md",
+          "sha256": "8c1f7d30fbb3def0894db05903235a54793dcc93f68d6ada60d7e069eebd6a69",
+          "bytes": 2925,
+          "url": "https://raw.githubusercontent.com/cloudflare/skills/cbf893b954222276bf1af57e5f23379231e0efb9/skills/basin/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "vuejs-ai/skills",
+      "commit": "198f0cd8f7f9c0a3d9b566ccc16de6677519ee78",
+      "stars": 3349,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "2ea4e714425cf682879c4dea3d0d0a1a379a1418f463063f9eea1aa709ad946d",
+          "bytes": 1098,
+          "url": "https://raw.githubusercontent.com/vuejs-ai/skills/198f0cd8f7f9c0a3d9b566ccc16de6677519ee78/LICENSE"
+        },
+        {
+          "path": "skills/vue-best-practices/SKILL.md",
+          "sha256": "3a601da4b2cc46b1712fcedb1ce434f0c263e29c2a8193ccf84dcbd0b7c03378",
+          "bytes": 10475,
+          "url": "https://raw.githubusercontent.com/vuejs-ai/skills/198f0cd8f7f9c0a3d9b566ccc16de6677519ee78/skills/vue-best-practices/SKILL.md"
+        },
+        {
+          "path": "skills/vue-debug-guides/SKILL.md",
+          "sha256": "7e16c92d2a221fbd99c44456ada0c32cc4606b1f49a352b10e0ebdc046d50f8f",
+          "bytes": 20931,
+          "url": "https://raw.githubusercontent.com/vuejs-ai/skills/198f0cd8f7f9c0a3d9b566ccc16de6677519ee78/skills/vue-debug-guides/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "microsoft/skills",
+      "commit": "f03ec5392f7a0f3aca12af47477e92f1edf7b44c",
+      "stars": 3211,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "d9a1b1e30d633d5732ea18e3cba9538d293ebc53e1a9e4e96ab739e0c5c4f1cb",
+          "bytes": 1140,
+          "url": "https://raw.githubusercontent.com/microsoft/skills/f03ec5392f7a0f3aca12af47477e92f1edf7b44c/LICENSE"
+        },
+        {
+          "path": ".github/skills/microsoft-docs/SKILL.md",
+          "sha256": "23d6c309124c4dd7f96ef7166a1998814b4eaeca7e3d654bdac2feacde7e16d1",
+          "bytes": 2925,
+          "url": "https://raw.githubusercontent.com/microsoft/skills/f03ec5392f7a0f3aca12af47477e92f1edf7b44c/.github/skills/microsoft-docs/SKILL.md"
+        },
+        {
+          "path": ".github/plugins/deep-wiki/skills/wiki-researcher/SKILL.md",
+          "sha256": "3793d737ccb3e2c24d2de919f19ef59c35cc73598be8fdc8eb69693820ae29b5",
+          "bytes": 4520,
+          "url": "https://raw.githubusercontent.com/microsoft/skills/f03ec5392f7a0f3aca12af47477e92f1edf7b44c/.github/plugins/deep-wiki/skills/wiki-researcher/SKILL.md"
+        }
+      ]
+    },
+    {
+      "repository": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "stars": 3094,
+      "license": "MIT",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "b65e575eb4f04a13c187d64e958321298e2ab84d67aa8428819f362056ba292c",
+          "bytes": 1065,
+          "url": "https://raw.githubusercontent.com/supabase/agent-skills/c9be0e931b7930f7d02126d04774d904c381e7d7/LICENSE"
+        },
+        {
+          "path": "skills/supabase-postgres-best-practices/SKILL.md",
+          "sha256": "ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855",
+          "bytes": 3231,
+          "url": "https://raw.githubusercontent.com/supabase/agent-skills/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices/SKILL.md"
+        },
+        {
+          "path": "skills/supabase/SKILL.md",
+          "sha256": "697e0e949f97621c6fc1784169eb3ccbf673747d6bb8299a52962d3d84d93dc6",
+          "bytes": 14307,
+          "url": "https://raw.githubusercontent.com/supabase/agent-skills/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase/SKILL.md"
+        }
+      ]
+    }
+  ]
+}

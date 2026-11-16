@@ -9,9 +9,11 @@ import re
 import contextvars
 from concurrent.futures import ThreadPoolExecutor
 from mo_hinh_bdsg import MoHinhBDSG, LoiMoHinhBDSG
+from nhan_su import NhanSu
+from doi_ngu import DoiNgu
 
 
-TEMPLATES = {"de-xuat-giai-phap", "kiem-tra-ket-noi", "tong-quan"}
+TEMPLATES = {"de-xuat-giai-phap", "kiem-tra-ket-noi", "tong-quan", "nhan-su-chuyen-mon"}
 FINAL = {"completed", "cancelled", "failed", "interrupted"}
 
 
@@ -54,6 +56,8 @@ class CongViec:
             "bdsg_delegated_context", default=None
         )
         self.model = MoHinhBDSG()
+        self.staff = NhanSu()
+        self.workforce = DoiNgu(self.staff)
         with kho.ket_noi() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS model_calls(owner TEXT,created REAL)"
@@ -83,6 +87,12 @@ class CongViec:
                 task = json.loads(row[0])
                 task["status"] = "interrupted"
                 task["runtime_running"] = False
+                if task.get("team"):
+                    task["team"]["state"] = "interrupted"
+                    task["team"]["finished"] = time.time()
+                    for specialist in task["team"].get("agents", []):
+                        if specialist["state"] in ("queued", "running"):
+                            specialist.update(state="interrupted", finished=time.time())
                 task["updated"] = time.time()
                 for step in task["steps"]:
                     if step["status"] == "running":
@@ -404,6 +414,9 @@ class CongViec:
             if task["run"] >= 10:
                 raise ValueError("Tác vụ đã đạt giới hạn 10 lượt")
             self._capacity(actor)
+            if task.get("team"):
+                task.setdefault("team_history", []).append(task.pop("team"))
+                task["team_history"] = task["team_history"][-9:]
             task["run"] += 1
             task["mode"] = self.model.public_status()["mode"]
             task["messages"].append(
@@ -697,6 +710,9 @@ class CongViec:
                         self.reserve_model(actor, task.get("project_id", ""))
                     with self.lock:
                         current = self._load(task_id)
+                        if kind == "team-state":
+                            snapshot = extra.pop("team")
+                            current["team"] = {**snapshot, "run": current["run"]}
                         if kind == "model-usage":
                             usage = current.setdefault(
                                 "usage",
@@ -725,12 +741,26 @@ class CongViec:
                             or bool(verify and not verify(actor))
                         )
 
-                content = model.run(
-                    prompt, context, self.core, actor, on_event, cancelled
-                )
+                if task["template"] == "nhan-su-chuyen-mon":
+                    content = self.workforce.run(
+                        prompt, context,
+                        lambda p, c, event, stop: model.run(p, c, self.core, actor, event, stop),
+                        on_event, cancelled,
+                    )
+                else:
+                    content = model.run(
+                        prompt, context, self.core, actor, on_event, cancelled
+                    )
                 if cancelled():
                     raise RuntimeError("Tác vụ đã được yêu cầu dừng")
             else:
+                if task["template"] == "nhan-su-chuyen-mon":
+                    with self.lock:
+                        current = self._load(task_id)
+                        current["team"] = {"state": "awaiting_model", "agents": [], "run": current["run"],
+                                           "version": self.staff.version, "execution_kind": "not_executed"}
+                        self._save(current)
+                    raise LoiMoHinhBDSG("Cần cấu hình mô hình AI trước khi Agent tổng phân công và thực thi chuyên môn.")
                 content = self._report(task, products, connections)
             with self.lock:
                 task = self._load(task_id)
@@ -745,6 +775,13 @@ class CongViec:
                         "run": task["run"],
                     }
                 ]
+                if task.get("team", {}).get("run") == task["run"]:
+                    for specialist in task["team"].get("agents", []):
+                        if specialist["state"] == "completed" and specialist.get("output"):
+                            additions.append({"id": secrets.token_hex(8),
+                                "name": specialist["skill_id"] + "-luot-" + str(task["run"]) + ".md",
+                                "title": specialist["name"], "mime_type": "text/markdown",
+                                "content": specialist["output"], "created": time.time(), "run": task["run"]})
                 kiem_han_ket_qua(task["artifacts"], additions)
                 task["artifacts"].extend(additions)
                 self._save(task)

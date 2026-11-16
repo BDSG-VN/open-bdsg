@@ -632,6 +632,10 @@ class DieuPhoi:
         integer = {"type": "integer"}
         actor = lambda: self.actor.get()
         declarations = {
+            "nhan_su": [
+                ("danh_sach", lambda a: app.tasks.staff.catalogue(), False, {}, []),
+                ("chi_tiet", lambda a: app.tasks.staff.detail(a.get("id")), False, {"id": text}, ["id"]),
+            ],
             "tich_hop_vn": [
                 ("dong_bo_tao", lambda a: app.vn_sync.create(actor(), a), True,
                  {"connection_id": text, "operation": text, "label": text, "arguments": obj,

@@ -1,0 +1,457 @@
+{
+  "reviewed_at": "2026-11-16",
+  "repositories": [
+    {
+      "repository": "mattpocock/skills",
+      "commit": "5863806dd4e15c63174bee4e7515a4256792ecfa",
+      "stars": 325761,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/engineering/research/SKILL.md",
+        "skills/engineering/code-review/SKILL.md",
+        "skills/engineering/diagnosing-bugs/SKILL.md",
+        "skills/engineering/prototype/SKILL.md",
+        "skills/engineering/to-spec/SKILL.md"
+      ]
+    },
+    {
+      "repository": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "stars": 318557,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/brainstorming/SKILL.md",
+        "skills/writing-plans/SKILL.md",
+        "skills/verification-before-completion/SKILL.md",
+        "skills/systematic-debugging/SKILL.md"
+      ]
+    },
+    {
+      "repository": "affaan-m/ECC",
+      "commit": "d2ef2680594f9a17526a6e1a2e18b3d242c5d17b",
+      "stars": 304361,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        ".agents/skills/article-writing/SKILL.md",
+        ".agents/skills/deep-research/SKILL.md",
+        ".agents/skills/market-research/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "stars": 195809,
+      "license": "Apache-2.0",
+      "files": [
+        "THIRD_PARTY_NOTICES.md",
+        "skills/docx/SKILL.md",
+        "skills/docx/LICENSE.txt",
+        "skills/pdf/SKILL.md",
+        "skills/pdf/LICENSE.txt",
+        "skills/pptx/SKILL.md",
+        "skills/pptx/LICENSE.txt",
+        "skills/xlsx/SKILL.md",
+        "skills/xlsx/LICENSE.txt",
+        "skills/internal-comms/SKILL.md",
+        "skills/internal-comms/LICENSE.txt"
+      ]
+    },
+    {
+      "repository": "msitarzewski/agency-agents",
+      "commit": "8ae6164602c95ca78828b148b9052460ee426885",
+      "stars": 168743,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "research/research-synthesist.md",
+        "project-management/project-management-meeting-notes-specialist.md",
+        "product/product-manager.md",
+        "finance/finance-fpa-analyst.md",
+        "specialized/hr-onboarding.md"
+      ]
+    },
+    {
+      "repository": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "e59ff376a41f7ca47b7541ad5c116495cbade3ee",
+      "stars": 150303,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        ".claude/skills/ui-ux-pro-max/SKILL.md",
+        ".claude/skills/design-system/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "garrytan/gstack",
+      "commit": "5dcd76b4eae6bb06f73460d3ab29cef8e33e8537",
+      "stars": 141779,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "autoplan/SKILL.md",
+        "review/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "addyosmani/agent-skills",
+      "commit": "39b723ceebf81474d0557c1fecd01eddab585563",
+      "stars": 118213,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/planning-and-task-breakdown/SKILL.md",
+        "skills/source-driven-development/SKILL.md",
+        "skills/code-review-and-quality/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "Leonxlnx/taste-skill",
+      "commit": "f6b76575f949707b4e3c37cd86cb44b0b98643e8",
+      "stars": 116682,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/taste-skill/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "pbakaus/impeccable",
+      "commit": "d41d9860b0094dcb68030657da63461212835aaa",
+      "stars": 111220,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        ".agents/skills/impeccable/SKILL.md",
+        ".agents/skills/impeccable/reference/audit.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "ComposioHQ/awesome-claude-skills",
+      "commit": "be2a406907dbc61b73e6827ded415c96139d13a2",
+      "stars": 79638,
+      "license": "Apache-2.0",
+      "files": [
+        "brand-guidelines/LICENSE.txt",
+        "internal-comms/LICENSE.txt",
+        "brand-guidelines/SKILL.md",
+        "internal-comms/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "stars": 73685,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/security-audit/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "blader/humanizer",
+      "commit": "b48c832f0f809c1b5658edbb838c2521b72f2413",
+      "stars": 69795,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "AGENTS.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "mvanhorn/last30days-skill",
+      "commit": "ab042cbc10c128bd6103db95328724830c6b302f",
+      "stars": 67943,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/last30days/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "gsd-build/get-shit-done",
+      "commit": "bdcaab2c752d9a33a1a1ca9acf3a3c81fb991815",
+      "stars": 64134,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "agents/gsd-planner.md",
+        "agents/gsd-executor.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "coreyhaines31/marketingskills",
+      "commit": "1f837447b20bb6f0e72d87b80ece1c221c362c7d",
+      "stars": 60745,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/marketing-plan/SKILL.md",
+        "skills/customer-research/SKILL.md",
+        "skills/copywriting/SKILL.md",
+        "skills/sales-enablement/SKILL.md",
+        "skills/revops/SKILL.md"
+      ]
+    },
+    {
+      "repository": "K-Dense-AI/scientific-agent-skills",
+      "commit": "ec59a29a03d5c40f73ab40878df04860bc00e876",
+      "stars": 57435,
+      "license": "MIT",
+      "files": [
+        "LICENSE.md",
+        "skills/exploratory-data-analysis/SKILL.md",
+        "skills/statistical-analysis/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "obsidianmd/obsidian-skills",
+      "commit": "398127736bd4ba42d767b1419fee1a927508370b",
+      "stars": 52928,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "plugins/obsidian/LICENSE",
+        "plugins/obsidian/skills/obsidian-markdown/SKILL.md",
+        "plugins/obsidian/skills/json-canvas/SKILL.md",
+        "plugins/obsidian/skills/obsidian-bases/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "wshobson/agents",
+      "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+      "stars": 42578,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "plugins/business-analytics/skills/data-storytelling/SKILL.md",
+        "plugins/business-analytics/skills/kpi-dashboard-design/SKILL.md",
+        "plugins/startup-business-analyst/skills/market-sizing-analysis/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "github/awesome-copilot",
+      "commit": "dc0083dbe22133bfa7ce3500dee85e187e0cd47a",
+      "stars": 41213,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/breakdown-plan/SKILL.md",
+        "skills/create-implementation-plan/SKILL.md",
+        "skills/gtm-enterprise-account-planning/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "anthropics/knowledge-work-plugins",
+      "commit": "e91a134584eb798bac7fb0379358006a2b63b965",
+      "stars": 36268,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        "marketing/skills/content-creation/SKILL.md",
+        "data/skills/statistical-analysis/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "davila7/claude-code-templates",
+      "commit": "425154fbdb24f3d6b6792408e7cb055931993b92",
+      "stars": 33851,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        ".claude-plugin/skills/owasp-security/SKILL.md",
+        ".claude/agents/blog-writer.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "googleworkspace/cli",
+      "commit": "cd3697e07eb520056dcf142d0c7439bbb9ba32e9",
+      "stars": 32341,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        "skills/gws-sheets-read/SKILL.md",
+        "skills/gws-docs/SKILL.md",
+        "skills/persona-project-manager/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "alirezarezvani/claude-skills",
+      "commit": "4680893d91f2aee6f77ca1519fd1b86b7a104c87",
+      "stars": 29889,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "business-operations/skills/process-mapper/SKILL.md",
+        "business-operations/skills/internal-comms/SKILL.md",
+        "business-growth/skills/revenue-operations/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "OthmanAdi/planning-with-files",
+      "commit": "51bf62def62d1cb317d37936929b4ef97cf862c3",
+      "stars": 28092,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/planning-with-files/SKILL.md",
+        "skills/planning-with-files/reference.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "phuryn/pm-skills",
+      "commit": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+      "stars": 28050,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "pm-execution/skills/create-prd/SKILL.md",
+        "pm-product-discovery/skills/opportunity-solution-tree/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "VoltAgent/awesome-claude-code-subagents",
+      "commit": "ed74d115b7fb7026a22a4f816a8e3250f425e3b4",
+      "stars": 26599,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "categories/01-core-development/api-designer.md",
+        "categories/01-core-development/backend-developer.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "google/skills",
+      "commit": "38ae03a5ac49fe20d5de9680b81bd2b2aa161b63",
+      "stars": 24361,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        "plugins/cloud/google-cloud-developer/skills/gcloud/SKILL.md",
+        "skills/ads/data-manager-api-audience-ingestion/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "commit": "9ff0c99108b36d3b886defd825d8ac1f47dba374",
+      "stars": 18360,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/context-compression/SKILL.md",
+        "skills/context-fundamentals/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "google-labs-code/stitch-skills",
+      "commit": "0337446dadde6f8c94210444e2aa9d546126480f",
+      "stars": 9646,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        "plugins/stitch-build/skills/react-components/SKILL.md",
+        "plugins/stitch-design/skills/extract-design-md/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "snarktank/ai-dev-tasks",
+      "commit": "efbffaac10e68c94e14aaa587c79b7d5015b5ebd",
+      "stars": 7798,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        "create-prd.md",
+        "generate-tasks.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "stars": 4169,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "plugins/expo/skills/expo-data-fetching/SKILL.md",
+        "plugins/expo/skills/expo-router/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "cloudflare/skills",
+      "commit": "cbf893b954222276bf1af57e5f23379231e0efb9",
+      "stars": 3374,
+      "license": "Apache-2.0",
+      "files": [
+        "LICENSE",
+        "skills/agents-sdk/SKILL.md",
+        "skills/basin/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "vuejs-ai/skills",
+      "commit": "198f0cd8f7f9c0a3d9b566ccc16de6677519ee78",
+      "stars": 3349,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/vue-best-practices/SKILL.md",
+        "skills/vue-debug-guides/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    },
+    {
+      "repository": "microsoft/skills",
+      "commit": "f03ec5392f7a0f3aca12af47477e92f1edf7b44c",
+      "stars": 3211,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        ".github/skills/microsoft-docs/SKILL.md",
+        ".github/plugins/deep-wiki/skills/wiki-researcher/SKILL.md"
+      ]
+    },
+    {
+      "repository": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "stars": 3094,
+      "license": "MIT",
+      "files": [
+        "LICENSE",
+        "skills/supabase-postgres-best-practices/SKILL.md",
+        "skills/supabase/SKILL.md"
+      ],
+      "activation": "reference_only_pending_adaptation"
+    }
+  ],
+  "scope": "High-star reviewed international skills; selected text packages, not an exhaustive ranking of all GitHub repositories"
+}
