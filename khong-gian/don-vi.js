@@ -30,7 +30,8 @@
     const route = String(path).split('?')[0];
     return ['/api/me','/api/catalogue','/api/login','/api/logout','/api/ready','/api/health'].includes(route)
       || route.startsWith('/api/auth/') || route === '/api/sessions' || route.startsWith('/api/sessions/')
-      || route === '/api/units' || route.startsWith('/api/units/');
+      || route === '/api/units' || route.startsWith('/api/units/')
+      || route === '/api/oauth/clients' || route === '/api/oauth/clients/disable';
   }
   function headers(path) {
     if (unscoped(path)) return {};

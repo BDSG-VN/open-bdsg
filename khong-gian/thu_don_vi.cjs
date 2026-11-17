@@ -12,6 +12,15 @@ function client({storage = new Map(), parent, pathname = '/'} = {}) {
   return {unit:win.BDSGUnit,win,events,setUnits:value=>memberships=value,storage};
 }
 const me = {user:{id:'actor',name:'Actor',role:'nguoi-dung'},workspace:{mode:'units',system_admin:true,apps:['account','projects']}};
+
+test('client OAuth la control plane nhung consent va grant van can don vi',async()=>{
+  const {unit}=client();await unit.boot(me);
+  assert.deepEqual(Object.keys(unit.headers('/api/oauth/clients')),[]);
+  assert.deepEqual(Object.keys(unit.headers('/api/oauth/clients/disable')),[]);
+  assert.throws(()=>unit.headers('/api/oauth/bind'),/đơn vị/i);
+  assert.throws(()=>unit.headers('/api/oauth/decide'),/đơn vị/i);
+  assert.throws(()=>unit.headers('/api/mcp/grants'),/đơn vị/i);
+});
 test('don vi phai duoc chon tu danh sach thanh vien truoc khi goi API rieng',async()=>{
   const {unit} = client(); await unit.boot(me);
   assert.equal(unit.snapshot().selected,null);

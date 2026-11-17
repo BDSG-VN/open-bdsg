@@ -15,6 +15,14 @@
         ${editing === item.id ? `<form class="sessions-rename" data-rename-form="${esc(item.id)}"><label for="session-label">Tên phiên</label><input id="session-label" name="label" maxlength="80" required value="${esc(item.label)}" placeholder="Ví dụ: MacBook BDSG" autocomplete="off"><div><button class="button" type="submit">Lưu tên</button><button class="button secondary" type="button" data-session-cancel>Hủy</button></div></form>` : `<div class="sessions-actions"><button class="button secondary" data-session-rename="${esc(item.id)}">Đổi tên<span class="visually-hidden"> ${esc(title(item))}</span></button>${!item.current ? `<button class="button sessions-danger" data-session-revoke="${esc(item.id)}">Đăng xuất<span class="visually-hidden"> ${esc(title(item))}</span></button>` : ""}</div>`}</li>`).join("")}</ul>
       ${hasMore ? '<p class="sessions-note">Danh sách hiển thị tối đa 100 phiên. Đăng xuất các phiên khác cũng áp dụng cho những phiên chưa hiển thị.</p>' : ""}
       </section><section class="sessions-group sessions-controls"><h2>Kiểm soát đăng nhập</h2><p>Thu hồi ở đây kết thúc phiên web BDSG. Quyền Office, kết nối Google, SSH và token agent đã cấp riêng cần được quản lý riêng.</p><div><button class="button sessions-danger" id="sessions-revoke-others">Đăng xuất các phiên khác</button><button class="button secondary" id="sessions-logout">Đăng xuất phiên hiện tại</button></div><p class="sessions-note">Phiên hiện tại được giữ khi anh đăng xuất các phiên khác. Ghi nhận gần nhất là lúc không gian web kiểm tra phiên, không phải trạng thái thiết bị đang online.</p></section></div>`;
+    if (window.BDSGUnit?.snapshot().mode === 'units') {
+      const section = document.createElement('section'); section.id = 'connection-management';
+      section.className = 'sessions-group'; main.querySelector('.sessions-page').append(section);
+      window.BDSGConnections?.mount(section);
+      const jump = document.createElement('button'); jump.type = 'button'; jump.className = 'button secondary';
+      jump.textContent = 'Quyền kết nối'; jump.onclick = () => { section.scrollIntoView({block:'start'}); section.tabIndex=-1;section.focus({preventScroll:true}); };
+      main.querySelector('.sessions-heading').append(jump);
+    }
     main.querySelector("#sessions-refresh").onclick = () => open();
     main.querySelector("#sessions-logout").onclick = () => {
       if (confirm("Đăng xuất phiên web BDSG đang dùng?")) document.querySelector("#profile").click();
@@ -72,6 +80,7 @@
   }
 
   async function open(message = "") {
+    window.BDSGConnections?.reset();
     const version = ++revision, identity = state.user?.id;
     sessions = []; hasMore = false; editing = null; busy = false;
     if (!state.user) {

@@ -25,6 +25,9 @@ class ThuDongGoi(unittest.TestCase):
         self.assertIn('/ios.css', (self.ra / 'index.html').read_text(encoding='utf-8'))
         self.assertTrue((self.ra / 'workspace.html').is_file())
         self.assertTrue((self.ra / 'trinh-duyet.html').is_file())
+        for name in ('quyen-ket-noi.js', 'quyen-ket-noi.css'):
+            self.assertTrue((self.ra/name).is_file())
+            self.assertIn('/'+name,(self.ra/'workspace.html').read_text(encoding='utf-8'))
         self.assertNotIn('canonical', (self.ra / 'workspace.html').read_text(encoding='utf-8'))
         for ten_font in ('lora-latin.woff2', 'lora-vietnamese.woff2'):
             self.assertTrue((self.ra / 'fonts' / ten_font).read_bytes().startswith(b'wOF2'))

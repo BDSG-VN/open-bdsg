@@ -337,3 +337,35 @@ Chưa triển khai R11 hoặc nghiệm thu client ChatGPT/Claude thật. Còn UI
 lý client/grant, profile AI/MCP nâng cao và các cửa nghiệm thu phát hành/
 snapshot/restore/hậu kiểm. Public-client profile này không là tuyên bố đã có
 mọi hình thức OAuth, DCR hoặc confidential-client integration.
+
+## R11c — quản lý quyền trong Tài khoản
+
+Ngày18/11/2026: thêm Quyền kết nối vào Tài khoản của chế độ đơn vị thử, giữ
+quản lý phiên web hiện có. Người dùng xem/cấp/thu hồi grant trong đơn vị;
+quản trị đơn vị có thể thu hồi grant thành viên nhưng không nhận key hoặc
+project_ids của họ. Chủ quản quản lý client OAuth ở control plane ngay cả
+khi không có membership. Chỉ hai route client được bỏ header đơn vị, không
+bỏ scope của bind/consent hoặc grant.
+
+Công cụ/dự án không chọn sẵn; thời hạn rõ. Profile tác vụ mặc định không AI,
+có opt-in AI và danh sách đọc/lập đề xuất từ đầu nối đã xác minh. Cấp quyền
+không chạy mô hình hoặc công cụ, không cấp direct-write/approve/reconcile.
+Danh sách own grant có phạm vi dự án và profile; grant của người khác chỉ
+nhận metadata backend cho phép. Consent OAuth hiện vẫn profile danh mục;
+giao diện profile nâng cao tại consent còn tiếp.
+
+Key riêng chỉ hiện một lần dưới dạng che, sao chép theo thao tác rõ, không
+localStorage/sessionStorage. Đóng/chuyển/ẩn cửa sổ, đổi đơn vị hoặc tài khoản
+xóa key khỏi UI/closure; clipboard đã sao chép là phần riêng của thiết bị.
+Phản hồi đến muộn bị loại, không tự cấp lại khi kết quả chưa rõ. Lỗi nhập
+liệu/cổng ghi đóng giữ form để sửa; mất kết nối khi lưu cần làm mới kiểm tra
+trước khi cấp lại. Có xác nhận trước khi thu hồi/ngắt client.
+
+Ngày18/11/2026:20 nghiệm thu Chrome riêng ở1440/390 đạt,26 ảnh và không lỗi
+JavaScript/tràn ngang. Gateway/SQLite/cookie thật qua proxy TLS fixture;
+profile dùng MCP tổng hợp, không gọi API mô hình tính phí. Chèn lỗi mạng và
+giữ phản hồi API thật sau khi cấp để kiểm late key; không giả tạo grant.
+Kiểm clipboard thực sau nút sao chép, xóa field/list không echo, root không
+unit đăng ký/ngắt client, member chỉ own và admin revoke khác có hiệu lực.
+Một bài Node mới giữ ranh giới client control plane/bind/consent/grant;
+đóng gói đã kiểm hai asset mới. Chưa deploy R11 hoặc nhận toàn mục tiêu xong.

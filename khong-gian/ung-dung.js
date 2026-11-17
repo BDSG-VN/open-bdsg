@@ -415,6 +415,7 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  window.BDSGConnections?.reset();
   window.BDSGSessions?.leave();
   window.BDSGNode?.leave();
   if (location.pathname !== "/workspace.html" && window.BDSGDesktop) {
@@ -768,6 +769,7 @@ function clearUnitState() {
   for (const controller of activeUnitRequests) controller.abort();
   activeUnitRequests.clear();
   window.BDSGSessions?.reset();
+  window.BDSGConnections?.reset();
   window.BDSGNode?.reset();
   window.BDSGReadBroker?.reset();
   window.BDSGProjects?.reset?.();
