@@ -248,6 +248,12 @@ class CongViec:
                 self._binding(db,task)
             return task
 
+    def _authorize_request(self, actor, name, arguments):
+        if 'mcp_delegation' in actor:
+            if self.inbound_mcp is None:
+                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
+            self.inbound_mcp.authorize_call(actor, name, arguments)
+
     def _binding(self, db, task):
         return task_reference(db,task)
 
@@ -440,10 +446,7 @@ class CongViec:
 
     def create(self, actor, args):
         self._auth(actor, True)
-        if 'mcp_delegation' in actor:
-            if self.inbound_mcp is None:
-                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
-            self.inbound_mcp.authorize_call(actor, 'cong_viec.tao', args)
+        self._authorize_request(actor, 'cong_viec.tao', args)
         model = self._model_for(actor)
         if model.configuration_error:
             raise ValueError(model.configuration_error)
@@ -686,10 +689,7 @@ class CongViec:
 
     def followup(self, actor, task_id, text):
         self._auth(actor, True)
-        if 'mcp_delegation' in actor:
-            if self.inbound_mcp is None:
-                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
-            self.inbound_mcp.authorize_call(actor, 'cong_viec.tiep_tuc', {'id': task_id, 'text': text})
+        self._authorize_request(actor, 'cong_viec.tiep_tuc', {'id': task_id, 'text': text})
         model = self._model_for(actor)
         if self.units is not None and self.scoped_ai is None and model.configured:
             raise PermissionError('Chưa có mô hình riêng theo đơn vị')
@@ -758,10 +758,7 @@ class CongViec:
 
     def cancel(self, actor, task_id):
         self._auth(actor, True)
-        if 'mcp_delegation' in actor:
-            if self.inbound_mcp is None:
-                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
-            self.inbound_mcp.authorize_call(actor, 'cong_viec.dung', {'id': task_id})
+        self._authorize_request(actor, 'cong_viec.dung', {'id': task_id})
         with self.lock:
             task = self.detail(actor, task_id)
             if task["status"] not in FINAL or task.get("runtime_running"):

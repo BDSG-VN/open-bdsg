@@ -79,9 +79,10 @@ Khởi động lại không replay; token còn hiệu lực có thể yêu cầu
 theo rõ ràng. Khôi phục data ở kho mới từ chối nguồn epoch cũ. Giữ ngân sách
 bảo thủ cho yêu cầu đã gửi; không tự hoàn phí upstream khi kết quả bị chặn.
 
-Ngày 17/11/2026: 14 bài nguồn/worker/adapter HTTP tổng hợp đạt: tạo/followup,
+Ngày 17/11/2026: 15 bài nguồn/worker/adapter HTTP tổng hợp đạt: tạo/followup,
 profile/AI opt-in, token chỉ tạo, từ chối tiếp quản token/web, thu hồi trước
-reserve và lúc provider chờ, expiry, thu hồi/cấp lại dự án, restart/restore.
+reserve và lúc provider chờ, expiry, thu hồi/cấp lại dự án, restart/restore,
+dừng bằng token và bằng web sau khi token đã thu hồi.
 
 ```sh
 python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_tac_vu_don_vi.py' -v

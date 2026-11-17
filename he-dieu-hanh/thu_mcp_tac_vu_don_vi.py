@@ -161,6 +161,30 @@ class ThuMCPTacVuDonVi(unittest.TestCase):
         self.assertEqual(task['artifacts'], [])
         self.assertNotIn('ONLY-LATE-PROVIDER-CONTENT', json.dumps(task))
 
+    def test_dung_bang_token_va_web_sau_thu_hoi_khong_luu_ket_qua_muon(self):
+        for via_web in (False, True):
+            with self.subTest(via_web=via_web):
+                entered, released = threading.Event(), threading.Event()
+                self.addCleanup(released.set)
+                def wait():
+                    entered.set()
+                    if not released.wait(3): raise RuntimeError('Test barrier timeout')
+                self.configure_ai(wait)
+                issued = self.issue(allow_ai=True)
+                actor = self.service.authenticate(issued['credential'])
+                identifier = self.create(actor)
+                self.assertTrue(entered.wait(3))
+                if via_web:
+                    self.service.revoke(self.actor, issued['id'])
+                    self.app.tasks.cancel(self.actor, identifier)
+                else:
+                    self.assertTrue(self.service.call(actor, 'cong_viec.dung', {'id': identifier})['ok'])
+                released.set()
+                task = self.finished(identifier)
+                self.assertEqual(task['status'], 'cancelled')
+                self.assertEqual(task['artifacts'], [])
+                self.assertNotIn('ONLY-LATE-PROVIDER-CONTENT', json.dumps(task))
+
     def test_thu_hoi_truoc_giu_ngan_sach_chan_provider(self):
         requests = self.configure_ai()
         issued = self.issue(allow_ai=True)
