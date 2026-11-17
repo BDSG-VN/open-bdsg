@@ -5,6 +5,7 @@ from pathlib import Path
 
 from may_chu import UngDung
 from sao_luu_he_thong import backup, restore
+from nhan.han_muc import HanMuc
 
 
 class ThuKinhDoanhDonVi(unittest.TestCase):
@@ -124,6 +125,23 @@ class ThuKinhDoanhDonVi(unittest.TestCase):
             finally:
                 other.tasks.close()
                 other.core.audit.close()
+
+    def test_bound_root_does_not_gain_content_and_limit_follows_authorization(self):
+        a, b = self.actor('nguoi-a'), self.actor('nguoi-b')
+        self.app.units.set_member(a, {'unit_id':self.units[0], 'identity':'chu-quan', 'role':'admin'})
+        root = self.app.units.bind(self.root, self.units[0])
+        self.app.core.nhan.bo_han_muc.dat_han_muc_vai('operator', HanMuc(so_lan=1000, cua_so_giay=60))
+        visible = self.create(a)
+        project = self.value(b, 'du_an.tao', {'name':'Du an khong chia se'})['id']
+        hidden = self.create(b, project_id=project)
+        for _ in range(201):
+            self.create(b, project_id=project)
+        self.assertEqual([r['id'] for r in self.value(a, 'kinh_doanh.danh_sach')['requests']], [visible['id']])
+        self.assertEqual(self.value(root, 'kinh_doanh.danh_sach')['requests'], [])
+        self.assertFalse(self.call(root, 'kinh_doanh.doi_chang', {'id':hidden['id'], 'stage':'van-hanh'}).get('ok'))
+        rows = self.value(b, 'kinh_doanh.danh_sach')['requests']
+        self.assertEqual(len(rows), 200)
+        self.assertNotIn(hidden['id'], {r['id'] for r in rows})
 
     def test_personal_request_is_private_to_unit_and_creator(self):
         b = self.actor('nguoi-b')
