@@ -273,4 +273,54 @@ class ThuNganSachDonVi(unittest.TestCase):
         self.assertEqual(restarted.status(actor,self.policy)['tasks_remaining'],1)
         self.assertEqual(restarted.status(actor,self.policy)['resets_at_unix'],147600)
 
+    def test_reserve_cho_writer_qua_nua_dem_tinh_vao_ngay_da_nhan_khoa(self):
+        for scoped in (True,False):
+            with self.subTest(scoped=scoped):
+                budget,actor,identifier = self._budget_for_midnight(scoped)
+                self._wait_writer_across_midnight(budget,lambda:self.reserve(budget,actor,identifier))
+                self.assertEqual(budget.status(actor,self.policy)['calls_used'],1)
+                with self.assertRaises(LoiMoHinhBDSG): self.reserve(budget,actor,identifier)
+
+    def test_status_cho_writer_qua_nua_dem_doc_ngay_da_nhan_khoa(self):
+        for scoped in (True,False):
+            with self.subTest(scoped=scoped):
+                budget,actor,identifier = self._budget_for_midnight(scoped)
+                self.now = 61200
+                self.reserve(budget,actor,identifier)
+                status = self._wait_writer_across_midnight(budget,lambda:budget.status(actor,self.policy))
+                self.assertEqual(status['calls_used'],1)
+                self.assertEqual(status['resets_at_unix'],147600)
+
+    def _budget_for_midnight(self,scoped):
+        self.now = 61199
+        if scoped:
+            budget = self.budget()
+            self.task(budget,self.aa,'midnight-task')
+            return budget,self.aa,'midnight-task'
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        return NganSachAI(Kho(temporary.name),clock=lambda:self.now),USER,'legacy-midnight'
+
+    def _wait_writer_across_midnight(self,budget,operation):
+        self.now = 61199
+        started, sampled = threading.Event(),threading.Event()
+        def clock():
+            sampled.set()
+            return self.now
+        budget.clock = clock
+        def work():
+            started.set()
+            return operation()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with budget.kho.ket_noi() as writer:
+                writer.execute('BEGIN IMMEDIATE')
+                future = pool.submit(work)
+                self.assertTrue(started.wait(timeout=5))
+                # Bản cũ đọc đồng hồ trước khóa; bản sửa chỉ đọc sau khi khóa
+                # được nhả. Chờ sự kiện có hạn để hỗ trợ cả hai đường thực thi.
+                sampled.wait(timeout=0.25)
+                self.assertFalse(future.done())
+                self.now = 61200
+            return future.result(timeout=5)
+
 if __name__ == '__main__': unittest.main()

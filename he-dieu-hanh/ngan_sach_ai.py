@@ -184,7 +184,7 @@ class NganSachAI:
         Ràng buộc epoch/revision của lượt đã lưu ngăn scope vừa cấp lại dùng
         quyền mới để gửi lời gọi còn sót từ lượt cũ.
         """
-        owner, day = self._owner(actor), self.day()
+        owner = self._owner(actor)
         if any(
             type(value) is not int or not 0 <= value <= 2000000
             for value in (input_tokens, output_tokens)
@@ -198,6 +198,8 @@ class NganSachAI:
         )
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
+            # Chờ writer có thể đi qua nửa đêm; ngày hạn mức phải lấy sau khóa.
+            day = self.day()
             if self.units is not None:
                 return self._reserve_scoped(db,actor,task_id,model_id,input_tokens,
                     output_tokens,cost,policy,project_id,run,day)
@@ -347,9 +349,10 @@ class NganSachAI:
             'policy':dict(policy),'accounting':'Giữ trước bảo thủ theo giá chủ quản khai báo; chưa phải hóa đơn nhà cung cấp.'}
 
     def status(self, actor, policy):
-        owner, day = self._owner(actor), self.day()
+        owner = self._owner(actor)
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
+            day = self.day()
             scope = self.units.require(actor,db) if self.units is not None else None
             if scope:
                 return self._status_scoped(db,actor,scope,policy,day)
