@@ -18,6 +18,7 @@ from nhan.quyen import ChinhSach, CongGhi
 from nhan.mcp import MayChuMCP
 from nhan_dong_thoi import HanMucDongThoi, NhatKyDongThoi
 from hop_thu import HopThu
+from kinh_doanh import KinhDoanh
 
 
 class KhongChuyenHuong(HTTPRedirectHandler):
@@ -195,6 +196,7 @@ class DieuPhoi:
     def __init__(self, kho, catalogue, ghi=False, connections=None, *, units=None):
         self.kho = kho
         self.mailbox = HopThu(kho, units)
+        self.business = KinhDoanh(kho, units)
         self.catalogue = catalogue
         self.actor = contextvars.ContextVar("bdsg_actor", default=None)
         self.connection_guard = contextvars.ContextVar('bdsg_connection_guard', default=None)
@@ -289,33 +291,23 @@ class DieuPhoi:
                 [
                     BanKhaiCongCu(
                         "danh_sach",
-                        lambda a: {
-                            "requests": self.kho.yeu_cau(
-                                self.actor.get()["id"],
-                                self.actor.get()["role"] == "quan-tri",
-                            )
-                        },
+                        lambda a: self.business.call(self.actor.get(), 'danh_sach', a),
                         mo_ta="Yêu cầu kinh doanh trong phạm vi danh tính.",
                         luoc_do=schema(),
                     ),
                     BanKhaiCongCu(
                         "tao_yeu_cau",
-                        lambda a: self.kho.tao_yeu_cau(self.actor.get()["id"], a),
+                        lambda a: self.business.call(self.actor.get(), 'tao_yeu_cau', a),
                         ghi=True,
                         mo_ta="Ghi nhận nhu cầu để đi qua tư vấn, triển khai, vận hành và kinh doanh.",
                         luoc_do=schema(
-                            {"title": text, "sector": text, "description": text},
+                            {"title": text, "sector": text, "description": text, "project_id": text},
                             ["title", "sector", "description"],
                         ),
                     ),
                     BanKhaiCongCu(
                         "doi_chang",
-                        lambda a: self.kho.doi_chang(
-                            self.actor.get()["id"],
-                            a.get("id"),
-                            a.get("stage"),
-                            self.actor.get()["role"] == "quan-tri",
-                        ),
+                        lambda a: self.business.call(self.actor.get(), 'doi_chang', a),
                         ghi=True,
                         mo_ta="Cập nhật chặng của yêu cầu có quyền quản lý.",
                         luoc_do=schema({"id": text, "stage": text}, ["id", "stage"]),
@@ -389,6 +381,7 @@ class DieuPhoi:
     def dang_ky_cong_viec(
         self, engine, configure_model, connectors, disable_model, projects, *, modules=None
     ):
+        self.business.projects = projects
         text = {"type": "string"}
         project_fields = {"name": text, "instructions": text, "context": text}
         self.nhan.dang_ky(

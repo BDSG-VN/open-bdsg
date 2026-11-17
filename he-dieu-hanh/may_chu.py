@@ -54,6 +54,7 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
+    'kinh_doanh.danh_sach', 'kinh_doanh.tao_yeu_cau', 'kinh_doanh.doi_chang',
     'agent.danh_sach', 'agent.doc_hop_thu', 'agent.gui_tin',
     "ket_noi.ghi", "hanh_dong.danh_sach", "hanh_dong.de_xuat", "hanh_dong.duyet", "hanh_dong.doi_soat",
     "nen_tang.ket_noi", "ket_noi.doc", "cau_hinh.dau_noi", "cau_hinh.luu_dau_noi",

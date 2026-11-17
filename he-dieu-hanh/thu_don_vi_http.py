@@ -82,6 +82,25 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertTrue(body["ok"], body)
         return body["ket_qua"]
 
+    def test_business_requests_cookie_scope_origin_and_legacy_alias(self):
+        first, second = self.units
+        payload = {'title':'Nhu cau thu nghiem HTTP', 'sector':'bat-dong-san',
+                   'description':'Noi dung tong hop khong phai du lieu khach'}
+        created = self.value(self.tool('kinh_doanh.tao_yeu_cau', payload))
+        rows = self.value(self.tool('kinh_doanh.danh_sach'))['requests']
+        self.assertEqual([r['id'] for r in rows], [created['id']])
+        self.assertEqual(self.value(self.tool('kinh_doanh.danh_sach', unit=second))['requests'], [])
+        change = {'id':created['id'], 'stage':'kinh-doanh'}
+        self.assertFalse(self.tool('kinh_doanh.doi_chang', change, unit=second)[1]['ok'])
+        self.assertEqual(self.value(self.tool('kinh_doanh.doi_chang', change))['stage'], 'kinh-doanh')
+        self.assertEqual(self.request('/api/requests', who='nguoi-a', unit=first)[0], 403)
+        body = {'name':'kinh_doanh.tao_yeu_cau', 'arguments':payload}
+        self.assertEqual(self.request('/api/tools', body, 'nguoi-a')[0], 403)
+        self.assertEqual(self.request('/api/tools', body, 'nguoi-a', first,
+                         {'Origin':'https://other.test'})[0], 403)
+        self.assertNotEqual(self.request('/api/tools', body, unit=first)[0], 200)
+        self.assertEqual(len(self.value(self.tool('kinh_doanh.danh_sach'))['requests']), 1)
+
     def test_same_cookie_switches_units_without_content_bypass(self):
         first, second = self.units
         project = self.value(self.tool("du_an.tao", {"name": "Du an rieng A"}))
