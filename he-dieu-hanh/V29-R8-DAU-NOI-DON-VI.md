@@ -59,11 +59,25 @@ CA không được tin cậy, IP riêng và redirect bị chặn. Tái hiện l�
 đặt timeout. Đây là kiểm transport với endpoint tổng hợp, không xác nhận CRM
 hay một nền tảng BDSG thật đã kết nối. Chưa thay cho kiểm provider thực tế.
 
+Rà soát phát hiện timeout từng socket recv không chặn được header gửi từng byte.
+Đã thêm timer theo deadline đóng socket khi hết thời gian, bao phủ handshake,
+header và body. Trong phép thử TLS tổng hợp giới hạn một giây ngày 17/11/2026,
+trước sửa mất 5,03 giây; sau sửa dừng sau 1,00 giây. Giới hạn này không bao gồm
+thời gian resolver của hệ điều hành trước khi có socket để hủy.
+
 ```sh
 python3 he-dieu-hanh/thu_dau_noi_don_vi.py -v
 python3 he-dieu-hanh/thu_mcp_truyen_tai.py -v
 python3 he-dieu-hanh/thu_don_vi_http.py -v
 ```
+
+Hồi quy TLS thật, cần root trên Linux/systemd, tự tạo mạng cô lập và CA tổng hợp:
+
+```sh
+sudo python3 trien-khai/van-hanh/v29_thu_mcp_tls.py
+```
+
+Bài này được gọi riêng trong CI, không sửa mạng host hoặc dùng endpoint thật.
 
 Đối chiếu [MCP Streamable HTTP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports):
 POST JSON-RPC, Accept JSON/SSE, notification 202 và session HTTP. Xem thêm

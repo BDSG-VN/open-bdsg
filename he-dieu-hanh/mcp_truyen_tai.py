@@ -9,11 +9,28 @@ import json
 import re
 import socket
 import ssl
+import threading
 import time
 from urllib.parse import urlsplit
 
 PROTOCOL = "2025-06-18"
 MAX_BODY = 2 * 1024 * 1024
+
+
+def endpoint_https_bdsg(url):
+    if not isinstance(url, str) or len(url) > 1000 or any(ord(c) < 33 or ord(c) > 126 for c in url):
+        raise ValueError("Endpoint MCP không hợp lệ")
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        raise ValueError("Endpoint MCP không hợp lệ") from None
+    if (parsed.scheme != "https" or not parsed.hostname
+            or not re.fullmatch(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+bdsg\.vn", parsed.hostname)
+            or port not in (None, 443) or parsed.username or parsed.password
+            or parsed.query or parsed.fragment):
+        raise ValueError("Cần endpoint HTTPS miền con BDSG, không có userinfo/query")
+    return parsed.hostname, parsed.path or "/"
 
 
 def _remaining(deadline):
@@ -24,8 +41,9 @@ def _remaining(deadline):
 
 
 class _Body:
-    def __init__(self, connection, response, sock):
+    def __init__(self, connection, response, sock, timer):
         self.connection, self.response, self.sock = connection, response, sock
+        self.timer = timer
         self.status = response.status
 
     def getheader(self, name):
@@ -42,12 +60,13 @@ class _Body:
         return self
 
     def __exit__(self, *_):
+        self.timer.cancel()
         self.response.close()
         self.connection.close()
 
 
 def _https(host, address, path, method, headers, body, deadline, guard):
-    connection, raw, secured = None, None, None
+    connection, raw, secured, timer = None, None, None, None
     try:
         guard()
         raw = socket.create_connection((address, 443), timeout=_remaining(deadline))
@@ -55,7 +74,20 @@ def _https(host, address, path, method, headers, body, deadline, guard):
             raise PermissionError("Địa chỉ kết nối không khớp IP đã ghim")
         raw.settimeout(_remaining(deadline))
         context = ssl.create_default_context()
-        secured = context.wrap_socket(raw, server_hostname=host)
+        secured = context.wrap_socket(raw, server_hostname=host, do_handshake_on_connect=False)
+        def expire():
+            # Timeout socket là theo từng recv; shutdown phá cả slow header/TLS.
+            try:
+                secured.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            finally:
+                secured.close()
+        timer = threading.Timer(max(0, deadline-time.monotonic()), expire)
+        timer.daemon = True
+        timer.start()
+        secured.settimeout(_remaining(deadline))
+        secured.do_handshake()
         connection = http.client.HTTPSConnection(host, 443, context=context)
         # HTTP client dùng socket đã kiểm, không resolve hostname lần nữa.
         connection.sock = secured
@@ -64,8 +96,10 @@ def _https(host, address, path, method, headers, body, deadline, guard):
         connection.request(method, path, body=body, headers=headers)
         secured.settimeout(_remaining(deadline))
         response = connection.getresponse()
-        return _Body(connection, response, secured)
+        return _Body(connection, response, secured, timer)
     except BaseException:
+        if timer:
+            timer.cancel()
         if connection:
             connection.close()
         if secured:
@@ -76,9 +110,12 @@ def _https(host, address, path, method, headers, body, deadline, guard):
 
 
 class TruyenTaiMCP:
-    def __init__(self, *, resolver=None, exchange=None):
+    def __init__(self, *, resolver=None, exchange=None, timeout=30):
+        if type(timeout) not in (int, float) or not 0 < timeout <= 30:
+            raise ValueError("Thời gian MCP phải lớn hơn 0 và không quá 30 giây")
         self.resolver = resolver or socket.getaddrinfo
         self.exchange = exchange or _https
+        self.timeout = timeout
 
     @staticmethod
     def _reply(response, identifier, deadline):
@@ -117,21 +154,17 @@ class TruyenTaiMCP:
     def goi(self, config, method, parameters, guard):
         if method not in ("tools/list", "tools/call") or not isinstance(parameters, dict):
             raise ValueError("Phương thức MCP không được hỗ trợ")
-        parsed = urlsplit(config["url"])
-        host, token = parsed.hostname, config.get("token")
-        if (parsed.scheme != "https" or not host
-                or not re.fullmatch(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+bdsg\.vn", host)
-                or parsed.port not in (None, 443) or parsed.username or parsed.password
-                or parsed.query or parsed.fragment or any(ord(c) < 33 or ord(c) > 126 for c in config["url"])
-                or not isinstance(token, str) or not 1 <= len(token) <= 4096
+        host, path = endpoint_https_bdsg(config["url"])
+        token = config.get("token")
+        if (not isinstance(token, str) or not 1 <= len(token) <= 4096
                 or any(ord(c) < 33 or ord(c) > 126 for c in token)):
             raise ValueError("Endpoint hoặc chứng thư MCP không hợp lệ")
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + self.timeout
         guard()
         addresses = [ipaddress.ip_address(row[4][0]) for row in self.resolver(host, 443, type=socket.SOCK_STREAM)]
         if not addresses or any(not address.is_global or "%" in str(address) for address in addresses):
             raise PermissionError("MCP chỉ được kết nối tới địa chỉ công khai")
-        address, path, session = str(addresses[0]), parsed.path or "/", {}
+        address, session = str(addresses[0]), {}
 
         def rpc(identifier, name, params):
             guard()
@@ -156,7 +189,9 @@ class TruyenTaiMCP:
                             or session and session["MCP-Session-Id"] != remote_session):
                         raise ValueError("Session MCP không hợp lệ")
                     session["MCP-Session-Id"] = remote_session
-                return self._reply(response, identifier, deadline)
+                result = self._reply(response, identifier, deadline)
+                _remaining(deadline)
+                return result
 
         try:
             initialized = rpc(1, "initialize", {"protocolVersion": PROTOCOL, "capabilities": {},

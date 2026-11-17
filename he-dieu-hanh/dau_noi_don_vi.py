@@ -6,7 +6,7 @@ import secrets
 import time
 from urllib.parse import urlsplit
 
-from mcp_truyen_tai import TruyenTaiMCP
+from mcp_truyen_tai import TruyenTaiMCP, endpoint_https_bdsg
 
 
 class DauNoiDonVi:
@@ -73,13 +73,9 @@ class DauNoiDonVi:
         platform, url = data.get("platform_id"), data.get("url")
         if not isinstance(platform, str) or platform not in self.ids or not isinstance(url, str) or len(url) > 1000:
             raise ValueError("Cần chọn nền tảng và endpoint hợp lệ")
-        parsed = urlsplit(url)
-        if (parsed.scheme != "https" or not parsed.hostname
-                or not re.fullmatch(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+bdsg\.vn", parsed.hostname)
-                or parsed.hostname == self.own_host or parsed.port not in (None, 443)
-                or parsed.username or parsed.password or parsed.query or parsed.fragment
-                or any(ord(char) < 33 or ord(char) > 126 for char in url)):
-            raise ValueError("Chỉ nhận endpoint HTTPS miền con BDSG, không nối ngược chính cổng này")
+        host, _path = endpoint_https_bdsg(url)
+        if host == self.own_host:
+            raise ValueError("Không nối ngược chính cổng Thanh Hoá")
         tools, roles = data.get("read_tools", []), data.get("read_roles", ["admin"])
         if (not isinstance(tools, list) or len(tools) > 50 or any(
                 not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,128}", name) for name in tools)
