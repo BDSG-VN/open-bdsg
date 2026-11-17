@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V29 R10 — backend phê duyệt ghi MCP theo đơn vị, đang phát triển](V29-R10-PHE-DUYET-GHI-DON-VI.md).
+
 [V29 R6 — cấu hình, tác vụ và HTTP AI theo đơn vị thử nghiệm](V29-R6-AI-THEO-DON-VI.md).
 
 [V29 R5 — nền hạn mức AI theo đơn vị và cổng công cụ trong nhân](V29-R5-HAN-MUC-AI-DON-VI.md).

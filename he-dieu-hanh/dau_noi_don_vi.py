@@ -4,6 +4,8 @@ import json
 import re
 import secrets
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from urllib.parse import urlsplit
 
 from mcp_truyen_tai import TruyenTaiMCP, endpoint_https_bdsg
@@ -15,6 +17,7 @@ class DauNoiDonVi:
         self.ids = frozenset(product["id"] for product in catalogue)
         self.own_host = urlsplit(origin).hostname
         self.transport = transport if transport is not None else TruyenTaiMCP()
+        self._write_permit = ContextVar('unit_connector_write_permit', default=None)
         with kho.ket_noi() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS unit_connectors(
                 unit_id TEXT NOT NULL REFERENCES don_vi(id),platform_id TEXT NOT NULL,
@@ -38,7 +41,8 @@ class DauNoiDonVi:
         return {key: config[key] for key in (
             "platform_id", "url", "enabled", "revision", "state", "read_tools",
             "read_roles", "checked_at", "discovered_tools", "tools_complete")} | {
-                "has_token": bool(config["token"]), "write_tools": []}
+                "has_token": bool(config["token"]), "write_tools": config.get("write_tools", []),
+                "allow_writes": config.get("allow_writes", False)}
 
     def list(self, actor):
         with self.kho.ket_noi() as db:
@@ -67,9 +71,13 @@ class DauNoiDonVi:
         if not isinstance(data, dict) or set(data) - {
                 "platform_id", "url", "token", "read_tools", "read_roles", "write_tools", "allow_writes"}:
             raise ValueError("Cấu hình đầu nối đơn vị không hợp lệ")
-        if (not isinstance(data.get("write_tools", []), list) or data.get("write_tools")
-                or data.get("allow_writes", False) is not False):
-            raise ValueError("Công cụ ghi cần cơ chế phê duyệt theo đơn vị trước khi được bật")
+        write_tools, allow_writes = data.get("write_tools", []), data.get("allow_writes", False)
+        if (type(allow_writes) is not bool or not isinstance(write_tools, list)
+                or len(write_tools) > 50 or any(not isinstance(name, str) or not re.fullmatch(
+                    r"[A-Za-z0-9_.:/-]{1,128}", name) for name in write_tools)
+                or len(set(write_tools)) != len(write_tools)
+                or bool(write_tools) != allow_writes):
+            raise ValueError("Công cụ ghi cần danh sách cụ thể và cấp quyền tường minh")
         platform, url = data.get("platform_id"), data.get("url")
         if not isinstance(platform, str) or platform not in self.ids or not isinstance(url, str) or len(url) > 1000:
             raise ValueError("Cần chọn nền tảng và endpoint hợp lệ")
@@ -84,6 +92,8 @@ class DauNoiDonVi:
         if (not isinstance(roles, list) or not roles or len(roles) > 2
                 or any(role not in ("admin", "member") for role in roles) or len(set(roles)) != len(roles)):
             raise ValueError("Vai trò đọc phải được cấp rõ trong đơn vị")
+        if set(tools) & set(write_tools):
+            raise ValueError("Công cụ ghi không được nằm trong danh sách đọc")
         token = data.get("token", "")
         if not isinstance(token, str) or len(token) > 4096 or any(ord(c) < 33 or ord(c) > 126 for c in token):
             raise ValueError("Chứng thư đầu nối không hợp lệ")
@@ -93,6 +103,7 @@ class DauNoiDonVi:
             token = previous["token"]
         return {"platform_id": platform, "url": url, "token": token, "enabled": True,
                 "read_tools": list(tools), "read_roles": list(roles), "revision": secrets.token_hex(16),
+                "write_tools": list(write_tools), "allow_writes": allow_writes,
                 "state": "da-khai-bao", "checked_at": None, "discovered_tools": [], "tools_complete": False}
 
     def save(self, actor, data):
@@ -115,6 +126,7 @@ class DauNoiDonVi:
             if current is None:
                 raise ValueError("Chưa khai báo đầu nối trong đơn vị")
             current.update(enabled=False, token="", state="da-ngat", read_tools=[],
+                           write_tools=[], allow_writes=False,
                            discovered_tools=[], tools_complete=False, checked_at=None,
                            revision=secrets.token_hex(16))
             db.execute("UPDATE unit_connectors SET revision=?,document=? WHERE unit_id=? AND platform_id=?",
@@ -198,19 +210,61 @@ class DauNoiDonVi:
                     for key, item in value.items()}
         return value
 
+    @staticmethod
+    def _write_digest(platform_id, tool, arguments):
+        return json.dumps([platform_id, tool, arguments], sort_keys=True, ensure_ascii=False, allow_nan=False)
+
+    @staticmethod
+    def _write_grant(config, tool):
+        if (config['state'] != 'da-xac-minh' or not config.get('allow_writes', False)
+                or tool not in config.get('write_tools', []) or tool not in config['discovered_tools']):
+            raise PermissionError('Công cụ ghi chưa được cấp và xác minh')
+
+    def prepare_write(self, actor, platform_id, tool):
+        """Thành viên chỉ chụp revision cho dự thảo; chưa nhận quyền gửi mạng."""
+        _scope, config = self._capture(actor, platform_id)
+        self._write_grant(config, tool)
+        return {'revision': config['revision']}
+
+    @contextmanager
+    def authorization(self, actor, platform_id, tool, arguments, revision, guard):
+        """Permit nội bộ cho một claim phê duyệt, không là tham số HTTP/JSON."""
+        if not callable(guard):
+            raise PermissionError('Cần kiểm phê duyệt còn hiệu lực')
+        scope, config = self._capture(actor, platform_id, admin=True)
+        self._write_grant(config, tool)
+        if config['revision'] != revision:
+            raise PermissionError('Cấu hình khác bản được duyệt')
+        permit = {'actor': actor['id'], 'scope': scope, 'revision': revision,
+                  'payload': self._write_digest(platform_id, tool, arguments),
+                  'guard': guard, 'used': False}
+        token = self._write_permit.set(permit)
+        try:
+            yield
+        finally:
+            self._write_permit.reset(token)
+
     def call(self, actor, platform_id, tool, arguments, ghi=False, *, expected_revision=None, guard=None):
-        if ghi:
-            raise PermissionError("Chưa mở công cụ ghi khi phê duyệt đơn vị chưa sẵn sàng")
         if not isinstance(tool, str) or not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,128}", tool):
             raise ValueError("Cần tên công cụ cụ thể")
         if not isinstance(arguments, dict) or len(json.dumps(arguments, allow_nan=False).encode()) > 48*1024:
             raise ValueError("Tham số công cụ phải là object giới hạn 48 KiB")
-        scope, config = self._capture(actor, platform_id, tool=tool)
+        permit = self._write_permit.get() if ghi else None
+        if ghi and (permit is None or permit['used'] or permit['actor'] != actor.get('id')
+                or permit['payload'] != self._write_digest(platform_id, tool, arguments)):
+            raise PermissionError('Công cụ ghi cần phê duyệt đúng nội dung, chỉ thực thi một lần')
+        scope, config = self._capture(actor, platform_id, admin=ghi, tool=None if ghi else tool)
+        if ghi:
+            self._write_grant(config, tool)
+            if scope != permit['scope'] or config['revision'] != permit['revision']:
+                raise PermissionError('Phạm vi hoặc cấu hình khác bản được duyệt')
+            permit['used'] = True
         if expected_revision is not None and expected_revision != config['revision']:
             raise PermissionError('Cấu hình đầu nối khác bản đã giao cho tác vụ')
-        connector_guard = self._guard(actor, scope, config)
+        connector_guard = self._guard(actor, scope, config, admin=ghi)
         task_guard = guard
         def guard():
+            if ghi: permit['guard']()
             if task_guard is not None: task_guard()
             connector_guard()
         try:

@@ -33,6 +33,7 @@ from dang_nhap_google import DangNhapGoogle, LoiDangNhapGoogle
 from runtime_tac_vu import RuntimeTacVu
 from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
+from hanh_dong_don_vi import HanhDongDonVi
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -48,6 +49,7 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
+    "ket_noi.ghi", "hanh_dong.danh_sach", "hanh_dong.de_xuat", "hanh_dong.duyet",
     "nen_tang.ket_noi", "ket_noi.doc", "cau_hinh.dau_noi", "cau_hinh.luu_dau_noi",
     "cau_hinh.kiem_tra_dau_noi", "cau_hinh.ngat_dau_noi",
     "mo_dun.danh_sach", "nhan_su.danh_sach",
@@ -131,7 +133,7 @@ class UngDung:
             self.google_office.forget(identity)
 
         self.core.on_revoke = revoke
-        self.actions = HanhDong(self.kho, self.core, self.tasks,self.browser)
+        self.actions = None if unit_preview else HanhDong(self.kho, self.core, self.tasks,self.browser)
         self.schedules = LichCongViec(self.kho, self.core, self.tasks)
         self.delegation = PhoiHop(self.kho, self.core, self.tasks)
         self.model_settings = CauHinhMoHinh(self.kho, self.tasks)
@@ -149,6 +151,11 @@ class UngDung:
             self.tasks.scoped_connectors = self.connectors
             self.core.connection_call = self.connectors.call
             self.core.connection_summary = self.connectors.summary
+            self.actions = HanhDongDonVi(self.kho, self.core, self.tasks, self.units, self.connectors)
+            def cancel_scoped_action(owner, reference):
+                revoke_browser(owner, reference)
+                self.actions.cancel_task(owner, reference)
+            self.tasks.on_cancel = cancel_scoped_action
         self.core.dang_ky_cong_viec(
             self.tasks,
             self.model_settings.save,
@@ -180,7 +187,7 @@ class UngDung:
                     ghi=[tool["ten"] for tool in tools if tool["ghi"]]
                         + (["don_vi.chia_se_du_an"] if role != "agent" else [])
                         + (["mo_hinh.luu", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi",
-                            "cau_hinh.ngat_dau_noi"] if role == "operator" else []))
+                            "cau_hinh.ngat_dau_noi", "ket_noi.ghi", "hanh_dong.duyet"] if role == "operator" else []))
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):

@@ -94,6 +94,38 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertNotIn("unit_scope", json.dumps(me))
         self.assertEqual(self.value(self.tool("du_an.danh_sach"))["projects"][0]["id"], project["id"])
 
+    def test_ghi_mcp_qua_http_can_de_xuat_va_admin_duyet_dung_digest(self):
+        one = self.units[0]
+        self.app.units.set_member(self.root, {'unit_id': one, 'identity': 'nguoi-b', 'role': 'member'})
+        transport = TransportTongHop()
+        self.app.connectors.transport = transport
+        self.value(self.tool('cau_hinh.luu_dau_noi', {'platform_id': 'bdsg_crm',
+            'url': 'https://crm.bdsg.vn/mcp', 'token': 'synthetic-http-write-key',
+            'read_tools': ['crm.list'], 'write_tools': ['crm.delete'], 'allow_writes': True}))
+        self.value(self.tool('cau_hinh.kiem_tra_dau_noi', {'platform_id': 'bdsg_crm'}))
+        transport.calls.clear()
+        task = self.value(self.tool('cong_viec.tao', {'prompt': 'Tong hop thu nghiem HTTP',
+            'template': 'tong-quan', 'module_ids': ['bdsg_crm']}, who='nguoi-b'))
+        deadline = time.monotonic()+5
+        while time.monotonic() < deadline:
+            detail = self.value(self.request('/api/task?id='+task['id'], who='nguoi-b', unit=one))
+            if detail['status'] == 'completed': break
+            time.sleep(.01)
+        self.assertEqual(detail['status'], 'completed')
+        arguments = {'platform_id': 'bdsg_crm', 'tool': 'crm.delete', 'arguments': {'record': 'synthetic-only'}}
+        self.assertFalse(self.tool('ket_noi.ghi', arguments)[1]['ok'])
+        action = self.value(self.tool('hanh_dong.de_xuat', {
+            'task_id': task['id'], 'tool': 'ket_noi.ghi', 'arguments': arguments}, who='nguoi-b'))
+        self.assertEqual(transport.calls, [])
+        decision = {'id': action['id'], 'digest': action['digest'], 'approve': True}
+        self.assertFalse(self.tool('hanh_dong.duyet', decision, who='nguoi-b')[1]['ok'])
+        result = self.value(self.tool('hanh_dong.duyet', decision))
+        self.assertEqual(result['status'], 'completed')
+        self.assertEqual(len(transport.calls), 1)
+        self.assertNotIn('synthetic-http-write-key', json.dumps(result))
+        self.assertFalse(self.tool('hanh_dong.duyet', decision)[1]['ok'])
+        self.assertEqual(len(transport.calls), 1)
+
     def test_workspace_metadata_and_own_membership_versions(self):
         guest = self.request("/api/me")[1]
         self.assertEqual(guest["workspace"]["mode"], "units")
