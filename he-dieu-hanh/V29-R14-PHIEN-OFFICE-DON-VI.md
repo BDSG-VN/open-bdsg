@@ -29,7 +29,7 @@ hỏng làm khởi tạo thất bại và không tự bị ghi đè; yêu cầu 
 tạo lại tệp bị mất. Đây chưa là nghiệm thu phục hồi engine hoặc toàn máy.
 
 Kiểm cục bộ qua phương thức công khai `SoanThaoOffice`, đo 18/11/2026:
-`thu_phien_office_don_vi.py` có 20 bài đạt về nguồn ký, hai đơn vị, rejoin,
+`thu_phien_office_don_vi.py` có 24 bài đạt về nguồn ký, hai đơn vị, rejoin,
 quyền đổi trong scan/fetch, callback lưu, participant khác mất quyền,
 restart/backup/restore, schema cũ, tệp thế hệ hỏng/bị mất và lệnh lưu bên dưới.
 `thu_office_tich_hop.py` có 13 bài legacy đạt. Tệp Office thật và chữ ký thật;
@@ -60,6 +60,21 @@ cấp công cụ/HTTP/UI cho phương thức này; chưa thử ngắt cache/WebS
 engine thật. Mất quyền trong lúc đợi lệnh khiến phản hồi bị từ chối.
 
 ## Chưa mở để sử dụng
+
+Ngày 18/11/2026 đã thêm profile xác thực engine theo đường dẫn trong chế
+độ đơn vị thử nghiệm. Mã giao diện chung yêu cầu danh tính còn hiệu lực;
+cache và đường doc/WebSocket phải mang key phiên hợp lệ. Backend khôi
+phục đơn vị từ tham chiếu key phía máy chủ rồi kiểm người tham gia và quyền
+ghi tệp. Header đơn vị tường minh vẫn phải khớp; không lấy vai chủ quản
+làm quyền đọc tài liệu. Đường chưa có hợp đồng, thay key qua query,
+traversal hoặc mã hóa nhiều lớp bị từ chối.
+
+`thu_don_vi_http.py` có 20 bài đạt ngày 18/11/2026, gồm một bài mới đi qua
+HTTP/cookie thật cho endpoint xác thực engine: key hợp lệ được phép;
+khách, chủ quản không tham gia, người khác và đơn vị sai bị từ chối.
+Nguồn, callback và công cụ mở editor vẫn đóng trong bản thử. Đây chưa là
+nghiệm thu proxy nginx, cache/service-worker hay WebSocket của engine thật,
+và chưa triển khai R14 lên máy chủ.
 
 Còn kiểm force-save/callback/reconnect với engine thật và forcesave tự động
 không do request BDSG; phục hồi/vòng đời engine/cache bên ngoài gateway;

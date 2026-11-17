@@ -339,7 +339,8 @@ def tao_may_chu(app, port=8766):
                 return True
             allowed = ({"/api/me", "/api/sessions", "/api/units", "/api/units/members",
                         "/api/document", "/api/tasks", "/api/task", "/api/suc-khoe", "/api/ready",
-                        "/api/catalogue", "/api/model", "/api/modules"} if method == "GET" else
+                        "/api/catalogue", "/api/model", "/api/modules",
+                        "/api/office-engine-auth"} if method == "GET" else
                        {"/api/login", "/api/logout", "/api/tools", "/api/upload", "/api/units",
                         "/api/units/members", "/api/sessions/rename", "/api/sessions/revoke",
                         "/api/sessions/revoke-others"})
@@ -653,7 +654,15 @@ def tao_may_chu(app, port=8766):
                 except (ValueError, PermissionError):
                     return self.send(403, {"error": "Không có quyền tải nguồn Office"})
             if path == "/api/office-engine-auth":
-                allowed = app.office_editor.engine_access(self.actor(), self.headers.get("X-BDSG-Engine-Path", ""))
+                actor = self.actor()
+                # Iframe dùng cookie và lease phía máy chủ; nếu client khai phạm vi
+                # riêng thì vẫn phải xác minh, không bỏ qua phạm vi không khớp.
+                if app.unit_preview and any(self.headers.get(name) is not None for name in
+                        ("X-BDSG-Unit", "X-BDSG-Unit-Epoch", "X-BDSG-Unit-Revision")):
+                    actor = self.scoped_actor(actor)
+                    if actor is None:
+                        return
+                allowed = app.office_editor.engine_access(actor, self.headers.get("X-BDSG-Engine-Path", ""))
                 return self.send(200 if allowed else 403)
             if path == "/mcp":
                 if not self.actor(True):

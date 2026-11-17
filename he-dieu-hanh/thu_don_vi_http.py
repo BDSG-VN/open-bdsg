@@ -82,6 +82,33 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertTrue(body["ok"], body)
         return body["ket_qua"]
 
+    def test_office_engine_auth_cookie_restores_key_scope_and_rejects_substitution(self):
+        from thu_office_tich_hop import Scanner, SECRET
+        self.app.office_editor.secret=SECRET
+        self.app.office.scanner=Scanner()
+        actor=self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},self.units[0])
+        project=self.app.projects.create(actor,{'name':'Du an Engine HTTP'})['id']
+        file=self.app.office_editor.create(actor,{'project_id':project,'name':'thu.docx'})
+        opened=self.app.office_editor.open(actor,{'id':file['id']})
+        path='/office-docs/doc/'+opened['key']+'/c/websocket'
+        headers={'X-BDSG-Engine-Path':path}
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',headers=headers)[0],200)
+        for who in (None,'chu-quan','nguoi-b'):
+            self.assertEqual(self.request('/api/office-engine-auth',who=who,headers=headers)[0],403)
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',unit=self.units[1],headers=headers)[0],403)
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',
+                         headers={**headers,'X-BDSG-Unit-Epoch':'1'})[0],403)
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',unit=self.units[0],
+                         headers={**headers,'X-BDSG-Unit-Epoch':'1','X-BDSG-Unit-Revision':'999'})[0],409)
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',
+                         headers={'X-BDSG-Engine-Path':path+'?shardkey=bdsg-'+'f'*32})[0],403)
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',
+                         headers={'X-BDSG-Engine-Path':'/office-docs/command'})[0],403)
+        # Nguồn/callback và công cụ tạo/mở vẫn chưa được bật bởi auth endpoint.
+        self.assertEqual(self.request('/api/office-source?key='+opened['key'],who='nguoi-a')[0],403)
+        self.assertEqual(self.request('/api/office-callback',{'status':2},who='nguoi-a')[0],403)
+        self.assertEqual(self.tool('van_phong.mo_soan_thao',{'id':file['id']})[0],403)
+
     def test_business_requests_cookie_scope_origin_and_legacy_alias(self):
         first, second = self.units
         payload = {'title':'Nhu cau thu nghiem HTTP', 'sector':'bat-dong-san',

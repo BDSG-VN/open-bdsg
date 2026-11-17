@@ -325,6 +325,62 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
         with self.assertRaises((PermissionError,ValueError)):
             self.editor.progress(self.b,{'key':first['key']})
 
+    def test_engine_key_restores_cookie_actor_scope_without_trusting_global_role(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        cookie_actor={'id':'nguoi-a','role':'operator','name':'Nguoi A'}
+        path='/office-docs/cache/files/'+opened['key']+'_1/output.docx'
+        self.assertTrue(self.editor.engine_access(cookie_actor,path))
+        self.assertTrue(self.editor.engine_access(cookie_actor,'/office-docs/10.0.0-1/doc/'+opened['key']+'/c/websocket'))
+        self.assertFalse(self.editor.engine_access(self.b,path))
+        self.assertFalse(self.editor.engine_access(self.root,path))
+
+    def test_engine_static_code_is_common_but_requires_live_web_identity(self):
+        cookie_actor={'id':'nguoi-a','role':'operator','name':'Nguoi A'}
+        for path in ('/office-docs/web-apps/apps/api/documents/api.js',
+                     '/office-docs/10.0.0-1/sdkjs/common/AllFonts.js',
+                     '/office-docs/fonts/font.woff','/office-docs/meta/formats'):
+            self.assertTrue(self.editor.engine_access(cookie_actor,path),path)
+            for other in (None,{}, {'id':'khong-co','role':'operator'},
+                          {**cookie_actor,'mcp_delegation':None}):
+                self.assertFalse(self.editor.engine_access(other,path),path)
+        self.app.kho.thu_hoi_agent('nguoi-a')
+        self.assertFalse(self.editor.engine_access(cookie_actor,'/office-docs/sdkjs/app.js'))
+
+    def test_engine_unknown_routes_and_path_or_query_key_substitution_are_denied(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        actor={'id':'nguoi-a','role':'operator','name':'Nguoi A'}
+        key=opened['key'];other='bdsg-'+'f'*32
+        base='/office-docs/cache/files/'+key+'_1/output.docx'
+        self.assertTrue(self.editor.engine_access(actor,base+'?shardkey='+key+'&expires=1&md5=synthetic'))
+        bad=[None,13,'https://elsewhere.test'+base,base+'#fragment',
+             '/office-docs/web-apps/../cache/files/'+key+'/output.docx',
+             '/office-docs/web-apps/%2e%2e/cache/files/'+key+'/output.docx',
+             '/office-docs/web-apps/%252e%252e/cache/files/'+key+'/output.docx',
+             '/office-docs//cache/files/'+key+'/output.docx',base+'?docid='+other,
+             base+'?shardkey='+other,base+'?key='+key+'&key='+key,
+             base+'?%256bey='+other,base+'?WOPISrc=https://unused.test',
+             '/office-docs/cache/files/'+key+'/'+other+'/output.docx',
+             '/office-docs/doc/'+key+'_1/c/websocket',
+             '/office-docs/cache/files/not-issued/output.docx',
+             '/office-docs/web-apps/..\\cache/secret',
+             '/office-docs/web-apps/%0aasset.js']
+        bad.extend('/office-docs/'+p for p in ('command','internal/status','info/status','ai-proxy/chat','uploadimage','ConvertService.ashx','wopi/files/x'))
+        for path in bad:
+            with self.subTest(path=path):self.assertFalse(self.editor.engine_access(actor,path))
+
+    def test_engine_lease_does_not_revive_after_membership_rejoin(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        actor={'id':'nguoi-a','role':'operator','name':'Nguoi A'}
+        path='/office-docs/doc/'+opened['key']+'/c/websocket'
+        self.assertTrue(self.editor.engine_access(actor,path))
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+        member={'unit_id':self.units[0],'identity':'nguoi-a'}
+        self.app.units.set_member(self.root,{**member,'role':'revoke'})
+        self.app.units.set_member(self.root,{**member,'role':'admin'})
+        self.assertFalse(self.editor.engine_access(actor,path))
+        fresh=self.editor.open(self.actor(self.units[0]),{'id':self.file['id']})
+        self.assertTrue(self.editor.engine_access(actor,'/office-docs/doc/'+fresh['key']+'/c/websocket'))
+
     def test_rejoin_does_not_revive_source_and_reopen_rotates_key(self):
         first=self.editor.open(self.a,{'id':self.file['id']})
         self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})

@@ -17,6 +17,7 @@ from chu_ky_office import sign, verify
 from kiem_tep_office import kiem_tep
 from van_phong import LoiXungDotVanPhong
 from phien_office_don_vi import PhienOfficeDonVi
+from duong_engine_office import phan_loai
 
 
 class SoanThaoOffice:
@@ -201,6 +202,8 @@ class SoanThaoOffice:
             return raw
 
     def engine_access(self, actor, path):
+        if self.scopes.units is not None:
+            return self._scoped_engine_access(actor,path)
         if not actor:
             return False
         if len(path) > 8192:
@@ -225,6 +228,26 @@ class SoanThaoOffice:
             except (ValueError, PermissionError):
                 return False
         return True
+
+    def _scoped_engine_access(self,actor,path):
+        if not isinstance(actor,dict) or 'mcp_delegation' in actor:
+            return False
+        try:
+            kind,key=phan_loai(path)
+            with self.kho.ket_noi() as db:
+                db.execute('BEGIN')
+                # Mã giao diện là tài nguyên chung, không phải quyền tài liệu.
+                # Dùng đúng kiểm danh tính còn hiệu lực của đơn vị, không tự
+                # suy quyền nội dung từ vai root hoặc từ cookie toàn cổng.
+                self.scopes.units._identity(db,actor)
+                if kind=='static':return True
+                session=self._row(db,key)
+                current=actor if 'unit_scope' in actor else None
+                scoped=self.scopes.actor(key,actor['id'],db,current=current)
+                self.office._file(scoped,session['file_id'],db,True)
+                return True
+        except (ValueError,PermissionError,OSError):
+            return False
 
     def save(self, actor, args):
         if self.scopes.units is not None:
