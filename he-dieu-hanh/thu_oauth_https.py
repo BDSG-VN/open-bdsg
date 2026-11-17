@@ -101,8 +101,13 @@ class ThuOAuthHTTPS(unittest.TestCase):
                                       'nguoi-thu', self.unit)
         self.assertEqual(status, 200)
         self.project = body['ket_qua']['id']
+        status, body, _ = self.request('/api/tools', {'name': 'du_an.tao', 'arguments': {'name': 'Du an ngoai consent'}},
+                                      'nguoi-thu', self.unit)
+        self.assertEqual(status, 200)
+        self.other_project = body['ket_qua']['id']
         status, self.client, _ = self.request('/api/oauth/clients', {'name': 'SDK TLS thu',
-            'redirect_uris': ['https://client.test/callback'], 'allowed_tools': ['du_an.danh_sach']}, 'chu-quan')
+            'redirect_uris': ['https://client.test/callback'],
+            'allowed_tools': ['du_an.danh_sach', 'nen_tang.danh_sach']}, 'chu-quan')
         self.assertEqual(status, 200)
 
     def stop_server(self):
@@ -154,6 +159,9 @@ class ThuOAuthHTTPS(unittest.TestCase):
         self.assertEqual(self.request('/api/ready')[0], 200)
 
     def test_https_cookie_pkce_exchange_then_sdk_scope_and_revocation(self):
+        status, body, _ = self.request('/api/tools', {'name': 'du_an.danh_sach', 'arguments': {}}, 'nguoi-thu', self.unit)
+        self.assertEqual(status, 200)
+        self.assertCountEqual([row['id'] for row in body['ket_qua']['projects']], [self.project, self.other_project])
         code = self.code()
         self.assertEqual(self.exchange(code, resource='https://other.test/mcp')[0], 400)
         status, token, headers = self.exchange(code)
