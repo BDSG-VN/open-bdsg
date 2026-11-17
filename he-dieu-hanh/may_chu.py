@@ -37,6 +37,7 @@ from ket_noi_chatgpt import KetNoiChatGPT
 from van_hanh_may_chu import VanHanhMayChu, MayChuCoGioiHan
 from thiet_bi_may_chu import ThietBiMayChu
 from kiem_tra_khoi_phuc import read_status
+from tinh_trang_offsite import read_offsite_status
 from tich_hop_viet_nam import TichHopVietNam
 from vn_dong_bo import DongBoVietNam
 
@@ -110,7 +111,8 @@ class UngDung:
         if not actor or actor.get("role") != "quan-tri":
             raise PermissionError("Chỉ chủ quản xem máy chủ")
         return {"node": self.node.snapshot(), "operations": self.operations.report(),
-                "recovery": read_status(os.environ.get("BDSG_RECOVERY_STATUS_FILE"))}
+                "recovery": read_status(os.environ.get("BDSG_RECOVERY_STATUS_FILE")),
+                "offsite": read_offsite_status(os.environ.get("BDSG_OFFSITE_STATUS_FILE"))}
 
     def configure_ai(self, actor, args):
         # Giữ cùng khóa với tạo/tiếp tục tác vụ để đổi nhà cung cấp không cắt lượt đang chạy.

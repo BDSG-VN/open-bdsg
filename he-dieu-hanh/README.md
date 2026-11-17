@@ -1,5 +1,8 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V28 R2 — cổng phục hồi và biên nhận ngoài máy](V28-R2-PHUC-HOI-OFFSITE.md).
+[V28 — quản trị nút máy chủ và phục hồi dữ liệu](V28-VAN-HANH.md).
+
 [V27 — hệ điều hành ứng dụng, nhiều cửa sổ và trình duyệt](V27-HE-DIEU-HANH-UNG-DUNG.md).
 [Lộ trình hệ sinh thái và máy chủ đầu tiên](LO-TRINH-HE-SINH-THAI-BDSG.md).
 

@@ -42,3 +42,16 @@ test("Nhãn máy và số liệu được escape trước khi vẽ", async () =>
   const h=harness(async()=>data);await h.app.open();
   assert.doesNotMatch(h.main.innerHTML,/<script>/);assert.match(h.main.innerHTML,/&lt;script&gt;/);
 });
+test("Bản ngoài máy đã kiểm vẫn phân biệt với lịch tự động", async () => {
+  const data=fixture();data.offsite={status:"verified",verified_at:1000,backup_age_seconds:3600,decryption_verified:true};
+  const h=harness(async()=>data);await h.app.open();
+  assert.match(h.main.innerHTML,/Đã có bản được kiểm/);
+  assert.match(h.main.innerHTML,/Checksum và giải mã đạt/);
+  assert.match(h.main.innerHTML,/Chưa xác minh tự động/);
+});
+test("Bản ngoài máy quá cũ không được hiển thị như bản còn mới", async () => {
+  const data=fixture();data.offsite={status:"stale",verified_at:1000,backup_age_seconds:300000,decryption_verified:false};
+  const h=harness(async()=>data);await h.app.open();
+  assert.match(h.main.innerHTML,/Bản sao đã cũ/);
+  assert.doesNotMatch(h.main.innerHTML,/Đã có bản được kiểm|Checksum và giải mã đạt/);
+});
