@@ -1,7 +1,8 @@
-# V29 R10 — phê duyệt ghi MCP theo đơn vị, đang phát triển
+# V29 R10 — phê duyệt ghi MCP theo đơn vị thử nghiệm
 
-Ngày 17/11/2026, tiếp [R9](V29-R9-TAC-VU-MCP-DON-VI.md). Backend đầu tiên đã
-có; chưa nhận R10 hoàn tất, chưa triển khai thay R9 hoặc bật tenant production.
+Ngày 17/11/2026, tiếp [R9](V29-R9-TAC-VU-MCP-DON-VI.md). Có backend, giao diện
+và agent lập dự thảo. Chế độ đơn vị vẫn thử nghiệm; mã không tự bật tenant
+production, tạo đơn vị thật hoặc chuyển dữ liệu đang vận hành.
 
 ## Hợp đồng backend
 
@@ -45,7 +46,7 @@ quả applied/not-applied cùng ghi chú kiểm chứng. Thao tác này không g
 và không tự gửi lại; đây là xác nhận do người quản trị nhập, chưa là hệ thống
 tự kiểm upstream. Muốn thử lại cần đề xuất/duyệt riêng sau đối soát.
 
-## Giao diện và agent — đang nghiệm thu
+## Giao diện và agent
 
 Kết nối có trường công cụ ghi và ô cấp quyền riêng, kiểm không trùng danh sách
 đọc. Xưởng việc đơn vị chỉ mở Phê duyệt: chọn tác vụ/mô-đun/tool đã cấp, nhập
@@ -63,13 +64,22 @@ Ngày 17/11/2026: bảy bài agent qua MoHinhLiteLLM thật/HTTP opener tổng h
 đạt; gồm opt-in, member, không token, từ chối tool/duyệt/đối soát, connector/AI
 đổi sau provider và followup giữ grant cũ. Không gọi API trả phí.
 
-## Cổng còn lại trước khi phát hành R10
+## Bằng chứng và cổng phát hành
 
-Kiểm browser điện thoại/máy tính, rà soát giao diện và agent mới đang thực
-hiện; chưa nhận đủ nghiệm thu. Chưa mở browser action,
-kinh doanh legacy hoặc inbound MCP theo đơn vị. Rà soát độc lập, CI Linux,
-backup/restore action, snapshot/rollback và hậu kiểm chưa được coi là đạt khi
-chưa có bằng chứng tương ứng. Không dùng endpoint thật hoặc API tính phí để thử.
+Ngày 17/11/2026: 23 bài phê duyệt và bảy bài agent đạt. Browser HTTPS loopback
+qua SQLite/gateway thật đạt mười luồng: cấu hình ghi, lưu/từ chối/duyệt, member,
+unknown/đối soát, agent opt-in, lỗi/thử lại, late response đổi đơn vị, loading,
+owner-member và đúng chứng thư đơn vị ngoài ngữ cảnh AI. Dữ liệu, provider và
+MCP tổng hợp; không endpoint thật/API tính phí. Kiểm computed style khóa cỡ
+label14px/input16px trong vùng mới. Hai lỗi unknown được gửi lại và hủy lượt
+completed không chặn draft muộn đã tái lập/sửa và được reviewer kiểm lại.
+
+Trước mỗi phát hành cần CI exact-head, finish review, source manifest,
+snapshot/rollback và hậu kiểm dữ liệu/quyền/phục hồi. Bằng chứng vận hành riêng
+không đưa vào Git. Bài snapshot/restore action giữ đúng digest, membership và
+chứng thư, context issuer cũ bị từ chối. Chưa mở browser action, kinh doanh
+legacy hoặc inbound MCP theo đơn vị; Office/Google, workflow/runtime,
+audit/retention, MFA và migration/cutover còn tiếp trong lộ trình đầy đủ.
 
 ```sh
 python3 -m unittest discover -s he-dieu-hanh -p 'thu_hanh_dong_don_vi.py' -v
