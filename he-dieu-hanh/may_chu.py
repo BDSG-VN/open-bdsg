@@ -34,6 +34,7 @@ from runtime_tac_vu import RuntimeTacVu
 from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
 from hanh_dong_don_vi import HanhDongDonVi
+from mcp_uy_quyen_don_vi import UyQuyenMCPDonVi
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -188,6 +189,9 @@ class UngDung:
                         + (["don_vi.chia_se_du_an"] if role != "agent" else [])
                         + (["mo_hinh.luu", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi",
                             "cau_hinh.ngat_dau_noi", "ket_noi.ghi", "hanh_dong.duyet", "hanh_dong.doi_soat"] if role == "operator" else []))
+        self.inbound_mcp = (UyQuyenMCPDonVi(self.kho, self.units, self.core, self.projects, origin=self.origin)
+                            if unit_preview else None)
+        self.core.delegated_calls = self.inbound_mcp
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):

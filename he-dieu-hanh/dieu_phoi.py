@@ -199,6 +199,7 @@ class DieuPhoi:
         self.draft_context = contextvars.ContextVar('bdsg_draft_context', default=None)
         self.lock = threading.RLock()
         self.verify_actor = None
+        self.delegated_calls = None
         self.connections = CongMCP(connections, catalogue)
         self.connection_call = self.connections.goi
         self.connection_summary = lambda actor: self.connections.tom_tat()
@@ -997,6 +998,14 @@ class DieuPhoi:
         return self.connection_call(actor, platform, tool, arguments, ghi)
 
     def goi(self, actor, name, args, *, tool_guard=None, expected_revision=None, draft_context=None):
+        delegated = isinstance(actor, dict) and 'mcp_delegation' in actor
+        if delegated:
+            try:
+                if self.delegated_calls is None:
+                    raise PermissionError()
+                self.delegated_calls.authorize_call(actor, name, args)
+            except (PermissionError, ValueError):
+                return {'ok': False, 'ly_do': 'Lời gọi ngoài phạm vi ủy quyền MCP còn hiệu lực', 'loai_loi': 'quyen'}
         if self.verify_actor and not self.verify_actor(actor):
             return {
                 "ok": False,
@@ -1014,6 +1023,11 @@ class DieuPhoi:
                     "ly_do": "Danh tính đã bị thu hồi",
                     "loai_loi": "xac-thuc",
                 }
+            if delegated:
+                try:
+                    result = self.delegated_calls.filter_result(actor, name, args, result)
+                except (PermissionError, ValueError):
+                    return {'ok': False, 'ly_do': 'Ủy quyền MCP đã thay đổi; không trả kết quả cũ', 'loai_loi': 'quyen'}
             return result
         finally:
             self.draft_context.reset(draft_token)
@@ -1021,6 +1035,9 @@ class DieuPhoi:
             self.actor.reset(token)
 
     def mcp(self, actor, payload):
+        if isinstance(actor, dict) and 'mcp_delegation' in actor:
+            return {'jsonrpc': '2.0', 'id': payload.get('id'), 'error': {
+                'code': -32001, 'message': 'Credential đơn vị cần dispatcher MCP có phạm vi'}}
         if self.verify_actor and not self.verify_actor(actor):
             return {
                 "jsonrpc": "2.0",
