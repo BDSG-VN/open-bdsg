@@ -93,6 +93,7 @@ const stages = [
   ["kinh-doanh", "Kinh doanh", "Mở rộng cơ hội tăng trưởng"],
 ];
 const titles = {
+  account: "Tài khoản",
   system: "Máy chủ",
   integrations: "Quản lý kết nối",
   support: "Hỗ trợ khách hàng",
@@ -397,6 +398,7 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  window.BDSGSessions?.leave();
   window.BDSGNode?.leave();
   if (location.pathname !== "/workspace.html" && window.BDSGDesktop) {
     if (!location.hash || location.hash === "#desktop") {
@@ -435,6 +437,7 @@ function render() {
     return;
   }
   ({
+    account: () => window.BDSGSessions?.open(),
     system: () => window.BDSGNode?.open(),
     integrations: () => window.BDSGConnectors?.open(),
     support: () => window.BDSGSupport?.open(),
@@ -746,6 +749,7 @@ function clearPrivateState() {
   refreshVersion++;
   state.user = null;
   window.BDSGDesktop?.reset();
+  window.BDSGSessions?.reset();
   window.BDSGNode?.reset();
   window.BDSGReadBroker?.reset();
   window.BDSGProjects?.clearSelected();

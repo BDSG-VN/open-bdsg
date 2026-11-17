@@ -7,6 +7,7 @@ import os
 import secrets
 import sys
 import signal
+import sqlite3
 import threading
 from http.cookies import SimpleCookie, CookieError
 from http.server import BaseHTTPRequestHandler
@@ -38,6 +39,7 @@ from van_hanh_may_chu import VanHanhMayChu, MayChuCoGioiHan
 from thiet_bi_may_chu import ThietBiMayChu
 from kiem_tra_khoi_phuc import read_status
 from tinh_trang_offsite import read_offsite_status
+from phien_web import PhienWeb
 from tich_hop_viet_nam import TichHopVietNam
 from vn_dong_bo import DongBoVietNam
 
@@ -52,6 +54,7 @@ class UngDung:
             )["products"]
         )
         self.kho = Kho(data)
+        self.web_sessions = PhienWeb(self.kho)
         self.node = ThietBiMayChu(self.kho.root, node_id=os.environ.get("BDSG_NODE_ID"))
         self.customer_support = HoTroKhach(self.catalogue)
         self.chatgpt_connection = KetNoiChatGPT(self.kho)
@@ -209,6 +212,43 @@ def tao_may_chu(app, port=8766):
                 return False
             return True
 
+        def client_hint(self):
+            agent = self.headers.get("User-Agent", "")[:512].lower()
+            for words, hint in ((("iphone", "ipad"), "iPhone/iPad"),
+                                (("android",), "Android"), (("windows",), "Windows"),
+                                (("macintosh", "mac os"), "macOS"), (("linux",), "Linux")):
+                if any(word in agent for word in words):
+                    return hint
+            return "Chưa xác định"
+
+        def sessions_response(self, action, body=None):
+            actor = self.actor()
+            if not actor:
+                return self.send(401, {"error": "Cần đăng nhập"})
+            token = self.session()
+            try:
+                if action == "list":
+                    app.web_sessions.touch(actor, token, self.client_hint())
+                    return self.send(200, app.web_sessions.list(actor, token))
+                expected = {"rename": {"id", "label"}, "revoke": {"id"}, "revoke-others": set()}
+                if action not in expected or not isinstance(body, dict) or set(body) != expected[action]:
+                    return self.send(400, {"error": "Yêu cầu quản lý phiên không hợp lệ"})
+                if action == "rename":
+                    result = app.web_sessions.rename(actor, token, body["id"], body["label"])
+                elif action == "revoke":
+                    result = app.web_sessions.revoke(actor, token, body["id"])
+                else:
+                    result = app.web_sessions.revoke_others(actor, token)
+                return self.send(200, result)
+            except LookupError:
+                return self.send(404, {"error": "Không tìm thấy phiên"})
+            except PermissionError:
+                return self.send(403, {"error": "Phiên không còn hiệu lực; hãy đăng nhập lại"})
+            except ValueError as error:
+                return self.send(400, {"error": str(error)})
+            except sqlite3.Error:
+                return self.send(503, {"error": "Chưa đọc được phiên đăng nhập; hãy thử lại"})
+
         def body(self):
             if (
                 self.headers.get("Transfer-Encoding")
@@ -245,6 +285,8 @@ def tao_may_chu(app, port=8766):
                 state = app.operations.readiness()
                 return self.send(200 if state["status"] == "ready" else 503,
                                  {"status": state["status"]})
+            if path == "/api/sessions":
+                return self.sessions_response("list")
             if path in ("/api/system", "/api/node"):
                 actor = self.actor()
                 if not actor:
@@ -356,6 +398,13 @@ def tao_may_chu(app, port=8766):
                 except (ValueError, PermissionError):
                     return self.send(404, {"error": "Tệp ngoài phạm vi quyền"})
             if path == "/api/me":
+                if actor:
+                    try:
+                        app.web_sessions.touch(actor, self.session(), self.client_hint())
+                    except PermissionError:
+                        actor = None
+                    except sqlite3.Error:
+                        return self.send(503, {"error": "Chưa xác minh được phiên; hãy thử lại"})
                 return self.send(
                     200, {"authenticated": actor is not None, "user": actor}
                 )
@@ -410,6 +459,8 @@ def tao_may_chu(app, port=8766):
                     400, {"error": "Nội dung yêu cầu không hợp lệ hoặc quá lớn"}
                 )
             try:
+                if path in ("/api/sessions/rename", "/api/sessions/revoke", "/api/sessions/revoke-others"):
+                    return self.sessions_response(path.rsplit("/", 1)[1], body)
                 if path == '/api/auth/google/start':
                     if actor:
                         return self.send(409, {'error':'Bạn đã đăng nhập; hãy đăng xuất trước khi đổi tài khoản'})

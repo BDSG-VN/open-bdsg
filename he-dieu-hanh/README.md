@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V29 — quản lý phiên đăng nhập web và hướng tách dữ liệu theo đơn vị](V29-PHIEN-WEB.md).
+
 [V28 R2 — cổng phục hồi và biên nhận ngoài máy](V28-R2-PHUC-HOI-OFFSITE.md).
 [V28 — quản trị nút máy chủ và phục hồi dữ liệu](V28-VAN-HANH.md).
 

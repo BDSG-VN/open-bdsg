@@ -37,6 +37,8 @@ class Kho:
               CREATE INDEX IF NOT EXISTS thu_dang_nhap_ip ON thu_dang_nhap(ip,created);
               CREATE TABLE IF NOT EXISTS web_users(ma TEXT PRIMARY KEY,salt TEXT,hash TEXT);
             """)
+            from phien_web import ensure_schema
+            ensure_schema(c)
         os.chmod(self.db, 0o600)
 
     @contextmanager
@@ -95,6 +97,8 @@ class Kho:
         token = secrets.token_urlsafe(36)
         db.execute('DELETE FROM phien WHERE expires<?', (now,))
         db.execute('INSERT INTO phien VALUES (?,?,?)', (bam(token), identity, now+8*3600))
+        from phien_web import register_session
+        register_session(db, bam(token), identity, now)
         return token
 
     def tu_phien(self, token):

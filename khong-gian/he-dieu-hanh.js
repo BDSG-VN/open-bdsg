@@ -49,7 +49,7 @@
     document.addEventListener("click", event => {
       const anchor = event.target.closest('a[href^="#"]');
       const route = anchor?.getAttribute("href");
-      if (!route || !/^#(?:system|work|office|projects|studio|tasks|staff|modules|integrations|ai-settings|support|overview|agents|requests|activity|settings|platforms|sectors|connections|task\/[a-f0-9]{24}|support\/[a-z0-9_-]{1,80})$/.test(route)) return;
+      if (!route || !/^#(?:account|system|work|office|projects|studio|tasks|staff|modules|integrations|ai-settings|support|overview|agents|requests|activity|settings|platforms|sectors|connections|task\/[a-f0-9]{24}|support\/[a-z0-9_-]{1,80})$/.test(route)) return;
       event.preventDefault();
       parent.postMessage({type:"bdsg-os-launch-route", route}, location.origin);
     });
@@ -66,6 +66,7 @@
   }
   window.BDSGReadBroker = window.BDSGOSState.createReadBroker({getIdentity:()=>state.user?.id || "guest", maxConcurrent:2});
   const apps = [
+    {id:"account", title:"Tài khoản", route:"#account", icon:"lock", color:"gray", description:"Các phiên đăng nhập web và tên thiết bị"},
     {id:"system", title:"Máy chủ", route:"#system", icon:"activity", color:"gray", description:"TH01, tài nguyên và phục hồi dữ liệu"},
     {id:"work", title:"Agent BDSG", route:"#work", icon:"spark", color:"blue", description:"Giao mục tiêu, theo dõi kết quả AI"},
     {id:"office", title:"Văn phòng", route:"#office", icon:"briefcase", color:"orange", description:"Tài liệu, bảng tính và trình chiếu"},
@@ -192,7 +193,7 @@
     if (!root || root.hidden || !manager) return;
     const snapshot = manager.snapshot();
     root.querySelector("#os-session-count").textContent = snapshot.sessions.length;
-    root.querySelector("#os-account").textContent = state.user ? "Tài khoản" : "Đăng nhập";
+    root.querySelector("#os-account").textContent = state.user ? "Đăng xuất" : "Đăng nhập";
     const active = surface === "app" && snapshot.sessions.find(session => session.id === snapshot.activeSessionId);
     root.querySelector("#os-stage").hidden = !active;
     root.querySelector("#os-view").hidden = !!active;

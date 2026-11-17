@@ -50,7 +50,7 @@ def dung(cau_hinh, thu_muc_ra):
     dau = dau.replace("</head>", '<link rel="canonical" href="' + goc_url + '/">\n</head>')
     ghi("index.html", dau)
     ghi("workspace.html", dau.replace('<link rel="canonical" href="' + goc_url + '/">', ''))
-    for ten in ("may-chu.js", "may-chu.css", "he-dieu-hanh-state.js", "he-dieu-hanh.js", "bao-ve-phien.js", "ios.css", "trinh-duyet.html", "trinh-duyet.js", "trinh-duyet.css", "ung-dung.webmanifest"):
+    for ten in ("phien-web.js", "phien-web.css", "may-chu.js", "may-chu.css", "he-dieu-hanh-state.js", "he-dieu-hanh.js", "bao-ve-phien.js", "ios.css", "trinh-duyet.html", "trinh-duyet.js", "trinh-duyet.css", "ung-dung.webmanifest"):
         ghi(ten, doc_tep("khong-gian/" + ten))
     ghi("portal.css", doc_tep("khong-gian/giao-dien.css"))
     ghi("portal.js", doc_tep("khong-gian/ung-dung.js"))
