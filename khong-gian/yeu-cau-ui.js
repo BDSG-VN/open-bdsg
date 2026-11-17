@@ -11,7 +11,7 @@
   function paint(){
     if(!host?.isConnected)return;
     if(!host.childElementCount){
-      host.innerHTML=`<header class="unit-biz-heading"><div><h1>Yêu cầu kinh doanh</h1><p id="unit-biz-scope"></p></div><div class="unit-biz-actions"><button class="button secondary" id="unit-biz-refresh">Làm mới</button><button class="button" id="unit-biz-new">Tạo yêu cầu</button></div></header>
+      host.innerHTML=`<header class="unit-biz-heading"><div><h1>Yêu cầu kinh doanh</h1><p id="unit-biz-scope"></p></div><div class="unit-biz-actions"><button class="button secondary" id="unit-biz-refresh">Làm mới</button><button class="button primary" id="unit-biz-new">Tạo yêu cầu</button></div></header>
         <p id="unit-biz-notice" role="status" hidden></p><p id="unit-biz-state" role="status"></p>
         <form id="unit-biz-form" class="unit-biz-form" hidden><h2>Ghi nhận nhu cầu mới</h2>
         <label for="unit-biz-title">Tên yêu cầu</label><input id="unit-biz-title" name="title" required minlength="3" maxlength="160" autocomplete="off">
@@ -19,7 +19,7 @@
         <div><label for="unit-biz-project">Lưu yêu cầu vào</label><select id="unit-biz-project" name="project_id"></select></div></div>
         <p class="unit-biz-help">Yêu cầu cá nhân chỉ bạn đọc được. Yêu cầu trong dự án dùng quyền chia sẻ của dự án. Danh sách có tối đa 100 dự án được phép ghi.</p>
         <label for="unit-biz-description">Nhu cầu và kết quả mong muốn</label><textarea id="unit-biz-description" name="description" rows="4" required minlength="10" maxlength="4000"></textarea>
-        <div class="unit-biz-actions"><button class="button" type="submit">Lưu yêu cầu</button><button class="button secondary" type="button" id="unit-biz-close">Đóng biểu mẫu</button></div></form>
+        <div class="unit-biz-actions"><button class="button primary" type="submit">Lưu yêu cầu</button><button class="button secondary" type="button" id="unit-biz-close">Đóng biểu mẫu</button></div></form>
         <div class="unit-biz-board" aria-label="Yêu cầu theo chặng"></div>`;
       const sector=host.querySelector('#unit-biz-sector');
       for(const row of sectors){const option=document.createElement('option');option.value=row.id;option.textContent=row.name;sector.append(option);}
@@ -96,16 +96,22 @@
   }
   async function write(name,args,onSuccess){
     if(writing||reading||unknown||status!=='ready'||!visible())return;
-    const token=capture();writing=true;notice='';paint();
-    try{await invoke(name,args);if(!current(token))return;onSuccess();notice='Đã lưu yêu cầu.';}
+    const token=capture();let focusId='';writing=true;notice='';paint();
+    try{await invoke(name,args);if(!current(token))return;focusId=onSuccess()||'';notice='Đã lưu yêu cầu.';}
     catch(error){if(!current(token))return;unknown=!error.knownRejected;notice=unknown?'Chưa rõ thao tác đã được lưu hay chưa. Làm mới và kiểm tra trước khi thực hiện lại.':'Chưa lưu được. Kiểm tra quyền và cổng ghi; bản nháp vẫn được giữ.';}
-    finally{if(current(token)){writing=false;paint();if(!unknown)await load();}}
+    finally{if(current(token)){
+      writing=false;paint();if(!unknown)await load();
+      if(current(token)&&focusId){
+        const target=host.querySelector('#'+focusId);
+        (target&&!target.disabled?target:host.querySelector('#unit-biz-refresh')).focus({preventScroll:true});
+      }
+    }}
   }
   function create(event){
     event.preventDefault();const form=event.currentTarget;if(!form.reportValidity())return;
     const data=Object.fromEntries(new FormData(form));if(!data.project_id)delete data.project_id;
     if(data.project_id&&!projects.some(p=>p.id===data.project_id))return;
-    write('kinh_doanh.tao_yeu_cau',data,()=>{form.reset();showForm=false;});
+    write('kinh_doanh.tao_yeu_cau',data,()=>{form.reset();showForm=false;return 'unit-biz-new';});
   }
   function change(id,stage){
     const row=rows.find(r=>r.id===id);if(reading||writing||unknown||!row?.can_edit){paint();return;}
