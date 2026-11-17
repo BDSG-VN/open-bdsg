@@ -1,7 +1,8 @@
 # R14 — phiên Office theo đơn vị, đang phát triển
 
-Ngày 18/11/2026: mới nghiệm thu các chốt quyền backend trên kho tổng hợp;
-chưa mở công cụ/HTTP soạn thảo trong chế độ đơn vị và chưa triển khai R14.
+Ngày 18/11/2026: đã kiểm các chốt quyền backend và HTTP nguồn/callback ký
+trên kho tổng hợp; chưa mở công cụ/giao diện soạn thảo trong chế độ đơn vị
+và chưa triển khai R14.
 
 Phiên cộng tác có tham chiếu membership epoch/revision và thế hệ quyền dự
 án của từng người tham gia trong SQLite riêng. Hai đơn vị không dùng chung
@@ -69,12 +70,30 @@ ghi tệp. Header đơn vị tường minh vẫn phải khớp; không lấy vai
 làm quyền đọc tài liệu. Đường chưa có hợp đồng, thay key qua query,
 traversal hoặc mã hóa nhiều lớp bị từ chối.
 
-`thu_don_vi_http.py` có 20 bài đạt ngày 18/11/2026, gồm một bài mới đi qua
+`thu_don_vi_http.py` có 23 bài đạt ngày 18/11/2026, gồm bài đi qua
 HTTP/cookie thật cho endpoint xác thực engine: key hợp lệ được phép;
 khách, chủ quản không tham gia, người khác và đơn vị sai bị từ chối.
-Nguồn, callback và công cụ mở editor vẫn đóng trong bản thử. Đây chưa là
+Công cụ mở editor vẫn đóng trong bản thử. Đây chưa là
 nghiệm thu proxy nginx, cache/service-worker hay WebSocket của engine thật,
 và chưa triển khai R14 lên máy chủ.
+
+## HTTP nguồn và callback có chữ ký
+
+Theo [giao thức token trong header của ONLYOFFICE](https://api.onlyoffice.com/docs/docs-api/additional-api/signature/request/token-in-header)
+đối chiếu ngày 18/11/2026, yêu cầu download/callback của DocServer có token
+riêng theo thao tác. Các đường nguồn/callback trong pilot nhận JWT hợp lệ
+không cần cookie hoặc header đơn vị của trình duyệt. Backend vẫn khôi phục
+tham chiếu phiên phía máy chủ và kiểm quyền; cookie chủ quản không thay JWT.
+Nguồn chỉ nhận đúng một key và một cap, không nhận tham số thêm/lặp/rỗng;
+kết quả tải có `Cache-Control: no-store`. Không nhận nguồn chỉ vì có cap.
+
+Ba bài HTTP mới kiểm chữ ký thiếu/sai/hết hạn/sai thao tác/sai URL, query
+mơ hồ, thu hồi/rejoin, payload ký khác JSON chưa ký, callback đóng lặp và
+callback lưu vào kho đúng một lần. Transport tải kết quả DocServer và scanner
+là tổng hợp; HTTP gateway/SQLite/chữ ký/tệp Office là thật. Đã đối chiếu
+nội dung tệp sau commit. Callback mới sau rejoin bị chặn trước tải kết quả.
+Biên nhận callback đã commit chỉ được ack mà không fetch hoặc ghi lại,
+kể cả quyền sau đó thay đổi; ack này không cấp quyền đọc tệp hoặc mở phiên.
 
 Đọc artifact service-worker của engine đang cài ngày 18/11/2026 cho thấy
 nó có cache động tài liệu và trả cache trước khi gọi mạng. Profile thử

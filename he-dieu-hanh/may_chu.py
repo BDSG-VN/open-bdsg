@@ -340,10 +340,10 @@ def tao_may_chu(app, port=8766):
             allowed = ({"/api/me", "/api/sessions", "/api/units", "/api/units/members",
                         "/api/document", "/api/tasks", "/api/task", "/api/suc-khoe", "/api/ready",
                         "/api/catalogue", "/api/model", "/api/modules",
-                        "/api/office-engine-auth"} if method == "GET" else
+                        "/api/office-engine-auth", "/api/office-source"} if method == "GET" else
                        {"/api/login", "/api/logout", "/api/tools", "/api/upload", "/api/units",
                         "/api/units/members", "/api/sessions/rename", "/api/sessions/revoke",
-                        "/api/sessions/revoke-others"})
+                        "/api/sessions/revoke-others", "/api/office-callback"})
             if path not in allowed:
                 self.send(403, {"error": "Đường này chưa hỗ trợ phạm vi đơn vị trong bản thử"})
                 return False
@@ -596,7 +596,8 @@ def tao_may_chu(app, port=8766):
                 "/api/model", "/api/suc-khoe", "/api/me",
             }
             if app.unit_preview:
-                public_paths = {"/api/ready", "/api/suc-khoe", "/api/me", "/api/catalogue"}
+                public_paths = {"/api/ready", "/api/suc-khoe", "/api/me", "/api/catalogue",
+                                "/api/office-source"}
             if path not in public_paths and not self.cookie_actor_matches(self.actor()):
                 return
             if app.unit_preview and path in ("/api/units", "/api/units/members"):
@@ -643,7 +644,11 @@ def tao_may_chu(app, port=8766):
                                  headers={"Location": target, "Referrer-Policy": "no-referrer"})
             if path == "/api/office-source":
                 try:
-                    raw = app.office_editor.source(parse_qs(urlsplit(self.path).query), self.headers.get("Authorization", ""))
+                    # Giữ giá trị rỗng để phát hiện query lặp, không bỏ chúng
+                    # trước khi đối chiếu hợp đồng nguồn đã ký.
+                    query = parse_qs(urlsplit(self.path).query, keep_blank_values=True,
+                                     max_num_fields=100)
+                    raw = app.office_editor.source(query, self.headers.get("Authorization", ""))
                     self.send_response(200)
                     self.send_header("Content-Type", "application/octet-stream")
                     self.send_header("Content-Length", str(len(raw)))

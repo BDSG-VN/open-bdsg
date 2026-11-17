@@ -7,6 +7,10 @@ import tempfile
 import threading
 import time
 import unittest
+from urllib.parse import urlsplit
+from unittest.mock import Mock, patch
+
+from chu_ky_office import sign
 
 from may_chu import UngDung, tao_may_chu
 from ngan_sach_ai import DEFAULT_POLICY
@@ -82,14 +86,98 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertTrue(body["ok"], body)
         return body["ket_qua"]
 
-    def test_office_engine_auth_cookie_restores_key_scope_and_rejects_substitution(self):
+    def office_session(self):
         from thu_office_tich_hop import Scanner, SECRET
         self.app.office_editor.secret=SECRET
         self.app.office.scanner=Scanner()
         actor=self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},self.units[0])
         project=self.app.projects.create(actor,{'name':'Du an Engine HTTP'})['id']
         file=self.app.office_editor.create(actor,{'project_id':project,'name':'thu.docx'})
-        opened=self.app.office_editor.open(actor,{'id':file['id']})
+        return actor,file,self.app.office_editor.open(actor,{'id':file['id']})
+
+    def test_office_signed_source_http_without_cookie_checks_lease_and_exact_query(self):
+        from thu_office_tich_hop import SECRET
+        actor,file,opened=self.office_session()
+        url=opened['config']['document']['url']
+        parsed=urlsplit(url);path=parsed.path+'?'+parsed.query
+        def headers(**claims):
+            return {'Origin':'','Authorization':'Bearer '+sign({'payload':{'url':url},
+                'operation':'download','exp':time.time()+60,**claims},SECRET)}
+        status,raw,hdr=self.request(path,headers=headers())
+        self.assertEqual(status,200)
+        self.assertTrue(raw.startswith(b'PK'))
+        self.assertEqual(hdr['Cache-Control'],'no-store')
+        for bad in ({},headers(operation='callback'),headers(exp=time.time()-60),
+                    headers(payload={'url':url+'-other'})):
+            self.assertEqual(self.request(path,headers=bad)[0],403)
+        for suffix in ('&key='+opened['key'],'&cap=other','&unused=1','&cap=','&unused='):
+            self.assertEqual(self.request(path+suffix,headers=headers())[0],403)
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'nguoi-a','role':'revoke'})
+        self.assertEqual(self.request(path,headers=headers())[0],403)
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'nguoi-a','role':'admin'})
+        self.assertEqual(self.request(path,headers=headers())[0],403)
+
+    def test_office_signed_callback_http_ignores_unsigned_body_and_cookie_authority(self):
+        from thu_office_tich_hop import SECRET
+        actor,file,opened=self.office_session()
+        key=opened['key']
+        payload={'key':key,'status':1}
+        token=sign({'payload':payload,'operation':'callback','exp':time.time()+60},SECRET)
+        status,body,_=self.request('/api/office-callback',{'key':key,'status':4},
+            headers={'Origin':'','Authorization':'Bearer '+token})
+        self.assertEqual((status,body),(200,{'error':0}))
+        self.assertEqual(self.app.office_editor.progress(actor,{'key':key})['state'],'active')
+        for headers in ({},{'Authorization':'Bearer '+self.bearer},
+                        {'Authorization':'Bearer '+sign({'payload':payload,'operation':'download',
+                         'exp':time.time()+60},SECRET)}):
+            status,body,_=self.request('/api/office-callback',{'key':key,'status':4},'chu-quan',headers=headers)
+            self.assertEqual((status,body),(200,{'error':1}))
+        closed=sign({'payload':{'key':key,'status':4},'operation':'callback','exp':time.time()+60},SECRET)
+        for _ in range(2):
+            self.assertEqual(self.request('/api/office-callback',{'token':closed},headers={'Origin':''})[:2],
+                             (200,{'error':0}))
+        self.assertEqual(self.app.office_editor.progress(actor,{'key':key})['state'],'closed')
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'nguoi-a','role':'revoke'})
+        # Biên nhận đã commit chỉ được ack; callback mới vẫn kiểm quyền sống.
+        self.assertEqual(self.request('/api/office-callback',{'token':closed})[:2],(200,{'error':0}))
+        self.assertEqual(self.request('/api/office-callback',{'token':token})[:2],(200,{'error':1}))
+
+    def test_office_signed_callback_http_commits_once_and_rejects_new_write_after_rejoin(self):
+        from thu_office_tich_hop import SECRET, changed_document
+        actor,file,opened=self.office_session()
+        key=opened['key'];raw=changed_document('Ban luu HTTP tong hop')
+        payload={'key':key,'status':2,'users':['nguoi-a'],
+                 'url':'http://127.0.0.1:8088/cache/files/'+key+'/output.docx'}
+        token=sign({'payload':payload,'operation':'callback','exp':time.time()+60},SECRET)
+        original=http.client.HTTPConnection
+        engine=Mock();engine.getresponse.return_value.status=200
+        engine.getresponse.return_value.read.return_value=raw
+        def connect(host,port=None,**kwargs):
+            return engine if (host,port)==('127.0.0.1',8088) else original(host,port,**kwargs)
+        with patch('soan_thao_office.http.client.HTTPConnection',side_effect=connect):
+            for _ in range(2):
+                self.assertEqual(self.request('/api/office-callback',{'token':token},
+                    headers={'Origin':''})[:2],(200,{'error':0}))
+            self.assertEqual(engine.request.call_count,1)
+            saved=self.app.office.read(actor,{'id':file['id']})
+            self.assertEqual(saved['version'],2)
+            self.assertEqual(base64.b64decode(saved['content_base64']),raw)
+            fresh=self.app.office_editor.open(actor,{'id':file['id']})
+            self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+            for role in ('revoke','admin'):
+                self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'nguoi-a','role':role})
+            rejected=sign({'payload':{**payload,'key':fresh['key'],
+                'url':'http://127.0.0.1:8088/cache/files/'+fresh['key']+'/output.docx'},
+                'operation':'callback','exp':time.time()+60},SECRET)
+            self.assertEqual(self.request('/api/office-callback',{'token':rejected})[:2],(200,{'error':1}))
+            self.assertEqual(engine.request.call_count,1)
+        current=self.app.units.bind({'id':'nguoi-a','role':'operator'},self.units[0])
+        self.assertEqual(self.app.office.read(current,{'id':file['id']})['version'],2)
+
+    def test_office_engine_auth_cookie_restores_key_scope_and_rejects_substitution(self):
+        actor,file,opened=self.office_session()
         path='/office-docs/doc/'+opened['key']+'/c/websocket'
         headers={'X-BDSG-Engine-Path':path}
         self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',headers=headers)[0],200)
@@ -104,9 +192,9 @@ class ThuDonViHTTP(unittest.TestCase):
                          headers={'X-BDSG-Engine-Path':path+'?shardkey=bdsg-'+'f'*32})[0],403)
         self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',
                          headers={'X-BDSG-Engine-Path':'/office-docs/command'})[0],403)
-        # Nguồn/callback và công cụ tạo/mở vẫn chưa được bật bởi auth endpoint.
+        # Cookie không thay chữ ký nguồn/callback; công cụ tạo/mở vẫn đóng.
         self.assertEqual(self.request('/api/office-source?key='+opened['key'],who='nguoi-a')[0],403)
-        self.assertEqual(self.request('/api/office-callback',{'status':2},who='nguoi-a')[0],403)
+        self.assertEqual(self.request('/api/office-callback',{'status':2},who='nguoi-a')[:2],(200,{'error':1}))
         self.assertEqual(self.tool('van_phong.mo_soan_thao',{'id':file['id']})[0],403)
 
     def test_business_requests_cookie_scope_origin_and_legacy_alias(self):
@@ -378,7 +466,7 @@ class ThuDonViHTTP(unittest.TestCase):
                      "/api/connections", "/api/google/callback",
                      "/api/auth/google", "/api/office-source", "/api/office-engine-auth", "/mcp"):
             self.assertEqual(self.request(path, who="chu-quan", unit=self.units[0])[0], 401 if path == '/mcp' else 403, path)
-        for path in ("/mcp", "/api/office-callback", "/api/google/start", "/api/model-config", "/api/customer-support"):
+        for path in ("/mcp", "/api/google/start", "/api/model-config", "/api/customer-support"):
             self.assertEqual(self.request(path, {}, "chu-quan", self.units[0])[0], 401 if path == '/mcp' else 403, path)
         self.assertEqual(self.request("/mcp", {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
                                      unit=self.units[0], headers={"Authorization": "Bearer " + self.bearer})[0], 401)

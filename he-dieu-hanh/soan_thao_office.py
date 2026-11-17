@@ -183,6 +183,12 @@ class SoanThaoOffice:
         }
 
     def source(self, query, authorization):
+        if self.scopes.units is not None and (
+                not isinstance(query,dict) or set(query)!={'key','cap'}
+                or any(not isinstance(values,list) or len(values)!=1
+                       or not isinstance(values[0],str) or not values[0]
+                       for values in query.values())):
+            raise ValueError('Tham số nguồn Office không hợp lệ')
         key, cap = query.get("key", [""])[0], query.get("cap", [""])[0]
         url = self.origin + "/api/office-source?" + urlencode({"key": key, "cap": cap})
         signed = verify(authorization.removeprefix("Bearer "), self.secret, "download")
