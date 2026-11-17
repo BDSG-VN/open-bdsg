@@ -7,6 +7,7 @@ import json
 import os
 import pathlib
 import ssl
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -131,8 +132,18 @@ def main():
         'RuntimeMaxSec':'60','KillMode':'control-group','LimitCORE':'0',
         'InaccessiblePaths':'-/var/lib/bdsg-thanhhoa -/etc/bdsg-thanhhoa /root'}
     for key,value in properties.items():args+=['--property='+key+'='+value]
-    args += [sys.executable,'-B',str(pathlib.Path(__file__).resolve()),'--in-namespace',os.readlink('/proc/self/ns/net')]
-    result=subprocess.run(args,capture_output=True,timeout=75)
+    # Home của runner có thể bị giới hạn trong unit; chỉ chép hai tệp mã công khai.
+    with tempfile.TemporaryDirectory(prefix='bdsg-mcp-tls-',dir='/run') as folder:
+        bundle=pathlib.Path(folder)
+        script=bundle/'trien-khai/van-hanh/v29_thu_mcp_tls.py'
+        script.parent.mkdir(parents=True)
+        module=bundle/'he-dieu-hanh/mcp_truyen_tai.py'
+        module.parent.mkdir()
+        source=pathlib.Path(__file__).resolve()
+        shutil.copy2(source,script)
+        shutil.copy2(source.parents[2]/'he-dieu-hanh/mcp_truyen_tai.py',module)
+        args += [sys.executable,'-B',str(script),'--in-namespace',os.readlink('/proc/self/ns/net')]
+        result=subprocess.run(args,capture_output=True,timeout=75)
     sys.stdout.buffer.write(result.stdout);sys.stderr.buffer.write(result.stderr)
     raise SystemExit(result.returncode)
 
