@@ -2,6 +2,8 @@
 import re
 import time
 
+from van_phong import validate_request_mapping
+
 
 def migrate_legacy(office, actor, *, copy_only=False):
     """Caller xác nhận đang làm trên bản sao; không tự đoán đơn vị từ chia sẻ."""
@@ -34,6 +36,9 @@ def migrate_legacy(office, actor, *, copy_only=False):
                 OR (r.kind='create' AND c.file_id IS NULL)
                 OR (r.kind='upload' AND u.id IS NULL) LIMIT 1""").fetchone():
             raise ValueError("Metadata yêu cầu mồ côi; cần đối soát")
+        for mapping in db.execute("SELECT * FROM office_request_units"):
+            validate_request_mapping(mapping)
+        unclassified = []
         for kind, rows, key in [('create', creates, 'request'), ('upload', uploads, 'request_key')]:
             for row in rows:
                 classified = db.execute("""SELECT unit_id,request_key FROM office_request_units
@@ -44,6 +49,8 @@ def migrate_legacy(office, actor, *, copy_only=False):
                         raise ValueError("Phạm vi phiên tải không khớp")
                 elif marker:
                     raise ValueError("Có yêu cầu cũ chưa phân loại; cần đối soát")
+                else:
+                    unclassified.append((kind, row, key))
         if marker:
             if not legacy or marker[0] != legacy[0]:
                 raise ValueError("Marker Office không khớp nguồn legacy")
@@ -54,19 +61,18 @@ def migrate_legacy(office, actor, *, copy_only=False):
             raise ValueError("Nguồn legacy không rõ hoặc đã có chia sẻ đa đơn vị")
         unit = legacy[0]
         count = 0
-        for kind, rows, key in [('create', creates, 'request'), ('upload', uploads, 'request_key')]:
-            for row in rows:
-                if not re.fullmatch(r'[a-f0-9-]{32,64}',row[key]):
-                    raise ValueError("Khóa yêu cầu legacy chưa xác định")
-                bound = office.projects.units.bind(
-                    {"id":row['owner'],"role":"quan-tri" if row['owner']=='chu-quan' else "operator"},unit)
-                internal = office._request(db,bound,kind,row[key],True)
-                if kind == 'create':
-                    db.execute("UPDATE office_creates SET request=? WHERE owner=? AND request=?",(internal,row['owner'],row[key]))
-                else:
-                    db.execute("UPDATE office_uploads SET request_key=? WHERE id=?",(internal,row['id']))
-                    db.execute("INSERT INTO office_upload_units VALUES(?,?)",(row['id'],unit))
-                count += 1
+        for kind, row, key in unclassified:
+            if not re.fullmatch(r'[a-f0-9-]{32,64}',row[key]):
+                raise ValueError("Khóa yêu cầu legacy chưa xác định")
+            bound = office.projects.units.bind(
+                {"id":row['owner'],"role":"quan-tri" if row['owner']=='chu-quan' else "operator"},unit)
+            internal = office._request_key(db,bound,kind,row[key],persist=True)
+            if kind == 'create':
+                db.execute("UPDATE office_creates SET request=? WHERE owner=? AND request=?",(internal,row['owner'],row[key]))
+            else:
+                db.execute("UPDATE office_uploads SET request_key=? WHERE id=?",(internal,row['id']))
+                db.execute("INSERT INTO office_upload_units VALUES(?,?)",(row['id'],unit))
+            count += 1
         db.execute("INSERT INTO don_vi_migrations VALUES('office-requests-v1',?,?)",(unit,time.time()))
         db.execute("INSERT INTO su_kien(actor,action,target,created) VALUES(?,?,?,?)",
             (identity,'chuyen-yeu-cau-office-don-vi',unit,time.time()))

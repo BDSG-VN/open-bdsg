@@ -17,6 +17,21 @@ from kiem_tep_office import kiem_tep
 from quet_virus import LoiChuaQuetVirus, QuetVirus
 
 
+def office_request_key(kind, owner, unit, external):
+    """Namespace ổn định; dùng chung để kiểm metadata phục hồi và tạo mới."""
+    if (kind not in ('create', 'upload')
+            or any(not isinstance(value, str) or not 1 <= len(value) <= 80 for value in (owner, unit))
+            or not isinstance(external, str) or not re.fullmatch(r'[a-f0-9-]{32,64}', external)):
+        raise ValueError("Metadata yêu cầu không hợp lệ")
+    return "unit:" + hashlib.sha256(json.dumps(
+        [kind, owner, unit, external], ensure_ascii=True).encode()).hexdigest()
+
+
+def validate_request_mapping(row):
+    if office_request_key(row['kind'], row['owner'], row['unit_id'], row['request_key']) != row['internal_key']:
+        raise ValueError("Namespace yêu cầu không khớp metadata")
+
+
 class LoiXungDotVanPhong(ValueError):
     """Mã lỗi ổn định cho UI, không cần công khai thông điệp ngoại lệ."""
 
@@ -100,13 +115,16 @@ class VanPhong:
         scope = self._scope(actor, db)
         return scope.unit_id if scope is not None else None
 
-    def _request(self, db, actor, kind, external, remember=False):
+    def _request_key(self, db, actor, kind, external, *, persist=False):
         unit = self._unit(actor, db)
         if unit is None or external is None:
             return external
-        internal = "unit:" + hashlib.sha256(json.dumps(
-            [kind, actor["id"], unit, external], ensure_ascii=True).encode()).hexdigest()
-        if remember:
+        internal = office_request_key(kind, actor["id"], unit, external)
+        for row in db.execute("""SELECT * FROM office_request_units
+                WHERE kind=? AND owner=? AND unit_id=? AND (request_key=? OR internal_key=?)""",
+                (kind, actor["id"], unit, external, internal)):
+            validate_request_mapping(row)
+        if persist:
             db.execute("INSERT INTO office_request_units VALUES(?,?,?,?,?)",
                 (kind, actor["id"], unit, external, internal))
         return internal
@@ -315,7 +333,7 @@ class VanPhong:
             r"[a-f0-9-]{32,64}", request
         ):
             raise ValueError("Mã yêu cầu tạo tệp không hợp lệ")
-        internal = self._request(db, actor, "create", request)
+        internal = self._request_key(db, actor, "create", request)
         previous = db.execute(
             "SELECT * FROM office_creates WHERE owner=? AND request=?",
             (actor["id"], internal),
@@ -363,7 +381,7 @@ class VanPhong:
             if request is not None:
                 db.execute(
                     "INSERT INTO office_creates VALUES (?,?,?,?,?,?)",
-                    (actor["id"], self._request(db, actor, "create", request, True), pid, name, digest, file["id"]),
+                    (actor["id"], self._request_key(db, actor, "create", request, persist=True), pid, name, digest, file["id"]),
                 )
             return file
 
@@ -422,6 +440,13 @@ class VanPhong:
                 "SELECT 1 FROM office_upload_units WHERE upload_id=? AND unit_id=?",
                 (identifier, unit)).fetchone():
             raise ValueError("Phiên tải không tồn tại trong đơn vị")
+        if unit is not None:
+            mapping = db.execute("""SELECT * FROM office_request_units WHERE kind='upload'
+                AND owner=? AND unit_id=? AND internal_key=?""",
+                (actor["id"], unit, row["request_key"])).fetchone()
+            if not mapping:
+                raise ValueError("Yêu cầu tải chưa phân loại đơn vị")
+            validate_request_mapping(mapping)
         self._project(actor, row["project_id"], db, write)
         return dict(row)
 
@@ -446,7 +471,7 @@ class VanPhong:
                     SELECT 1 FROM office_uploads u WHERE u.owner=office_request_units.owner
                     AND u.request_key=office_request_units.internal_key AND u.expires>?)""", (time.time(),))
             db.execute("DELETE FROM office_uploads WHERE expires<=?", (time.time(),))
-            internal = self._request(db, actor, "upload", key)
+            internal = self._request_key(db, actor, "upload", key)
             old = db.execute(
                 "SELECT id FROM office_uploads WHERE owner=? AND request_key=?",
                 (actor["id"], internal),
@@ -494,7 +519,7 @@ class VanPhong:
             )
             if unit is not None:
                 db.execute("INSERT INTO office_upload_units VALUES(?,?)", (identifier, unit))
-                self._request(db, actor, "upload", key, True)
+                self._request_key(db, actor, "upload", key, persist=True)
             self._audit(db, actor, "office-bat-dau-tai", identifier)
             return self._upload_public(self._upload(actor, identifier, db))
 

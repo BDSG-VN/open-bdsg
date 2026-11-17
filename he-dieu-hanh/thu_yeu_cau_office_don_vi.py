@@ -181,6 +181,52 @@ class ThuChuyenYeuCauOfficeDonVi(unittest.TestCase):
         result = self.office.finish_upload(self.actor,{'id':self.upload['id']})
         self.assertEqual(self.office.read(self.actor,{'id':result['file']['id']})['content_base64'],base64.b64encode(RAW).decode())
 
+    def test_migration_tron_yeu_cau_da_phan_loai_va_legacy_giu_nguyen_du_lieu(self):
+        file = self.office.create_bytes(self.actor,self.pid,'moi.txt',RAW,'b'*32)
+        upload = self.office.begin_upload(self.actor,{'project_id':self.pid,'name':'moi.txt',
+            'total':len(RAW),'sha256':hashlib.sha256(RAW).hexdigest(),'request_key':'b'*32})
+        upload = self.office.upload_part(self.actor,{'id':upload['id'],'offset':0,
+            'content_base64':base64.b64encode(RAW).decode()})
+        result = migrate_legacy(self.office,OWNER,copy_only=True)
+        self.assertEqual(result['requests'],2)
+        for key,expected,name in [(KEY,self.file,'thu.txt'),('b'*32,file,'moi.txt')]:
+            self.assertEqual(self.office.create_bytes(self.actor,self.pid,name,RAW,key)['id'],expected['id'])
+            self.assertEqual(self.office.read(self.actor,{'id':expected['id']})['content_base64'],base64.b64encode(RAW).decode())
+        for expected in (self.upload,upload):
+            actual = self.office.upload_status(self.actor,{'id':expected['id']})
+            self.assertEqual(actual,expected)
+            completed = self.office.finish_upload(self.actor,{'id':expected['id']})
+            self.assertEqual(self.office.read(self.actor,{'id':completed['file']['id']})['content_base64'],base64.b64encode(RAW).decode())
+        self.assertFalse(migrate_legacy(self.office,OWNER,copy_only=True)['changed'])
+
+    def test_metadata_khoa_bi_sua_chan_migration_va_runtime_khong_ghi_them(self):
+        migrate_legacy(self.office,OWNER,copy_only=True)
+        before = self.office.list(self.actor,{'project_id':self.pid})
+        with self.kho.ket_noi() as db:
+            db.execute("UPDATE office_request_units SET request_key=? WHERE kind='create'",('b'*32,))
+            snapshot = db.execute('SELECT * FROM office_request_units ORDER BY kind').fetchall()
+        with self.assertRaises(ValueError): migrate_legacy(self.office,OWNER,copy_only=True)
+        with self.assertRaises(ValueError): self.office.create_bytes(self.actor,self.pid,'khac.txt',RAW,'b'*32)
+        self.assertEqual(self.office.list(self.actor,{'project_id':self.pid}),before)
+        with self.kho.ket_noi() as db:
+            self.assertEqual([tuple(r) for r in db.execute('SELECT * FROM office_request_units ORDER BY kind')],[tuple(r) for r in snapshot])
+
+    def test_chay_lai_khong_bind_lai_chu_the_da_bi_thu_hoi(self):
+        migrate_legacy(self.office,OWNER,copy_only=True)
+        self.kho.thu_hoi_agent(A['id'])
+        self.assertFalse(migrate_legacy(self.office,OWNER,copy_only=True)['changed'])
+        with self.assertRaises(PermissionError): self.office.upload_status(self.actor,{'id':self.upload['id']})
+
+    def test_metadata_upload_bi_sua_chan_ghi_phan_va_huy(self):
+        migrate_legacy(self.office,OWNER,copy_only=True)
+        with self.kho.ket_noi() as db:
+            db.execute("UPDATE office_request_units SET request_key=? WHERE kind='upload'",('b'*32,))
+        for method,args in [(self.office.upload_part,{'id':self.upload['id'],'offset':0,
+                'content_base64':base64.b64encode(RAW).decode()}),
+                (self.office.cancel_upload,{'id':self.upload['id']})]:
+            with self.assertRaises(ValueError): method(self.actor,args)
+        with self.assertRaises(ValueError): migrate_legacy(self.office,OWNER,copy_only=True)
+
     def test_nguon_da_co_don_vi_moi_khong_suy_scope_tu_du_an(self):
         self.units.create(OWNER,{'name':'Đơn vị khác tổng hợp','admin':A['id']})
         with self.assertRaises(ValueError): migrate_legacy(self.office,OWNER,copy_only=True)

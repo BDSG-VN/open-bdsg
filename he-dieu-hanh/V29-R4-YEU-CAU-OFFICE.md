@@ -29,6 +29,9 @@ xác thực, marker chuyển dự án `projects-v1` và nguồn một đơn vị
 ràng. Không tự suy đơn vị đang làm việc từ dự án đã chia sẻ. Nguồn đã có đơn vị
 khác, danh tính không còn hợp lệ hoặc dữ liệu mồ côi cần được đối soát riêng.
 Chạy lại kiểm nhất quán trước khi chấp nhận marker; mọi thay đổi cùng giao dịch.
+Nguồn một đơn vị có cả yêu cầu legacy và yêu cầu đã phân loại được xử lý cùng
+nhau: giữ ánh xạ hợp lệ, chỉ chuyển phần còn thiếu. Kiểm ánh xạ đối chiếu cả
+loại yêu cầu, danh tính, đơn vị, mã ngoài và khóa nội bộ; ánh xạ sai bị từ chối.
 
 ## Kiểm tra
 
