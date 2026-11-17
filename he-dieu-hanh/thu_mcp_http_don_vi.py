@@ -106,7 +106,10 @@ class ThuMCPHTTPDonVi(unittest.TestCase):
                                   ({'Transfer-Encoding': 'chunked'}, 400),
                                   ({'MCP-Protocol-Version': '2099-01-01'}, 400)):
             with self.subTest(headers=headers): self.assertEqual(self.request(headers=headers)[0], expected)
-        for raw in (b'{', b'{"jsonrpc":"2.0","jsonrpc":"2.0"}', b'{"a":NaN}', b'\xff', b'{"id":"\\ud800"}'):
+        for raw in (b'{', b'{"jsonrpc":"2.0","jsonrpc":"2.0"}', b'{"a":NaN}', b'\xff', b'{"id":"\\ud800"}',
+                    b'{"jsonrpc":"2.0","id":1,"method":"ping","params":{"_meta":{"n":1e9999}}}',
+                    b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18",'
+                    b'"capabilities":{"n":1e9999},"clientInfo":{"name":"Test","version":"1"}}}'):
             with self.subTest(raw=raw):
                 result = self.request(raw=raw)
                 self.assertEqual(result[0], 400)

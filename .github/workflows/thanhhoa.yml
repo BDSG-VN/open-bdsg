@@ -8,7 +8,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Install Office, Google and MCP test dependencies
+      - name: Cài thư viện kiểm thử Office, Google và MCP
         run: |
           python3 -m pip install --only-binary=:all: -r requirements-office.txt
           python3 -m pip install --only-binary=:all: -r requirements-google-login.txt

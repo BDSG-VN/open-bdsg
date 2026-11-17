@@ -88,7 +88,7 @@ class MCPHTTPDonVi:
             def invalid_constant(_value): raise ValueError('JSON không hữu hạn')
             body = json.loads(raw.decode('utf-8'), object_pairs_hook=self._object,
                               parse_constant=invalid_constant)
-            json.dumps(body, ensure_ascii=False).encode('utf-8')
+            json.dumps(body, ensure_ascii=False, allow_nan=False).encode('utf-8')
         except (ValueError, UnicodeError, RecursionError):
             return self._error(400, -32700, 'JSON MCP không hợp lệ')
         try:
