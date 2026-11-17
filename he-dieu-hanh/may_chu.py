@@ -470,13 +470,15 @@ def tao_may_chu(app, port=8766):
 
         def oauth_routes(self, method):
             path = urlsplit(self.path).path
+            metadata = {'/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp',
+                        '/.well-known/oauth-authorization-server'}
             assets = {'/oauth/consent': ('oauth-consent.html', 'text/html'),
                       '/oauth/consent.js': ('oauth-consent.js', 'application/javascript'),
                       '/oauth/consent.css': ('oauth-consent.css', 'text/css'),
                       '/oauth/don-vi.js': ('don-vi.js', 'application/javascript')}
             routes = {'/oauth/authorize', '/oauth/token', '/api/oauth/clients', '/api/oauth/clients/disable',
                       '/api/oauth/bind', '/api/oauth/decide', '/api/mcp/grants', '/api/mcp/grants/revoke'}
-            if not app.unit_preview or path not in routes | assets.keys():
+            if not app.unit_preview or path not in routes | assets.keys() | metadata:
                 return False
             self.connection.settimeout(12)
             try:
@@ -489,10 +491,13 @@ def tao_may_chu(app, port=8766):
                 if app.operations.draining.is_set():
                     self.send(503, {'error': 'temporarily_unavailable'}, headers={'Retry-After': '5'})
                     return True
-                allowed = (('GET', 'HEAD') if path in assets else ('GET',) if path == '/oauth/authorize' else
+                allowed = (('GET', 'HEAD') if path in assets.keys() | metadata else ('GET',) if path == '/oauth/authorize' else
                            ('GET', 'POST') if path in ('/api/oauth/clients', '/api/mcp/grants') else ('POST',))
                 if method not in allowed:
                     self.send(405, {'error': 'invalid_request'}, headers={'Allow': ', '.join(allowed)})
+                    return True
+                if path in metadata:
+                    self.send(200, app.oauth_mcp.metadata(resource=path != '/.well-known/oauth-authorization-server'))
                     return True
                 if path in assets:
                     filename, mime = assets[path]

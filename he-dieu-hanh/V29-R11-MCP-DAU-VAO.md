@@ -303,3 +303,37 @@ trả401 tại API công khai này.
 Còn metadata/discovery, client SDK tự thực hiện OAuth, quản lý client/grant,
 profile AI/MCP nâng cao, review/CI và phát hành/hậu kiểm. Chưa nhận toàn R11
 hoặc kết nối ChatGPT/Claude thật đã hoàn tất.
+
+## R11c — metadata và SDK tự thực hiện OAuth
+
+Ngày18/11/2026: PRmetadata tại `/.well-known/oauth-protected-resource` và
+`/.well-known/oauth-protected-resource/mcp`, ASmetadata tại
+`/.well-known/oauth-authorization-server`. Origin/resource lấy cấu hình cố
+định, không từ Host/Forwarded. GET/HEAD công khai, no-store; các guard query/
+Origin/header/draining giữ nguyên. MCP401 quảng bá resource_metadata thật.
+AS chỉ công bố code/S256/none, issuer response; không quảng bá DCR/refresh
+hoặc phương thức chưa có. Metadata mô tả khả năng, không cấp quyền.
+
+Ngày18/11/2026: 12 bài HTTP và hai bài SDK OAuth qua HTTPS cục bộ đạt. SDK2.3.0
+tự discover, tạo PKCE/state, đi authorize/callback, đổi token và khởi tạo MCP,
+không preset Bearer. Consent API cookie thật chọn một tool/một project;
+SDK list/call chỉ đọc dự án đó. Deny có quyết định access_denied thực, không
+exchange token, tạo grant hoặc gọi công cụ. Client ID được chủ quản đăng ký
+trước; fixture không giả DCR. SDK bản ghim yêu cầu các scope được quảng bá,
+nên client thử có trần công cụ được admin duyệt rõ, user vẫn chọn một. Không
+tự nới allowlist để tương thích một client xin quá quyền.
+
+Kiểm riêng bốn luồng SDK + Chrome1440/390: approve/deny qua trang thật đạt,
+không lỗi JavaScript. SDK tự kiểm state/iss và token exchange; chỉ công cụ/
+dự án đã chọn được trả. SDK tin CA tạm đúng hostname, Chrome pin leaf tạm
+trong profile riêng. Không dùng tài khoản thật hoặc API trả phí.
+
+```sh
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_oauth_http.py' -v
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_oauth_sdk.py' -v
+```
+
+Chưa triển khai R11 hoặc nghiệm thu client ChatGPT/Claude thật. Còn UI quản
+lý client/grant, profile AI/MCP nâng cao và các cửa nghiệm thu phát hành/
+snapshot/restore/hậu kiểm. Public-client profile này không là tuyên bố đã có
+mọi hình thức OAuth, DCR hoặc confidential-client integration.

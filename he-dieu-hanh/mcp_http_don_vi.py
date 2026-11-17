@@ -1,4 +1,4 @@
-"""MCP HTTP theo đơn vị, JSON không SSE; manual bearer chưa phải OAuth."""
+"""MCP HTTP theo đơn vị, JSON không SSE; bearer thủ công hoặc OAuth cùng guard."""
 import json
 import re
 from urllib.parse import urlsplit
@@ -101,10 +101,10 @@ class MCPHTTPDonVi:
         except (PermissionError, ValueError):
             return self._error(403, -32001, 'Không có quyền MCP còn hiệu lực')
 
-    @staticmethod
-    def _unauthorized():
+    def _unauthorized(self):
         return 401, {'error': 'Cần credential MCP đơn vị còn hiệu lực'}, {
-            'WWW-Authenticate': 'Bearer realm="bdsg-unit-mcp", error="invalid_token"'}
+            'WWW-Authenticate': 'Bearer realm="bdsg-unit-mcp", error="invalid_token", '
+                                'resource_metadata="'+self.origin+'/.well-known/oauth-protected-resource/mcp"'}
 
     def _dispatch(self, actor, body):
         if (not isinstance(body, dict) or body.get('jsonrpc') != '2.0'

@@ -202,9 +202,41 @@ class ThuOAuthHTTP(unittest.TestCase):
         self.assertEqual(self.request('/api/mcp/grants', settings, 'nguoi-a', self.units[0])[0], 403)
         self.assertEqual(self.request('/api/mcp/grants/revoke', {'id': issued['id']}, 'nguoi-a', self.units[0])[0], 200)
 
-    def test_gate_drain_bad_shapes_and_no_discovery_advertised_yet(self):
-        self.assertEqual(self.request('/.well-known/oauth-protected-resource/mcp')[0], 403)
-        self.assertEqual(self.request('/.well-known/oauth-authorization-server')[0], 403)
+    def test_metadata_fixed_origin_resource_and_only_implemented_capabilities(self):
+        headers = {'Host': 'untrusted.test', 'X-Forwarded-Host': 'untrusted.test',
+                   'X-Forwarded-Proto': 'http'}
+        for path in ('/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp'):
+            status, body, response = self.request(path, headers=headers)
+            self.assertEqual(status, 200)
+            self.assertEqual(body['resource'], self.app.inbound_mcp.resource)
+            self.assertEqual(body['authorization_servers'], [self.app.origin])
+            self.assertEqual(body['bearer_methods_supported'], ['header'])
+            self.assertEqual(response['Cache-Control'], 'no-store')
+            self.assertNotIn('issuer_epoch', body)
+            conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
+            conn.request('HEAD',path)
+            result = conn.getresponse()
+            self.assertEqual(result.status,200)
+            self.assertEqual(result.read(),b'')
+            self.assertGreater(int(result.getheader('Content-Length')),0)
+            conn.close()
+        status, body, _ = self.request('/.well-known/oauth-authorization-server', headers=headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(body['issuer'], self.app.origin)
+        self.assertEqual(body['authorization_endpoint'], self.app.origin+'/oauth/authorize')
+        self.assertEqual(body['token_endpoint'], self.app.origin+'/oauth/token')
+        self.assertEqual(body['code_challenge_methods_supported'], ['S256'])
+        self.assertEqual(body['token_endpoint_auth_methods_supported'], ['none'])
+        self.assertEqual(body['grant_types_supported'], ['authorization_code'])
+        self.assertNotIn('registration_endpoint', body)
+        self.assertNotIn('refresh_token', json.dumps(body))
+        self.assertEqual(self.request('/.well-known/oauth-authorization-server?issuer=untrusted')[0], 400)
+        self.assertEqual(self.request('/.well-known/oauth-authorization-server', {})[0], 405)
+        status, _, response = self.request('/mcp', {'jsonrpc':'2.0','id':1,'method':'tools/list'})
+        self.assertEqual(status, 401)
+        self.assertIn('resource_metadata="'+self.app.origin+'/.well-known/oauth-protected-resource/mcp"', response['WWW-Authenticate'])
+
+    def test_gate_drain_and_bad_shapes(self):
         self.assertEqual(self.request('/api/oauth/bind', {}, 'nguoi-a', self.units[0])[0], 400)
         self.assertEqual(self.request('/api/mcp/grants/revoke', {'id': 'x', 'owner': 'pretend'}, 'nguoi-a', self.units[0])[0], 400)
         self.app.core.nhan.chinh_sach.cong_ghi.dong()

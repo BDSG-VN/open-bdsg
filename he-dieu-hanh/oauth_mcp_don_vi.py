@@ -40,6 +40,17 @@ class OAuthMCPDonVi:
                 expires REAL NOT NULL,used INTEGER NOT NULL DEFAULT 0,grant_id TEXT NOT NULL DEFAULT '');''')
         authority.oauth_clients = self.require_client
 
+    def metadata(self, resource=False):
+        scopes = ['tool:'+tool for tool in sorted(TOOLS)]
+        if resource:
+            return {'resource': self.authority.resource, 'authorization_servers': [self.origin],
+                    'bearer_methods_supported': ['header'], 'scopes_supported': scopes}
+        return {'issuer': self.origin, 'authorization_endpoint': self.origin+'/oauth/authorize',
+                'token_endpoint': self.origin+'/oauth/token', 'response_types_supported': ['code'],
+                'grant_types_supported': ['authorization_code'], 'token_endpoint_auth_methods_supported': ['none'],
+                'code_challenge_methods_supported': ['S256'], 'scopes_supported': scopes,
+                'authorization_response_iss_parameter_supported': True}
+
     @staticmethod
     def _redirect(uri):
         if not isinstance(uri, str) or len(uri) > 2048 or not uri.isascii() or any(ord(c) <= 32 for c in uri):
