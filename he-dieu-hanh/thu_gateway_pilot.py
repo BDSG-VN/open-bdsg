@@ -9,6 +9,7 @@ import socket
 import tempfile
 import time
 import unittest
+from sao_luu_he_thong import backup, restore
 
 
 GATEWAY = Path(__file__).with_name('may_chu.py')
@@ -37,11 +38,11 @@ class ThuGatewayPilot(unittest.TestCase):
         self.assertEqual(self.credentials.read_bytes(), before)
         self.assertNotEqual(self.command('serve', '--port', '0').returncode, 0)
 
-    def test_pilot_serves_units_over_http_and_restarts_without_resetting_password(self):
+    def test_pilot_http_restart_and_snapshot_restore_preserve_login(self):
         result = self.command('init', '--unit-preview', '--output', str(self.credentials))
         self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
         credentials = json.loads(self.credentials.read_text())
-        for _ in range(2):
+        for attempt in range(3):
             with socket.socket() as listener:
                 listener.bind(('127.0.0.1', 0))
                 port = listener.getsockname()[1]
@@ -80,6 +81,12 @@ class ThuGatewayPilot(unittest.TestCase):
                 finally:
                     process.terminate()
                     process.wait(timeout=10)
+            if attempt == 1:
+                bundle, recovered = self.root/'bundle', self.root/'recovered'
+                backup(self.data, bundle)
+                restore(bundle, recovered)
+                self.data = recovered/'data'
+                self.assertFalse((self.data/'mcp-inbound-epoch').exists())
 
     def test_preview_requires_explicit_data_even_when_environment_supplies_it(self):
         env = dict(os.environ, BDSG_DATA_DIR=str(self.data))

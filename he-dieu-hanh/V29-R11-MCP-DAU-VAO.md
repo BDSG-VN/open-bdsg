@@ -432,6 +432,12 @@ có quyền sửa thư mục vẫn có thể sửa marker/dữ liệu. Nếu ini
 không ghi được chứng thư/marker, dừng kiểm tra thư mục riêng đó; không tự
 chạy lại init lên kho đã có hoặc sửa marker của production.
 
+Snapshot mới giữ marker chế độ, nhưng không giữ `mcp-inbound-epoch`.
+Khôi phục vào thư mục mới có thể chạy pilot và giữ mật khẩu web; grant/code/
+token cũ không được nhận lại chỉ vì khôi phục epoch từ snapshot. Dùng mã
+hiểu marker để phục hồi gói pilot; bản trước R11d chưa nhận tệp này trong
+manifest. Gói legacy không có marker không thay đổi vì bổ sung whitelist.
+
 Các ứng dụng pilot được công bố trong `PREVIEW_APPS`; Google Office/editor,
 workflow/lịch và runtime chưa được nhận là hoàn tất cách ly đơn vị. CLI mới
 không thay nghiệm thu migration/cutover hoặc phục hồi toàn máy chủ.

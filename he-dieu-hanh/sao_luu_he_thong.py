@@ -16,6 +16,8 @@ from contextlib import closing
 from pathlib import Path
 
 DATA_FILES = (
+    # Khôi phục đúng chế độ pilot; epoch credential vẫn cố ý nằm ngoài snapshot.
+    "unit-preview.mode",
     "model-private.json",
     "ai-models-private.json",
     "litellm-config.json",
