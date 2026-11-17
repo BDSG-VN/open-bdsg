@@ -187,6 +187,17 @@ def tao_may_chu(app, port=8766):
                 )
             return app.kho.tu_phien(self.session())
 
+        def cookie_actor_matches(self, actor):
+            expected = self.headers.get("X-BDSG-Actor")
+            # Cookie dùng chung giữa các tab; biểu mẫu cũ không được chạy dưới tài khoản mới.
+            if actor and expected is not None and expected != actor["id"]:
+                self.send(409, {
+                    "error": "Danh tính phiên đã thay đổi. Hãy tải lại không gian.",
+                    "code": "identity_changed",
+                })
+                return False
+            return True
+
         def body(self):
             if (
                 self.headers.get("Transfer-Encoding")
@@ -209,6 +220,14 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             path = urlsplit(self.path).path
+            public_paths = {
+                "/api/auth/google", "/api/ready", "/api/google/callback",
+                "/api/office-source", "/mcp", "/api/catalogue",
+                "/api/customer-agents", "/api/customer-agent", "/api/modules",
+                "/api/model", "/api/suc-khoe", "/api/me",
+            }
+            if path not in public_paths and not self.cookie_actor_matches(self.actor()):
+                return
             if path == '/api/auth/google':
                 return self.send(200, app.google_login.status())
             if path == "/api/ready":
@@ -361,6 +380,9 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok(required=path != "/mcp"):
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             actor = self.actor(path == "/mcp")
+            if (path not in ("/mcp", "/api/login", "/api/customer-support", "/api/auth/google/start")
+                    and not self.cookie_actor_matches(actor)):
+                return
             if path not in ("/api/login", "/api/customer-support", '/api/auth/google/start') and not actor:
                 return self.send(
                     401,

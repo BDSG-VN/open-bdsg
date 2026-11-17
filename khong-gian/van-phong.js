@@ -106,6 +106,26 @@
     target.setAttribute("role", error ? "alert" : "status");
     target.classList.toggle("form-error", error);
   }
+  const embedded = () => window.self !== window.top;
+  function separateTab(link) {
+    if (embedded()) {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }
+    return link;
+  }
+  function pageHandoff(url, label, message) {
+    if (!embedded()) return location.assign(url);
+    // Chờ một thao tác bấm thật: mở popup sau await dễ bị trình duyệt chặn.
+    notice(message);
+    const target = document.querySelector("#office-notice");
+    if (!target || !current()) return;
+    const link = separateTab(document.createElement("a"));
+    link.href = url;
+    link.className = "button";
+    link.textContent = label;
+    target.append(document.createTextNode(" "), link);
+  }
   function heading() {
     return `<div class="office-heading"><div><h1>Văn phòng của dự án</h1><p>Tệp, ghi chú và các phiên bản công việc, trong cùng một không gian.</p></div><a class="button" href="#projects">Quản lý dự án ${icon("arrow")}</a></div>`;
   }
@@ -130,8 +150,17 @@
         request_key: createIntents.get(intent),
       });
       createIntents.delete(intent);
-      if (valid(t))
-        location.assign("/soan-thao.html?id=" + encodeURIComponent(file.id));
+      if (valid(t)) {
+        if (embedded()) {
+          busy = false;
+          await load();
+        }
+        if (valid(t)) pageHandoff(
+          "/soan-thao.html?id=" + encodeURIComponent(file.id),
+          "Mở bộ soạn thảo trong thẻ mới",
+          "Đã tạo tài liệu. Bộ soạn thảo mở trong thẻ riêng để giữ phiên văn phòng.",
+        );
+      }
     } catch (error) {
       if (valid(t)) notice(error.message, true);
     } finally {
@@ -162,6 +191,7 @@
           picker.href =
             "/google-picker.html?project=" + encodeURIComponent(selected);
           picker.textContent = "Chọn tệp khác trên Google Drive";
+          separateTab(picker);
           panel.prepend(picker);
         }
       }
@@ -182,10 +212,15 @@
         const url = new URL(result.url);
         if (
           url.origin !== "https://accounts.google.com" ||
-          url.pathname !== "/o/oauth2/v2/auth"
+          url.pathname !== "/o/oauth2/v2/auth" ||
+          url.username || url.password || url.hash
         )
           throw new Error("Không mở được trang cấp quyền Google.");
-        if (valid(t)) location.assign(url.href);
+        if (valid(t)) pageHandoff(
+          url.href,
+          "Tiếp tục cấp quyền Google trong thẻ mới",
+          "Trang cấp quyền Google sẽ mở trong thẻ riêng. Sau khi hoàn tất, quay lại văn phòng và mở lại phần kết nối để kiểm tra.",
+        );
       } else if (action === "disconnect") {
         if (
           !window.confirm(
@@ -519,6 +554,7 @@
       link.className = "button primary";
       link.href = "/soan-thao.html?id=" + encodeURIComponent(file.id);
       link.textContent = "Mở bộ soạn thảo";
+      separateTab(link);
       actions.prepend(link);
     }
     if (!file.trashed) {

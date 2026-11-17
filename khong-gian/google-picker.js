@@ -4,10 +4,26 @@
   const pick = document.querySelector("#pick"),
     status = document.querySelector("#status"),
     error = document.querySelector("#error");
-  let loaded;
+  let loaded, picker, pendingSettings;
   const imports = new Map();
+  const guard = window.BDSGSessionGuard.create({ onInvalidate(message) {
+    try { picker?.setVisible(false); picker?.dispose?.(); } catch (_) {}
+    picker = null;
+    if (pendingSettings) pendingSettings.access_token = "";
+    pendingSettings = null;
+    document.querySelectorAll(".picker-dialog, .picker-dialog-bg").forEach(node => node.remove());
+    imports.clear();
+    document.querySelector("#selection").replaceChildren();
+    pick.disabled = true;
+    status.textContent = "Phiên chọn tệp đã dừng.";
+    error.textContent = message; error.hidden = false;
+  } });
+  pick.disabled = true;
+  guard.ready.then(() => { pick.disabled = false; }).catch(failure => {
+    error.textContent = failure.message; error.hidden = false;
+  });
   async function request(path, body) {
-    const response = await fetch(path, {
+    const response = await guard.fetch(path, {
       method: "POST",
       credentials: "same-origin",
       signal: AbortSignal.timeout(30000),
@@ -15,6 +31,7 @@
       body: JSON.stringify(body),
     });
     const value = await response.json();
+    guard.assertActive();
     if (response.status === 409 && path === "/api/google/picker")
       throw new Error(
         "Kết nối Google chưa sẵn sàng. Trở về kho tệp, mở Kết nối Google Drive để kiểm tra thiết lập và cấp quyền.",
@@ -30,6 +47,7 @@
     return value;
   }
   async function selected(data) {
+    if (!guard.active) return;
     if (data.action === google.picker.Action.CANCEL) {
       pick.disabled = false;
       return;
@@ -58,7 +76,7 @@
       error.textContent = failure.message;
       error.hidden = false;
     } finally {
-      pick.disabled = false;
+      pick.disabled = !guard.active;
     }
   }
   async function load() {
@@ -78,14 +96,19 @@
     return loaded;
   }
   pick.addEventListener("click", async () => {
+    if (!guard.active) return;
     pick.disabled = true;
     error.hidden = true;
+    let settings;
     try {
       if (!project)
         throw new Error("Thiếu dự án. Quay về kho tệp và chọn lại.");
-      const settings = await request("/api/google/picker", {});
+      await guard.check();
+      settings = await request("/api/google/picker", {});
+      pendingSettings = settings;
       await load();
-      new google.picker.PickerBuilder()
+      guard.assertActive();
+      picker = new google.picker.PickerBuilder()
         .addView(new google.picker.DocsView(google.picker.ViewId.DOCS))
         .setOAuthToken(settings.access_token)
         .setDeveloperKey(settings.api_key)
@@ -93,13 +116,15 @@
         .setOrigin(location.origin)
         .setLocale("vi")
         .setCallback(selected)
-        .build()
-        .setVisible(true);
-      settings.access_token = "";
+        .build();
+      picker.setVisible(true);
     } catch (failure) {
       error.textContent = failure.message;
       error.hidden = false;
-      pick.disabled = false;
+      pick.disabled = !guard.active;
+    } finally {
+      if (settings) settings.access_token = "";
+      pendingSettings = null;
     }
   });
 })();

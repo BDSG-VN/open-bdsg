@@ -23,4 +23,5 @@ jobs:
           node khong-gian/thu_mo_dun.cjs
           node khong-gian/thu_xuong.cjs
           node khong-gian/thu_tro_ly.cjs
+          node --test khong-gian/thu_he_dieu_hanh.cjs khong-gian/thu_trinh_duyet.cjs khong-gian/thu_van_phong_cua_so.cjs khong-gian/thu_bao_ve_phien.cjs
           git diff --check

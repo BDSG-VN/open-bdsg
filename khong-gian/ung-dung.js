@@ -114,15 +114,25 @@ const titles = {
 };
 const main = $("#main");
 let afterLogin = null,
-  toastTimer;
+  toastTimer,
+  refreshVersion = 0;
 
-async function api(path, options = {}) {
+async function api(path, options = {}, brokered = false) {
+  const publicRead = ["/api/me", "/api/catalogue", "/api/model", "/api/modules", "/api/auth/google", "/api/ready"].includes(path);
+  let sharedRead = !options.method && !publicRead;
+  if (path === "/api/tools" && options.body) {
+    try { sharedRead = ["mo_dun.danh_sach", "du_an.danh_sach"].includes(JSON.parse(options.body).name); } catch (_) {}
+  }
+  if (!brokered && sharedRead && location.pathname === "/workspace.html" && parent !== window && parent.BDSGReadBroker) {
+    return parent.BDSGReadBroker.read(path + "|" + (options.body || ""), state.user?.id || "guest", () => api(path, options, true));
+  }
   const r = await fetch(path, {
     credentials: "same-origin",
     ...options,
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
+      ...(state.user?.id && !["/api/me", "/api/catalogue", "/api/login", "/api/auth/google", "/api/auth/google/start"].includes(path) ? {"X-BDSG-Actor":state.user.id} : {}),
     },
   });
   let data;
@@ -131,7 +141,10 @@ async function api(path, options = {}) {
   } catch (_) {
     throw new Error("Dịch vụ chưa sẵn sàng. Vui lòng thử lại.");
   }
-  if (!r.ok) throw new Error(data.error || "Chưa hoàn tất được yêu cầu.");
+  if (!r.ok) {
+    if (data.code === "identity_changed") window.BDSGSession?.invalidate();
+    throw new Error(data.error || "Chưa hoàn tất được yêu cầu.");
+  }
   return data;
 }
 async function tool(name, args = {}) {
@@ -383,6 +396,15 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  if (location.pathname !== "/workspace.html" && window.BDSGDesktop) {
+    if (!location.hash || location.hash === "#desktop") {
+      window.BDSGDesktop.open();
+      document.title = "BDSG Thanh Hoá — Màn hình chính";
+      return;
+    }
+    if (window.BDSGDesktop.openRoute(location.hash)) return;
+  }
+  window.BDSGDesktop?.leave();
   if (window.BDSGOffice?.leave(location.hash) === false) return;
   const taskMatch = /^#task\/([a-f0-9]{24})$/.exec(location.hash);
   const supportMatch = /^#support\/([a-z0-9_-]{1,80})$/.exec(location.hash);
@@ -432,6 +454,10 @@ function render() {
   })[state.view]();
 }
 function auth(callback) {
+  if (location.pathname === "/workspace.html" && parent !== window && !state.user) {
+    parent.postMessage({type:"bdsg-os-login"}, location.origin);
+    return;
+  }
   if (state.user) {
     callback?.();
     return;
@@ -463,6 +489,9 @@ function newRequest(sector) {
 }
 async function loadPrivate() {
   if (!state.user) return;
+  // Các ứng dụng có API riêng không cần tải lại toàn bộ hộp thư/nhật ký khi mở cửa sổ.
+  if (!['#overview', '#requests', '#agents', '#activity', '#connections'].includes(location.hash)) return;
+  const actor = state.user.id;
   const routes = [
     ["requests", "/api/requests", "requests"],
     ["agents", "/api/agents", "agents"],
@@ -473,15 +502,18 @@ async function loadPrivate() {
   await Promise.all(
     routes.map(async ([key, path, field]) => {
       const r = await api(path);
-      if (r.ok) state[key] = r.ket_qua[field];
+      if (r.ok && state.user?.id === actor) state[key] = r.ket_qua[field];
     }),
   );
 }
 async function refresh() {
+  const version = ++refreshVersion;
   const [catalog, me] = await Promise.all([
     api("/api/catalogue"),
     api("/api/me"),
   ]);
+  if (version !== refreshVersion) return;
+  if ((state.user?.id || "guest") !== (me.user?.id || "guest")) clearPrivateState();
   state.products = catalog.products;
   state.checkedAt = catalog.checked_at;
   state.endpoint = catalog.mcp_endpoint;
@@ -659,6 +691,7 @@ $("#login-form").addEventListener("submit", async (e) => {
     e.target.elements.username.value = "chu-quan";
     $("#login-dialog").close();
     await refresh();
+    window.BDSGSession?.announce();
     const cb = afterLogin;
     afterLogin = null;
     cb?.();
@@ -691,30 +724,34 @@ $("#request-form").addEventListener("submit", async (e) => {
   }
 });
 $("#profile").addEventListener("click", async () => {
+  if (location.pathname === "/workspace.html" && parent !== window) {
+    parent.postMessage({type:state.user ? "bdsg-os-logout" : "bdsg-os-login"}, location.origin);
+    return;
+  }
   if (!state.user) return auth(() => render());
   try {
     await api("/api/logout", { method: "POST", body: "{}" });
-    state.user = null;
-    window.BDSGProjects?.clearSelected();
-    window.BDSGTasks?.reset();
-    window.BDSGStaff?.reset();
-    window.BDSGAI?.reset();
-    window.BDSGStudio?.reset();
-    window.BDSGOffice?.reset();
-    window.BDSGConnectors?.reset();
-    window.BDSGVietnam?.reset();
-    window.BDSGSupport?.reset();
-    state.requests = [];
-    state.agents = [];
-    state.messages = [];
-    state.events = [];
-    state.connections = [];
+    clearPrivateState();
+    window.BDSGSession?.announce();
     await refresh();
     toast("Đã đăng xuất không gian");
   } catch (err) {
     toast(err.message);
   }
 });
+function clearPrivateState() {
+  refreshVersion++;
+  state.user = null;
+  window.BDSGDesktop?.reset();
+  window.BDSGReadBroker?.reset();
+  window.BDSGProjects?.clearSelected();
+  window.BDSGTasks?.reset(); window.BDSGStaff?.reset(); window.BDSGAI?.reset();
+  window.BDSGStudio?.reset(); window.BDSGOffice?.reset(); window.BDSGConnectors?.reset();
+  window.BDSGVietnam?.reset(); window.BDSGSupport?.reset();
+  state.requests = []; state.agents = []; state.messages = []; state.events = []; state.connections = [];
+  $("#profile-name").textContent = "Không gian công khai";
+  $("#profile-role").textContent = "Đăng nhập để làm việc";
+}
 $("#menu-toggle").addEventListener("click", () => {
   $("#sidebar").classList.add("open");
   $("#sidebar-scrim").classList.add("open");
@@ -731,6 +768,7 @@ function search() {
 }
 $("#search-trigger").addEventListener("click", search);
 document.addEventListener("keydown", (e) => {
+  if (e.defaultPrevented) return;
   if (e.ctrlKey && e.key.toLowerCase() === "k") {
     e.preventDefault();
     search();
@@ -746,6 +784,7 @@ setInterval(async () => {
   if (
     state.view !== "agents" ||
     !state.user ||
+    window.BDSGAppVisible === false ||
     document.visibilityState !== "visible"
   )
     return;
@@ -767,6 +806,7 @@ refresh().then(() => {
   if (!['google-success', 'google-failed'].includes(result)) return;
   history.replaceState(null, '', location.pathname + location.hash);
   if (result === 'google-success' && state.user) {
+    window.BDSGSession?.announce();
     toast('Đã đăng nhập bằng Google');
   } else {
     auth();

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Trình duyệt BDSG</title>
+  <link rel="stylesheet" href="/trinh-duyet.css">
+  <script src="/he-dieu-hanh-state.js" defer></script>
+  <script src="/trinh-duyet.js" defer></script>
+</head>
+<body>
+  <div class="browser">
+    <header class="chrome">
+      <div class="tabs-row"><div id="session-tabs" class="session-tabs" role="tablist" aria-label="Tab trong phiên"></div><button id="new-tab" class="icon-button" aria-label="Tab mới" title="Tab mới"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      <div class="toolbar">
+        <div class="navigation"><button id="back" class="icon-button" aria-label="Quay lại" title="Quay lại"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7"/></svg></button><button id="forward" class="icon-button" aria-label="Tiến tới" title="Tiến tới"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m10 5 7 7-7 7"/></svg></button><button id="reload" class="icon-button" aria-label="Tải lại" title="Tải lại"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5M20 7l-3-2"/></svg></button></div>
+        <form id="address-form" class="address-form"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><label class="sr-only" for="address">Tìm nền tảng hoặc nhập địa chỉ website</label><input id="address" type="text" autocomplete="off" spellcheck="false" placeholder="Tìm trong BDSG hoặc nhập địa chỉ" maxlength="2048"><button class="go-button" type="submit" aria-label="Đi đến địa chỉ hoặc tìm kiếm">Đi</button></form>
+        <button id="bookmark" class="icon-button" aria-label="Lưu trang" title="Lưu trang" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg></button>
+        <button id="show-bookmarks" class="icon-button" aria-label="Xem dấu trang" title="Xem dấu trang" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v17l-7-4-7 4Z"/></svg></button>
+      </div>
+    </header>
+    <main id="page" tabindex="-1" role="tabpanel" aria-label="Nội dung tab"></main>
+    <footer><span>Tab và dấu trang chỉ giữ trong phiên này.</span><span>Website mở trong tab thiết bị.</span></footer>
+  </div>
+  <p id="notice" role="status" aria-live="polite"></p>
+</body>
+</html>

@@ -1,5 +1,8 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V27 — hệ điều hành ứng dụng, nhiều cửa sổ và trình duyệt](V27-HE-DIEU-HANH-UNG-DUNG.md).
+[Lộ trình hệ sinh thái và máy chủ đầu tiên](LO-TRINH-HE-SINH-THAI-BDSG.md).
+
 [V26 — độ tin cậy và điều khiển đồng bộ](V26-HOAN-THIEN-VAN-HANH.md).
 
 [V25 — đăng nhập Google công khai](V25-GOOGLE-CONG-KHAI.md).

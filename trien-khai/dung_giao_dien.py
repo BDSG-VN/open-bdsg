@@ -49,6 +49,9 @@ def dung(cau_hinh, thu_muc_ra):
                        '<span class="ten">' + html.escape(cau_hinh["ten"]) + "</span>")
     dau = dau.replace("</head>", '<link rel="canonical" href="' + goc_url + '/">\n</head>')
     ghi("index.html", dau)
+    ghi("workspace.html", dau.replace('<link rel="canonical" href="' + goc_url + '/">', ''))
+    for ten in ("he-dieu-hanh-state.js", "he-dieu-hanh.js", "bao-ve-phien.js", "ios.css", "trinh-duyet.html", "trinh-duyet.js", "trinh-duyet.css", "ung-dung.webmanifest"):
+        ghi(ten, doc_tep("khong-gian/" + ten))
     ghi("portal.css", doc_tep("khong-gian/giao-dien.css"))
     ghi("portal.js", doc_tep("khong-gian/ung-dung.js"))
     ghi("cong-viec.css", doc_tep("khong-gian/cong-viec.css"))

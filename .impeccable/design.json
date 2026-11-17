@@ -1,112 +1,228 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T02:40:34.064Z",
+  "generatedAt": "2026-11-17T04:36:08.734Z",
   "title": "Design System: BDSG Thanh Hoá",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "Đen than"
+        "displayName": "Xanh hành động",
+        "tonalRamp": [
+          "oklch(15% 0.0350 257.73)",
+          "oklch(26% 0.0770 257.73)",
+          "oklch(38% 0.1120 257.73)",
+          "oklch(49% 0.1400 257.73)",
+          "oklch(61% 0.1400 257.73)",
+          "oklch(73% 0.1120 257.73)",
+          "oklch(85% 0.0700 257.73)",
+          "oklch(95% 0.0252 257.73)"
+        ]
       },
       "primary-hover": {
         "role": "primary",
-        "displayName": "Đen than khi trỏ"
+        "displayName": "Xanh khi trỏ",
+        "tonalRamp": [
+          "oklch(15% 0.0350 258.02)",
+          "oklch(26% 0.0770 258.02)",
+          "oklch(38% 0.1120 258.02)",
+          "oklch(49% 0.1400 258.02)",
+          "oklch(61% 0.1400 258.02)",
+          "oklch(73% 0.1120 258.02)",
+          "oklch(85% 0.0700 258.02)",
+          "oklch(95% 0.0252 258.02)"
+        ]
       },
       "bg": {
         "role": "neutral",
-        "displayName": "Trắng ngà"
+        "displayName": "Nền nhóm",
+        "tonalRamp": [
+          "oklch(15% 0.0017 286.27)",
+          "oklch(26% 0.0037 286.27)",
+          "oklch(38% 0.0053 286.27)",
+          "oklch(49% 0.0066 286.27)",
+          "oklch(61% 0.0066 286.27)",
+          "oklch(73% 0.0053 286.27)",
+          "oklch(85% 0.0033 286.27)",
+          "oklch(95% 0.0012 286.27)"
+        ]
       },
       "surface": {
         "role": "neutral",
-        "displayName": "Trắng panel"
-      },
-      "surface-subtle": {
-        "role": "neutral",
-        "displayName": "Xám ấm nhẹ"
+        "displayName": "Trắng bề mặt",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(73% 0.0000 89.88)",
+          "oklch(85% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
       },
       "surface-muted": {
         "role": "neutral",
-        "displayName": "Xám trung tính dịu"
+        "displayName": "Xám tab",
+        "tonalRamp": [
+          "oklch(15% 0.0017 286.27)",
+          "oklch(26% 0.0037 286.27)",
+          "oklch(38% 0.0054 286.27)",
+          "oklch(49% 0.0067 286.27)",
+          "oklch(61% 0.0067 286.27)",
+          "oklch(73% 0.0054 286.27)",
+          "oklch(85% 0.0034 286.27)",
+          "oklch(95% 0.0012 286.27)"
+        ]
       },
       "surface-hover": {
         "role": "neutral",
-        "displayName": "Xám tương tác"
+        "displayName": "Xanh bề mặt tương tác",
+        "tonalRamp": [
+          "oklch(15% 0.0050 257.47)",
+          "oklch(26% 0.0110 257.47)",
+          "oklch(38% 0.0160 257.47)",
+          "oklch(49% 0.0200 257.47)",
+          "oklch(61% 0.0200 257.47)",
+          "oklch(73% 0.0160 257.47)",
+          "oklch(85% 0.0100 257.47)",
+          "oklch(95% 0.0036 257.47)"
+        ]
       },
       "text": {
         "role": "neutral",
-        "displayName": "Chữ vận hành"
+        "displayName": "Chữ nội dung",
+        "tonalRamp": [
+          "oklch(15% 0.0035 285.55)",
+          "oklch(26% 0.0078 285.55)",
+          "oklch(38% 0.0114 285.55)",
+          "oklch(49% 0.0142 285.55)",
+          "oklch(61% 0.0142 285.55)",
+          "oklch(73% 0.0114 285.55)",
+          "oklch(85% 0.0071 285.55)",
+          "oklch(95% 0.0026 285.55)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Mực tiêu đề",
+        "tonalRamp": [
+          "oklch(15% 0.0010 286.09)",
+          "oklch(26% 0.0021 286.09)",
+          "oklch(38% 0.0031 286.09)",
+          "oklch(49% 0.0038 286.09)",
+          "oklch(61% 0.0038 286.09)",
+          "oklch(73% 0.0031 286.09)",
+          "oklch(85% 0.0019 286.09)",
+          "oklch(95% 0.0007 286.09)"
+        ]
       },
       "muted": {
         "role": "neutral",
-        "displayName": "Chữ phụ"
+        "displayName": "Chữ phụ",
+        "tonalRamp": [
+          "oklch(15% 0.0039 285.82)",
+          "oklch(26% 0.0087 285.82)",
+          "oklch(38% 0.0126 285.82)",
+          "oklch(49% 0.0157 285.82)",
+          "oklch(61% 0.0157 285.82)",
+          "oklch(73% 0.0126 285.82)",
+          "oklch(85% 0.0079 285.82)",
+          "oklch(95% 0.0028 285.82)"
+        ]
       },
       "line": {
         "role": "neutral",
-        "displayName": "Viền mảnh"
+        "displayName": "Viền phân nhóm",
+        "tonalRamp": [
+          "oklch(15% 0.0024 286.20)",
+          "oklch(26% 0.0052 286.20)",
+          "oklch(38% 0.0076 286.20)",
+          "oklch(49% 0.0095 286.20)",
+          "oklch(61% 0.0095 286.20)",
+          "oklch(73% 0.0076 286.20)",
+          "oklch(85% 0.0048 286.20)",
+          "oklch(95% 0.0017 286.20)"
+        ]
       },
-      "focus": {
-        "role": "neutral",
-        "displayName": "Đường bao bàn phím"
+      "link": {
+        "role": "primary",
+        "displayName": "Xanh liên kết",
+        "tonalRamp": [
+          "oklch(15% 0.0350 257.73)",
+          "oklch(26% 0.0770 257.73)",
+          "oklch(38% 0.1120 257.73)",
+          "oklch(49% 0.1400 257.73)",
+          "oklch(61% 0.1400 257.73)",
+          "oklch(73% 0.1120 257.73)",
+          "oklch(85% 0.0700 257.73)",
+          "oklch(95% 0.0252 257.73)"
+        ]
       },
-      "nav-active": {
+      "selection": {
         "role": "neutral",
-        "displayName": "Điều hướng đang chọn"
+        "displayName": "Vùng chọn chữ",
+        "tonalRamp": [
+          "oklch(15% 0.0125 254.89)",
+          "oklch(26% 0.0274 254.89)",
+          "oklch(38% 0.0399 254.89)",
+          "oklch(49% 0.0499 254.89)",
+          "oklch(61% 0.0499 254.89)",
+          "oklch(73% 0.0399 254.89)",
+          "oklch(85% 0.0249 254.89)",
+          "oklch(95% 0.0090 254.89)"
+        ]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Tiêu đề giao việc",
-        "purpose": "Lora cục bộ cho tiếng Việt; cỡ linh hoạt lấy từ CSS của tiêu đề giao việc."
+        "displayName": "Tiêu đề Home",
+        "purpose": "Tiêu đề Home 44px trên máy tính, 32px tại chiều rộng tối đa 600px."
       },
       "headline": {
-        "displayName": "Tiêu đề trang",
-        "purpose": "Tiêu đề vận hành sans-serif."
+        "displayName": "Tiêu đề khu vực",
+        "purpose": "Tiêu đề khu vực trong shell và ứng dụng."
       },
       "body": {
         "displayName": "Nội dung",
-        "purpose": "Nội dung và điều khiển dùng chuỗi sans-serif của ứng dụng."
+        "purpose": "Nội dung trong shell và ứng dụng."
       },
       "label": {
-        "displayName": "Nhãn nút",
-        "purpose": "Nút thông thường."
-      },
-      "title": {
-        "displayName": "Tiêu đề nhóm",
-        "purpose": "Nhóm công việc gần đây."
+        "displayName": "Nhãn điều khiển",
+        "purpose": "Nhãn điều khiển trong shell và ứng dụng."
       }
     },
     "shadows": [
       {
-        "name": "module-menu",
-        "value": "0 13px 35px #00000020",
-        "purpose": "Danh sách chọn mô-đun nổi trên ô soạn; đối chiếu mã ngày 15/11/2026."
+        "name": "icon",
+        "value": "0 5px 12px #12325b14",
+        "purpose": "Biểu tượng Home."
       },
       {
-        "name": "toast",
-        "value": "0 8px 30px #00000026",
-        "purpose": "Thông báo nổi; đối chiếu mã ngày 15/11/2026."
+        "name": "dock",
+        "value": "0 10px 32px #182f5420",
+        "purpose": "Tách Dock khỏi nội dung."
+      },
+      {
+        "name": "window",
+        "value": "0 12px 36px #182f541a",
+        "purpose": "Cửa sổ máy tính; bỏ ở điện thoại."
+      },
+      {
+        "name": "notice",
+        "value": "0 7px 18px #182f541c",
+        "purpose": "Thông báo nổi."
       }
     ],
     "motion": [
       {
-        "name": "button-state",
-        "value": "transform 0.15s, background 0.15s",
-        "purpose": "Chuyển vị trí và nền nút thông thường; đối chiếu mã ngày 15/11/2026."
-      },
-      {
-        "name": "navigation-state",
-        "value": "background 0.15s, color 0.15s",
-        "purpose": "Đổi nền và chữ điều hướng; đối chiếu mã ngày 15/11/2026."
-      },
-      {
-        "name": "settings-toggle",
-        "value": "transform 160ms ease-out",
-        "purpose": "Xoay biểu tượng phần ngữ cảnh khi mở; đối chiếu mã ngày 15/11/2026."
+        "name": "icon-transition",
+        "value": "transform .18s cubic-bezier(.16,1,.3,1), filter .18s",
+        "purpose": "Phản hồi icon khi trỏ; tắt khi giảm chuyển động."
       }
     ],
     "breakpoints": [
       {
-        "name": "sidebar-drawer",
+        "name": "tablet",
         "value": "900px"
       },
       {
@@ -120,96 +236,82 @@
       "name": "Nút chính",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Hành động chính màu đen than; trích CSS có hiệu lực ngày 15/11/2026.",
-      "html": "<button class=\"ds-button ds-primary\">Bắt đầu công việc</button>",
-      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px;min-height:38px;border:1px solid var(--line,#e3e3df);border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;line-height:1.5;cursor:pointer;transition:transform 0.15s,background 0.15s}.ds-primary{background:var(--action,#1a1a19);border-color:var(--deep,#1a1a19);color:#fff}.ds-primary:hover{transform:translateY(-1px);background:#333330}.ds-button:focus-visible{outline:2px solid var(--focus,#555550);outline-offset:3px}.ds-button:disabled{opacity:0.6;cursor:wait}@media(max-width:600px){.ds-button{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+      "description": "Hành động chính trong shell.",
+      "html": "<button class=\"ds-primary\">Mở ứng dụng</button>",
+      "css": ".ds-primary{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--action, #0067dc);color:#fff;border:0;border-radius:12px;min-height:44px;padding:12px 18px;font-weight:600}.ds-primary:hover{background:var(--deep, #004fae)}.ds-primary:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}.ds-primary:disabled{opacity:.45;cursor:default}"
     },
     {
-      "name": "Nút phụ",
+      "name": "Nút chữ",
       "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "Hành động phụ nền trắng, có viền; trích CSS ngày 15/11/2026.",
-      "html": "<button class=\"ds-secondary\">Xem công việc</button>",
-      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px;min-height:38px;border:1px solid var(--line,#e3e3df);border-radius:8px;background:#fff;color:var(--ink,#1a1a19);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;line-height:1.5;cursor:pointer;transition:transform 0.15s,background 0.15s}.ds-secondary:hover{transform:translateY(-1px);background:var(--surface-subtle,#f4f4f1)}.ds-secondary:focus-visible{outline:2px solid var(--focus,#555550);outline-offset:3px}.ds-secondary:disabled{opacity:0.6;cursor:wait}@media(max-width:600px){.ds-secondary{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+      "refersTo": "button-text",
+      "description": "Thao tác nhẹ cạnh tiêu đề.",
+      "html": "<button class=\"ds-text\">Tùy chỉnh</button>",
+      "css": ".ds-text{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#005bc4;border:0;background:transparent;min-height:44px;padding:10px 0;font-weight:600}.ds-text:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}.ds-text:disabled{opacity:.45;cursor:default}"
     },
     {
-      "name": "Nút nhẹ",
-      "kind": "button",
-      "refersTo": "button-subtle",
-      "description": "Nút nền xám ấm không viền; trích CSS ngày 15/11/2026.",
-      "html": "<button class=\"ds-subtle\">Chọn tài liệu</button>",
-      "css": ".ds-subtle{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px;min-height:38px;border:0;border-radius:8px;background:var(--surface-subtle,#f4f4f1);color:var(--text,#454541);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;line-height:1.5;cursor:pointer;transition:transform 0.15s,background 0.15s}.ds-subtle:hover{transform:translateY(-1px);background:var(--surface-subtle,#f4f4f1)}.ds-subtle:focus-visible{outline:2px solid var(--focus,#555550);outline-offset:3px}.ds-subtle:disabled{opacity:0.6;cursor:wait}@media(max-width:600px){.ds-subtle{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-subtle{transition:none}}"
-    },
-    {
-      "name": "Trường nhập Studio",
+      "name": "Tìm ứng dụng",
       "kind": "input",
-      "refersTo": "field",
-      "description": "Trường nhập nền trắng của Studio; trích CSS ngày 15/11/2026.",
-      "html": "<input class=\"ds-field\" aria-label=\"Tên công việc\" placeholder=\"Tên công việc\">",
-      "css": ".ds-field{max-width:100%;min-width:0;border:1px solid var(--line,#e3e3df);border-radius:10px;background:#fff;color:var(--ink,#1a1a19);padding:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;caret-color:var(--ink,#1a1a19)}.ds-field::placeholder{color:var(--muted,#6b6b66);opacity:1}.ds-field:focus-visible{outline:2px solid var(--focus,#555550);outline-offset:3px}@media(max-width:600px){.ds-field{font-size:16px}}"
+      "refersTo": "search",
+      "description": "Khung tìm kiếm Home, focus trên cả nhóm.",
+      "html": "<label class=\"ds-search\"><span>Tìm</span><input aria-label=\"Tìm ứng dụng\" placeholder=\"Tìm ứng dụng BDSG\"></label>",
+      "css": ".ds-search{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:0 18px;min-height:56px;color:var(--muted, #62626c);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-search input{width:100%;min-width:0;border:0;background:transparent;padding:16px 0;font:inherit;font-size:16px;color:var(--ink, #1c1c1e)}.ds-search input::placeholder{color:var(--muted, #62626c)}.ds-search:focus-within{outline:3px solid var(--action, #0067dc);outline-offset:2px}.ds-search input:focus-visible{outline:none}"
     },
     {
-      "name": "Điều hướng sidebar",
+      "name": "Tab thư viện",
       "kind": "nav",
-      "refersTo": "navigation",
-      "description": "Mục điều hướng chữ thường và trạng thái đang mở; trích CSS ngày 15/11/2026.",
-      "html": "<nav class=\"ds-nav\" aria-label=\"Không gian\"><a href=\"#du-an\">Dự án</a><a href=\"#cong-viec\" aria-current=\"page\">Công việc</a></nav>",
-      "css": ".ds-nav{background:var(--surface-subtle,#f4f4f1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;line-height:1.5}.ds-nav a{display:flex;align-items:center;gap:11px;padding:10px;min-height:42px;margin-bottom:4px;border-radius:8px;font-size:13px;color:var(--text,#454541);text-decoration:none;transition:background 0.15s,color 0.15s}.ds-nav a:hover{background:var(--surface-hover,#e7e7e3);color:var(--ink,#1a1a19)}.ds-nav a[aria-current=page]{background:#e7e7e2;color:var(--ink,#1a1a19);font-weight:600}.ds-nav a:focus-visible{outline:2px solid var(--focus,#555550);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-nav a{transition:none}}"
+      "refersTo": "navigation-selected",
+      "description": "Tab chọn có chữ xanh và gạch dưới.",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"Thư viện\"><button aria-pressed=\"true\">Ứng dụng</button><button aria-pressed=\"false\">Nền tảng</button></nav>",
+      "css": ".ds-tabs{display:flex;gap:5px;border-bottom:1px solid #cbd5e6;width:fit-content;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-tabs button{font:inherit;border:0;background:transparent;min-height:44px;padding:10px 16px;color:#51586a;font-size:14px;font-weight:600;border-bottom:2px solid transparent}.ds-tabs button[aria-pressed=\"true\"]{color:#005bc4;border-bottom-color:var(--action, #0067dc)}.ds-tabs button:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}"
     },
     {
-      "name": "Mẫu công việc",
+      "name": "Gợi ý tìm kiếm",
       "kind": "chip",
-      "refersTo": "task-template",
-      "description": "Nút mẫu dạng viên thuốc; trích CSS ngày 15/11/2026.",
-      "html": "<button class=\"ds-template\"><span>Lập kế hoạch</span></button>",
-      "css": ".ds-template{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;min-height:40px;border:1px solid var(--line,#e3e3df);border-radius:100px;background:transparent;color:var(--text,#454541);text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;cursor:pointer;transition:background 0.15s,border-color 0.15s}.ds-template span{font-size:12px;line-height:1.5;color:inherit}.ds-template:hover{background:var(--surface-hover,#e7e7e3);border-color:#c8c8c0}.ds-template:focus-visible{outline:2px solid var(--focus,#555550);outline-offset:3px}@media(max-width:600px){.ds-template{padding:10px 12px;min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-template{transition:none}}"
+      "description": "Gợi ý thao tác trong trình duyệt.",
+      "html": "<button class=\"ds-suggestion\">Tìm nền tảng</button>",
+      "css": ".ds-suggestion{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;border:0;background:#e4e4eb;color:#3c3c43;padding:10px 14px;min-height:44px;border-radius:10px}.ds-suggestion:hover{background:#d8d8e2}.ds-suggestion:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:3px}.ds-suggestion:disabled{opacity:.4;cursor:default}"
     },
     {
-      "name": "Thẻ Studio",
+      "name": "Thẻ cửa sổ",
       "kind": "card",
-      "refersTo": "studio-card",
-      "description": "Thẻ nội dung phẳng, có viền; trích CSS ngày 15/11/2026.",
-      "html": "<article class=\"ds-card\"><p>Tài liệu công việc</p></article>",
-      "css": ".ds-card{background:#fff;color:var(--ink,#1a1a19);border:1px solid var(--line,#e3e3df);border-radius:18px;padding:24px;margin:18px 0;box-shadow:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,Arial,sans-serif;line-height:1.5}.ds-card>p{font-size:13px;color:var(--muted,#6b6b66);overflow-wrap:anywhere}@media(max-width:600px){.ds-card{padding:18px}}"
+      "refersTo": "session-card",
+      "description": "Vùng mở lại ứng dụng trong Switcher.",
+      "html": "<article class=\"ds-session\"><button class=\"ds-session-open\"><h2>Công việc</h2><p>Tiếp tục cửa sổ đang mở.</p><span>Tiếp tục</span></button></article>",
+      "css": ".ds-session{background:#fff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-session-open{font:inherit;display:block;width:100%;padding:30px 24px;text-align:left;border:0;background:transparent;color:var(--ink, #1c1c1e)}.ds-session h2{font-size:21px;margin:24px 0 10px}.ds-session p{color:var(--muted, #62626c);font-size:14px;margin:0 0 28px;line-height:1.6}.ds-session span{font-size:14px;color:#005bc4}.ds-session-open:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}"
     }
   ],
   "narrative": {
-    "northStar": "Không gian giao việc trung tính",
-    "overview": "Hệ thống ghi nhận từ bản giao diện ngày 15/11/2026: nền trắng ngà nhạt, panel trắng, sidebar xám ấm, chữ đen than và nút chính gần đen. Tham chiếu Manus là quyết định về diện mạo; tên, biểu tượng và ngôn ngữ vẫn là BDSG.\n\nKhoảng trống và chênh lệch sắc độ phân lớp nội dung. Tiêu đề giao việc dùng serif có bộ chữ tiếng Việt riêng; nội dung vận hành và điều khiển dùng sans-serif. Phạm vi ghi nhận là các stylesheet của khong-gian/index.html, với dien-mao.css nạp sau cùng. Các giá trị được đối chiếu mã ngày 15/11/2026; đây không phải số liệu đo hiệu năng hoặc tuyên bố đã rà mọi màn hình.",
+    "northStar": "Không gian ứng dụng iOS BDSG",
+    "overview": "Chủ quản chọn thay toàn bộ diện mạo sang phong cách iOS ngày 17/11/2026.\nBề mặt sáng, chữ hệ thống, hành động xanh và biểu tượng vuông bo góc tạo\nkhông gian mở ứng dụng, làm việc rồi quay lại. Tên, biểu tượng và tiếng Việt\nvẫn thuộc BDSG; không dùng tài sản Apple.\n\nTài liệu ghi nhận mã ngày 17/11/2026: `ios.css` là stylesheet nạp cuối của\n`index.html`, ghi đè các lớp cũ; trình duyệt riêng dùng `trinh-duyet.css`.\nĐây là kết quả quét nguồn, không phải xác nhận kiểm thử hình ảnh hay triển\nkhai. Bố cục từng ứng dụng giữ nhu cầu nghiệp vụ; vỏ webOS là ngữ cảnh chung.",
     "keyCharacteristics": [
-      "Nền trung tính ấm và hành động chính màu đen than.",
-      "Bề mặt tĩnh phẳng, đường viền mảnh, góc mềm.",
-      "Chữ serif dành cho tiêu đề giao việc; sans-serif phục vụ vận hành.",
-      "Trạng thái bàn phím có đường bao nhìn thấy được."
+      "Hành động xanh và chữ tối trên bề mặt sáng.",
+      "Chữ hệ thống dùng cho tiêu đề, nội dung và điều khiển.",
+      "Nhóm nội dung bo góc; Dock và cửa sổ có chiều sâu nhẹ.",
+      "Focus bàn phím rõ, có tùy chỉnh chữ lớn và giảm chuyển động."
     ],
     "rules": [
       {
-        "name": "The Nền ấm, hành động than Rule",
-        "body": "Dùng nền bg và hành động primary đã chốt; không đổi bảng màu chính thành xanh. Các màu trạng thái nghiệp vụ hiện có không phải màu thương hiệu mới.",
+        "name": "The Hành động xanh Rule",
+        "body": "Hành động chính dùng màu `primary`; màu biểu tượng chỉ giúp nhận diện ứng dụng. Không lấy nút đen ở stylesheet cũ làm chuẩn.",
         "section": "colors"
       },
       {
-        "name": "The Hai giọng chữ Rule",
-        "body": "Giữ Lora cho tiêu đề giao việc và sans-serif cho điều khiển; không suy rộng font hệ thống thành font display.",
-        "section": "typography"
-      },
-      {
-        "name": "The Bề mặt phẳng Rule",
-        "body": "Giữ ô soạn và thẻ Studio không bóng; dùng bóng của lớp nổi theo đúng vai trò.",
+        "name": "The Lớp nổi có vai trò Rule",
+        "body": "Dùng chiều sâu cho Dock, cửa sổ và thông báo; nhóm danh sách thường chỉ cần nền và đường phân cách.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do giữ nền trắng ngà, nút đen than và nhận diện BDSG đã chốt.",
-      "Do dùng khác biệt sắc độ và viền để phân lớp bề mặt tĩnh.",
-      "Do giữ font tiếng Việt và đường bao bàn phím của từng điều khiển.",
-      "Do đọc lớp diện mạo nạp cuối trước khi tái dùng giá trị CSS cũ."
+      "Do giữ nhận diện BDSG, tiếng Việt và lựa chọn phong cách iOS mới nhất.",
+      "Do dùng hành động xanh, chữ tối và nhóm bề mặt sáng theo token.",
+      "Do giữ focus, tên trợ năng, phản hồi lỗi và hỗ trợ giảm chuyển động.",
+      "Do kiểm cả điện thoại, máy tính, chữ lớn và trạng thái rỗng trước nghiệm thu."
     ],
     "donts": [
-      "Don't thay thương hiệu BDSG bằng Manus.",
-      "Don't biến màu trạng thái nghiệp vụ thành màu nhấn chung.",
-      "Don't lấy các khai báo cũ đã bị ghi đè làm chuẩn mới.",
-      "Don't xem bố cục trang giao việc là khuôn cố định cho mọi màn hình."
+      "Don't khôi phục nút đen và tiêu đề Lora từ stylesheet đã bị ghi đè.",
+      "Don't dùng tài sản Apple hoặc bịa pin, thời tiết, tín hiệu hay trạng thái kết nối.",
+      "Don't mô tả liên kết web như SSO, đồng bộ hoặc ứng dụng native đã cài.",
+      "Don't coi việc ghi tài liệu từ mã là bằng chứng giao diện đã qua kiểm thử hình ảnh."
     ]
   }
 }

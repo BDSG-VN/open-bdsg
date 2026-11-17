@@ -760,6 +760,7 @@
       !currentTask ||
       !activeStates.has(currentTask.status) ||
       document.visibilityState !== "visible" ||
+      window.BDSGAppVisible === false ||
       location.hash !== "#task/" + encodeURIComponent(currentTask.id)
     )
       return;

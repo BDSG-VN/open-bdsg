@@ -151,6 +151,45 @@ class ThuCong(unittest.TestCase):
         self.assertEqual(self.request("/api/logout", {}, hdr)[0], 200)
         self.assertFalse(self.request("/api/me", headers=hdr)[1]["authenticated"])
 
+    def test_stale_web_actor_cannot_read_write_or_logout_another_session(self):
+        with self.app.kho.ket_noi() as db:
+            token = self.app.kho.cap_phien(db, "operator-a", time.time())
+        hdr = {"Cookie": "bdsg_session=" + token, "Origin": self.app.origin,
+               "X-BDSG-Actor": "chu-quan"}
+        payload = {"name": "agent.gui_tin", "arguments": {
+            "recipient": "agent-b", "body": "khong-duoc-gui-tu-phien-cu"}}
+        for path, body in [("/api/messages", None), ("/api/system", None),
+                           ("/api/tools", payload), ("/api/logout", {})]:
+            with self.subTest(path=path):
+                status, result, headers = self.request(path, body, hdr)
+                self.assertEqual(status, 409)
+                self.assertEqual(result["code"], "identity_changed")
+                self.assertEqual(set(result), {"error", "code"})
+                self.assertNotIn("Set-Cookie", headers)
+        self.assertEqual(self.result(self.rpc("agent-b", "agent.doc_hop_thu"))["messages"], [])
+        self.assertEqual(self.request("/api/me", headers=hdr)[1]["user"]["id"], "operator-a")
+        self.assertEqual(self.request("/api/catalogue", headers=hdr)[0], 200)
+        legacy = {key: value for key, value in hdr.items() if key != "X-BDSG-Actor"}
+        self.assertEqual(self.request("/api/messages", headers=legacy)[0], 200)
+        self.assertTrue(self.request("/api/tools", {
+            "name": "agent.doc_hop_thu", "arguments": {}}, legacy)[1]["ok"])
+        self.assertEqual(self.request("/api/messages", headers={"X-BDSG-Actor": "operator-a"})[0], 401)
+        hdr["X-BDSG-Actor"] = "operator-a"
+        self.assertEqual(self.request("/api/messages", headers=hdr)[0], 200)
+        self.assertTrue(self.request("/api/tools", payload, hdr)[1]["ok"])
+        self.assertEqual(self.request("/api/logout", {}, hdr)[0], 200)
+
+    def test_actor_header_does_not_override_bearer_identity(self):
+        hdr = {**self.mcp_headers("agent-a"), "X-BDSG-Actor": "chu-quan"}
+        status, body, _ = self.request("/mcp", {
+            "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+            "params": {"name": "agent.gui_tin", "arguments": {
+                "recipient": "agent-b", "body": "danh-tinh-tu-token"}}}, hdr)
+        self.assertEqual(status, 200)
+        self.assertFalse(body["result"].get("isError"), body)
+        messages = self.result(self.rpc("agent-b", "agent.doc_hop_thu"))["messages"]
+        self.assertEqual(messages[0]["sender"], "agent-a")
+
     def test_agent_message_identity_isolation_persistence(self):
         message = "noi-dung-thu-rieng-tu"
         self.result(self.rpc("agent-a", "agent.gui_tin", {"recipient": "agent-b", "body": message}))

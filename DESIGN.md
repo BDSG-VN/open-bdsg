@@ -1,269 +1,265 @@
 ---
 name: "BDSG Thanh Hoá"
-description: "Không gian vận hành trung tính theo tham chiếu Manus, giữ nhận diện BDSG."
+description: "Không gian ứng dụng BDSG theo phong cách iOS, vận hành qua web."
 colors:
-  primary: "#1a1a19"
-  primary-hover: "#333330"
-  bg: "#f8f8f6"
+  primary: "#0067dc"
+  primary-hover: "#004fae"
+  bg: "#f2f2f7"
   surface: "#fff"
-  surface-subtle: "#f4f4f1"
-  surface-muted: "#ededea"
-  surface-hover: "#e7e7e3"
-  text: "#454541"
-  muted: "#6b6b66"
-  line: "#e3e3df"
-  focus: "#555550"
-  nav-active: "#e7e7e2"
+  surface-muted: "#e8e8ed"
+  surface-hover: "#e5eefb"
+  text: "#303038"
+  ink: "#1c1c1e"
+  muted: "#62626c"
+  line: "#d8d8df"
+  link: "#005bc4"
+  selection: "#c8e0ff"
 typography:
   display:
-    fontFamily: '"BDSG Lora", Georgia, serif'
-    fontWeight: 400
-    lineHeight: 1.35
-    letterSpacing: "-0.025em"
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    fontSize: "44px"
+    fontWeight: 750
+    lineHeight: 1.15
+    letterSpacing: "-0.03em"
   headline:
-    fontSize: "27px"
-    fontWeight: 650
-    lineHeight: 1.3
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    fontSize: "32px"
+    lineHeight: 1.2
     letterSpacing: "-0.025em"
   body:
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, Arial, sans-serif'
-    fontSize: "14px"
-    lineHeight: 1.5
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    fontSize: "16px"
+    lineHeight: 1.6
   label:
-    fontSize: "13px"
-    fontWeight: 600
-  title:
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     fontSize: "14px"
-    fontWeight: 500
+    fontWeight: 600
 rounded:
-  control: "8px"
-  field: "10px"
-  panel: "12px"
-  studio: "18px"
-  composer: "20px"
-  template: "100px"
-spacing:
-  inline: "8px"
+  browser-control: "10px"
   control: "12px"
-  sidebar: "16px"
-  compact: "18px"
-  section: "20px"
-  card: "24px"
+  panel: "16px"
+  icon: "18px"
+  window: "20px"
+  dock: "26px"
+spacing:
+  small: "8px"
+  control: "12px"
+  inset: "20px"
+  section: "24px"
+  group: "32px"
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.surface}"
-    typography: "{typography.label}"
     rounded: "{rounded.control}"
-    padding: "10px 15px"
+    padding: "12px 18px"
   button-primary-hover:
     backgroundColor: "{colors.primary-hover}"
-  button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.primary}"
-    typography: "{typography.label}"
-    rounded: "{rounded.control}"
-    padding: "10px 15px"
-  button-subtle:
-    backgroundColor: "{colors.surface-subtle}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.control}"
-    padding: "10px 15px"
-  field:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.field}"
-    padding: "12px"
-  navigation:
-    textColor: "{colors.text}"
-    rounded: "{rounded.control}"
-    padding: "10px"
-  navigation-active:
-    backgroundColor: "{colors.nav-active}"
-    textColor: "{colors.primary}"
-  task-template:
+  button-text:
     backgroundColor: "transparent"
-    textColor: "{colors.text}"
-    rounded: "{rounded.template}"
-    padding: "9px 13px"
-  studio-card:
+    textColor: "{colors.link}"
+    padding: "10px 0"
+  search:
     backgroundColor: "{colors.surface}"
-    rounded: "{rounded.studio}"
-    padding: "24px"
-  task-composer:
+    textColor: "{colors.ink}"
+    rounded: "{rounded.panel}"
+    padding: "0 18px"
+  navigation-selected:
+    textColor: "{colors.link}"
+    padding: "10px 16px"
+  app-icon:
+    textColor: "{colors.surface}"
+    rounded: "{rounded.icon}"
+    size: "68px"
+  session-card:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.composer}"
+    rounded: "{rounded.window}"
+    padding: "30px 24px"
 ---
 
 # Design System: BDSG Thanh Hoá
 
 ## Overview
 
-**Creative North Star: "Không gian giao việc trung tính"**
+**Creative North Star: "Không gian ứng dụng iOS BDSG"**
 
-Hệ thống ghi nhận từ bản giao diện ngày 15/11/2026: nền trắng ngà nhạt,
-panel trắng, sidebar xám ấm, chữ đen than và nút chính gần đen. Tham chiếu
-Manus là quyết định về diện mạo; tên, biểu tượng và ngôn ngữ vẫn là BDSG.
+Chủ quản chọn thay toàn bộ diện mạo sang phong cách iOS ngày 17/11/2026.
+Bề mặt sáng, chữ hệ thống, hành động xanh và biểu tượng vuông bo góc tạo
+không gian mở ứng dụng, làm việc rồi quay lại. Tên, biểu tượng và tiếng Việt
+vẫn thuộc BDSG; không dùng tài sản Apple.
 
-Khoảng trống và chênh lệch sắc độ phân lớp nội dung. Tiêu đề giao việc dùng
-serif có bộ chữ tiếng Việt riêng; nội dung vận hành và điều khiển dùng sans-serif.
-Phạm vi ghi nhận là các stylesheet của `khong-gian/index.html`, với
-`dien-mao.css` nạp sau cùng. Các giá trị dưới đây được đối chiếu mã ngày
-15/11/2026; đây không phải số liệu đo hiệu năng hoặc tuyên bố đã rà mọi màn hình.
+Tài liệu ghi nhận mã ngày 17/11/2026: `ios.css` là stylesheet nạp cuối của
+`index.html`, ghi đè các lớp cũ; trình duyệt riêng dùng `trinh-duyet.css`.
+Đây là kết quả quét nguồn, không phải xác nhận kiểm thử hình ảnh hay triển
+khai. Bố cục từng ứng dụng giữ nhu cầu nghiệp vụ; vỏ webOS là ngữ cảnh chung.
 
 **Key Characteristics:**
 
-- Nền trung tính ấm và hành động chính màu đen than.
-- Bề mặt tĩnh phẳng, đường viền mảnh, góc mềm.
-- Chữ serif dành cho tiêu đề giao việc; sans-serif phục vụ vận hành.
-- Trạng thái bàn phím có đường bao nhìn thấy được.
+- Hành động xanh và chữ tối trên bề mặt sáng.
+- Chữ hệ thống dùng cho tiêu đề, nội dung và điều khiển.
+- Nhóm nội dung bo góc; Dock và cửa sổ có chiều sâu nhẹ.
+- Focus bàn phím rõ, có tùy chỉnh chữ lớn và giảm chuyển động.
 
 ## Colors
 
-Bảng màu chủ đạo là các sắc trung tính ấm; token ở đầu tệp là giá trị chuẩn.
+Token đầu tệp là giá trị chuẩn; bảng màu sáng phân biệt nội dung, tương tác
+và lớp nổi. Các màu biểu tượng phân biệt ứng dụng, không thay màu hành động.
 
 ### Primary
 
-- **Đen than** (`primary`): chữ chính, nút chính, nút chạy và tab đang chọn.
-- **Đen than khi trỏ** (`primary-hover`): nền nút chính khi rê chuột.
+- **Xanh hành động** (`primary`): nút chính, trạng thái chọn và focus.
+- **Xanh khi trỏ** (`primary-hover`): nền nút chính trong lớp iOS chung.
+- **Xanh liên kết** (`link`): nút chữ, tài khoản và thao tác cửa sổ.
 
 ### Neutral
 
-- **Trắng ngà** (`bg`): nền ứng dụng và thanh trên.
-- **Trắng panel** (`surface`): ô nhập, thẻ, nút phụ và vùng soạn mục tiêu.
-- **Xám ấm nhẹ** (`surface-subtle`): sidebar, nút nhẹ, vùng mã và hàng khi trỏ.
-- **Xám trung tính dịu** (`surface-muted`): lớp phụ qua biến màu đang có trong mã.
-- **Xám tương tác** (`surface-hover`): điều hướng và mẫu công việc khi trỏ.
-- **Chữ vận hành** (`text`), **chữ phụ** (`muted`): phân biệt nội dung với giải thích.
-- **Viền mảnh** (`line`): ngăn khu vực và bao điều khiển.
-- **Đường bao bàn phím** (`focus`): nhận biết điều khiển đang được chọn bằng phím.
-- **Điều hướng đang chọn** (`nav-active`): nền mục đang mở trong sidebar.
+- **Nền nhóm** (`bg`), **trắng bề mặt** (`surface`): nền ứng dụng và nhóm nội dung.
+- **Xám tab** (`surface-muted`), **xanh bề mặt tương tác** (`surface-hover`): lớp phụ.
+- **Chữ nội dung** (`text`), **mực tiêu đề** (`ink`), **chữ phụ** (`muted`): phân cấp chữ.
+- **Viền phân nhóm** (`line`): chia hàng và khung.
+- **Vùng chọn chữ** (`selection`): nền chọn văn bản với chữ mực tối.
 
-**The Nền ấm, hành động than Rule.** Dùng nền `bg` và hành động `primary`
-đã chốt; không đổi bảng màu chính thành xanh. Các màu trạng thái nghiệp vụ
-hiện có không phải màu thương hiệu mới.
+**The Hành động xanh Rule.** Hành động chính dùng màu `primary`; màu biểu
+tượng chỉ giúp nhận diện ứng dụng. Không lấy nút đen ở stylesheet cũ làm chuẩn.
+
+Tính tương phản từ token ngày 17/11/2026 theo độ chói sRGB: trắng trên xanh
+hành động (`5.28:1`), chữ phụ trên nền nhóm (`5.40:1`), xanh liên kết trên
+trắng (`6.38:1`). Đây là kiểm tra cặp màu, không phải chứng nhận truy cập
+toàn giao diện. Không dùng màu viền nhạt làm chữ hoặc dấu hiệu trạng thái
+duy nhất. Các dải màu ở sidecar được tổng hợp để xem trước, không phải token
+đã triển khai trong CSS.
 
 ## Typography
 
-**Display Font:** BDSG Lora, dự phòng Georgia và serif; có font cục bộ cho
-tiếng Việt. **Body Font:** chuỗi sans-serif của token `body`.
+**Display Font:** chuỗi hệ thống của token `display`.
+**Body Font:** cùng chuỗi hệ thống; không cần tải font Apple riêng.
 
-### Hierarchy
+Tiêu đề lớn dùng độ đậm cao và tracking chặt; nội dung vận hành giữ giãn dòng
+thoáng. Chữ hệ thống là lựa chọn rõ của phong cách iOS đã được duyệt; Lora
+trong stylesheet cũ không còn là vai trò tiêu đề.
 
-Các giá trị và công thức trong phần này đối chiếu mã ngày 15/11/2026.
+- **Display:** tiêu đề Home theo token `display`; xuống cỡ (`32px`) trên điện thoại.
+- **Headline:** tiêu đề Switcher và Tùy chỉnh theo token `headline`; xuống (`28px`) ở điện thoại.
+- **Body:** lời dẫn Home theo token `body`; trình duyệt đặt nền chữ (`15px`), đoạn văn giãn dòng (`1.6`).
+- **Label:** token `label` cho tab và nút; nhãn app thường đậm (`500`), xuống cỡ (`13px`) ở điện thoại.
 
-- **Display:** token `display`, cỡ linh hoạt (`clamp(29px, 3.2vw, 40px)`),
-  dành cho tiêu đề giao việc. Công thức CSS được giữ ở văn bản vì định dạng
-  dimension của schema chỉ nhận đơn vị px, em, rem.
-- **Headline:** token `headline`, tiêu đề trang vận hành; xuống (`24px`) ở
-  breakpoint điện thoại (`600px`).
-- **Title:** token `title`, tiêu đề nhóm công việc gần đây.
-- **Body:** token `body`; lời dẫn giao việc dùng giãn dòng (`1.7`).
-- **Label:** token `label`, nút thông thường; mẫu công việc dùng cỡ (`12px`).
-
-**The Hai giọng chữ Rule.** Giữ Lora cho tiêu đề giao việc và sans-serif
-cho điều khiển; không suy rộng font hệ thống thành font display.
+Tùy chọn chữ lớn tăng các vai trò được khai báo trong shell và trình duyệt;
+không coi đây là phép phóng to toàn bộ giao diện hoặc thay cho zoom thiết bị.
 
 ## Layout
 
-Đối chiếu mã ngày 15/11/2026: sidebar cố định rộng (`240px`), phần chính
-dịch theo sidebar; vùng nội dung chung tối đa (`1510px`). Vùng giao việc
-tối đa (`1040px`); ô soạn và danh sách gần đây tối đa (`760px`), căn giữa.
-Mẫu công việc xếp flex, tự xuống hàng, có khoảng cách (`9px`). Đây là bố cục
-của trang giao việc, không phải khuôn bắt buộc cho mọi màn hình.
+Các kích thước dưới đây trích mã ngày 17/11/2026. Home, Switcher và Tùy chỉnh
+căn giữa, tối đa (`1100px`); Tùy chỉnh thu về (`820px`). Home có lưới sáu cột,
+tại (`900px`) xuống bốn cột; thẻ cửa sổ từ ba xuống hai cột rồi một cột tại
+(`600px`). Danh mục nền tảng từ hai xuống một cột tại (`900px`).
 
-Tại (`900px`) trở xuống, phần chính chiếm toàn chiều rộng và sidebar mở
-dạng ngăn trượt có lớp che. Tại (`600px`) trở xuống, lề chính là
-(`22px 18px 30px`), mẫu công việc cách nhau (`7px`), vùng bấm mẫu và thanh
-mở ngữ cảnh đạt chiều cao tối thiểu (`44px`). Nhịp khoảng cách lấy từ các
-token đã quan sát; mã không dùng một bội số duy nhất cho toàn bộ bố cục.
+Vỏ ứng dụng giữ chiều cao viewport; vùng xem cuộn riêng, cao
+(`calc(100dvh - 184px)`) trên máy tính và (`calc(100dvh - 168px)`) tại
+(`600px`). Khoảng dành riêng bên dưới tách nội dung khỏi Dock cố định;
+Dock dùng safe area.
+
+Toast của shell đặt phía trên Dock ở `112px` cộng safe area; thông báo không
+che icon điều hướng. Các trang ứng dụng mở độc lập giữ vị trí thông báo riêng.
+
+Tại (`600px`), Home có lề (`20px 20px 30px`), biểu tượng nhỏ hơn, Dock thu
+gọn. Tiêu đề và nút tùy chỉnh đứng cùng hàng; lời chào và ngày phụ ẩn để
+giữ vùng đầu gọn. Đồng hồ thanh trạng thái cũng ẩn ở kích thước này. Cửa sổ
+ứng dụng trở thành toàn chiều ngang, bỏ bo góc và bóng; thanh cửa sổ giữ
+nút điều khiển. Nội dung iframe có vùng cuộn riêng. Khi chiều cao màn hình
+không quá (`600px`), cửa sổ bỏ chiều cao tối thiểu và dùng
+(`calc(100dvh - 168px)`).
+
+Trình duyệt có nội dung tối đa (`1000px`), đệm (`60px 40px 48px`); điện thoại
+đổi thành (`30px 20px`), địa chỉ chiếm hàng riêng, tab cuộn ngang và nút tìm
+ở Home trình duyệt chiếm cả hàng. Không ép trang nghiệp vụ thành lưới icon.
 
 ## Elevation & Depth
 
-Ô soạn, panel và thẻ Studio phẳng ở trạng thái tĩnh. Viền và màu nền tạo
-phân lớp. Bóng dành cho lớp nổi đang có trong mã; không có quy tắc cấm bóng
-toàn ứng dụng. Giá trị đối chiếu ngày 15/11/2026:
+Nền Home là gradient nhạt, các nhóm nội dung trắng. Dock kết hợp nền trắng
+bán trong suốt, blur (`20px`) và bóng để tách khỏi nội dung; nền trắng vẫn
+hiện khi trình duyệt không hỗ trợ blur. Không phụ thuộc blur để đọc chữ.
 
-- **Danh sách chọn mô-đun:** (`0 13px 35px #00000020`), tách menu khỏi ô soạn.
-- **Thông báo nổi:** (`0 8px 30px #00000026`), giữ thông báo trên nội dung.
+Bóng trích mã ngày 17/11/2026:
 
-**The Bề mặt phẳng Rule.** Giữ ô soạn và thẻ Studio không bóng; dùng bóng
-của lớp nổi theo đúng vai trò. Bóng và chuyển động đầy đủ nằm ở sidecar.
+- **Biểu tượng:** (`0 5px 12px #12325b14`).
+- **Dock:** (`0 10px 32px #182f5420`).
+- **Cửa sổ:** (`0 12px 36px #182f541a`), bỏ ở điện thoại.
+- **Thông báo:** (`0 7px 18px #182f541c`).
+
+**The Lớp nổi có vai trò Rule.** Dùng chiều sâu cho Dock, cửa sổ và thông
+báo; nhóm danh sách thường chỉ cần nền và đường phân cách.
 
 ## Shapes
 
-Góc mềm phân biệt điều khiển nhỏ, panel, thẻ Studio và ô soạn theo nhóm
-`rounded`. Mẫu công việc có dạng viên thuốc. Nút chạy là hình tròn
-(`border-radius: 50%`), kích thước (`38px × 38px`), theo mã ngày 15/11/2026.
-Viền thông thường là (`1px`) dùng `line`; biểu tượng dùng SVG nét mảnh.
+Điều khiển và panel dùng nhóm `rounded` theo vai trò. Icon Home vuông bo góc,
+giảm từ (`68px`) còn (`58px`) trên điện thoại; icon trong Dock nhỏ hơn. Nút
+đóng cửa sổ trong Switcher là hình tròn. SVG nét mảnh lấy từ hệ BDSG, không
+thay bằng emoji hoặc tài sản Apple.
 
 ## Components
 
 ### Buttons
 
-Nút rõ hành động, không dùng màu trang trí làm lớp phân cấp.
+Nút chính xanh, chữ trắng theo `button-primary`; nút chữ dùng `button-text`.
+Điều khiển shell thường có chiều cao tối thiểu (`44px`). Nút trình duyệt
+chính bo (`10px`), đệm (`10px 17px`), hover xanh (`#0055b8`); đây là biến thể
+đang có, không đổi token hover của shell.
 
-- Nút chính dùng token `button-primary`, nút phụ dùng `button-secondary`,
-  nút nhẹ dùng `button-subtle`.
-- Khi trỏ, nút thường nhích lên (`translateY(-1px)`); chuyển nền và vị trí
-  trong (`0.15s`). Nút chính đổi sang token `button-primary-hover`.
-- Khi dùng phím, đường bao (`2px`) màu `focus`, lệch ngoài (`3px`).
-- Nút vô hiệu hóa dùng độ mờ (`0.6`); nút chạy dùng (`0.5`).
+Focus shell dùng outline xanh (`3px`), cách (`4px`); trình duyệt cách (`3px`).
+Các điều khiển kế thừa lớp chung có outline (`2px`), cách (`3px`) và màu
+focus được iOS ghi đè xanh. Disabled shell giảm opacity (`0.45`), trình
+duyệt (`0.4`); không dùng như trạng thái tải hoặc bằng chứng thiếu quyền.
 
 ### Chips
 
-Mẫu công việc là nút dạng viên thuốc theo token `task-template`: nền trong,
-viền `line`, icon SVG và chữ; khi trỏ đổi nền `surface-hover` và viền
-(`#c8c8c0`). Không suy diễn chúng thành trạng thái bộ lọc được chọn.
+Gợi ý tìm kiếm trong trình duyệt là nút nền xám (`#e4e4eb`), chữ tối
+(`#3c3c43`), tối thiểu (`44px`), bo (`10px`); hover (`#d8d8e2`). Đây là gợi
+ý thao tác, không phải chip bộ lọc đang chọn.
 
 ### Cards / Containers
 
-Panel thông thường dùng góc `panel`; Studio dùng `studio-card`, viền
-`line`, không bóng. Tại điện thoại (`600px`), padding thẻ Studio giảm về
-(`18px`). Danh sách công việc phân hàng bằng viền, rê chuột đổi nền nhẹ.
+Thẻ Switcher trắng theo `session-card`, có nút mở và nút đóng riêng. Nhóm
+cài đặt, danh mục dùng panel trắng và đường chia hàng; không thêm bóng mỗi
+hàng. Cửa sổ app có thanh điều khiển riêng trên iframe.
 
 ### Inputs / Fields
 
-Trường Studio dùng token `field`, viền `line`, có đường bao bàn phím chung.
-Ô soạn mục tiêu nằm trong token `task-composer`; vùng gõ có cỡ (`15px`),
-giãn dòng (`1.7`), đệm (`22px 24px 12px`). Khi focus bên trong, viền ô soạn
-đổi sang (`#8c8c84`), thay cho đường bao riêng của textarea. Ở điện thoại
-(`600px`), cỡ chữ ô soạn là (`16px`) và đệm (`18px`).
+Tìm kiếm Home nền trắng, bo panel; chữ nhập (`16px`). Focus đặt lên toàn
+khung bằng outline (`3px`), cách (`2px`), không chồng thêm outline input.
+Địa chỉ trình duyệt nền nhóm, bo control; focus đổi viền xanh. Nhãn ẩn vẫn
+cung cấp tên cho người dùng công nghệ hỗ trợ; placeholder không thay nhãn.
 
 ### Navigation
 
-Sidebar dùng nền `surface-subtle`, chữ `text`; mục hiện tại dùng
-`navigation-active`, độ đậm (`600`). Rê chuột dùng `surface-hover`; bàn phím
-dùng đường bao chung. Kích thước mục tối thiểu (`42px`), theo mã ngày
-15/11/2026; trên màn hình hẹp dùng ngăn trượt mô tả ở Layout.
+Home có tab thư viện: mục chọn dùng chữ xanh và gạch dưới; trạng thái chọn
+phải tiếp tục được biểu đạt bằng thuộc tính trợ năng. Dock giữ đường về Home
+và ứng dụng; danh sách cửa sổ mở là nơi tiếp tục hoặc đóng phiên. Nhãn icon
+Home đọc được; icon Dock có tên trợ năng dù không hiện nhãn.
 
-### Ô soạn giao việc
+### Chuyển ứng dụng và trình duyệt
 
-Tiêu đề và ô nhập tạo điểm chính. Nút chạy tròn dùng màu hành động;
-chọn mô-đun là menu nhẹ. Ngữ cảnh và quyền nằm trong khối có thể mở rộng;
-biểu tượng xoay khi mở với chuyển động (`160ms ease-out`). Nhãn chế độ là
-thông tin phụ dưới tiêu đề, không nâng thành nhãn trang trí phía trên.
+Chuyển ứng dụng giữ DOM trong bộ nhớ, chỉ cửa sổ hiện tại tương tác; tải lại
+chỉ phục hồi metadata có giới hạn. Không trình bày như đình chỉ tiến trình
+native. Tìm BDSG dựa trên danh mục; website mở tab thiết bị với giải thích rõ.
+Tab và dấu trang trình duyệt là trạng thái phiên, không hứa đồng bộ tài khoản.
 
-Các thông số Components đối chiếu mã ngày 15/11/2026. Chế độ giảm chuyển
-động bỏ transition và animation, giữ cuộn trực tiếp.
+Icon Home dịch lên (`2px`) khi trỏ với transition (`180ms`). Chế độ giảm
+chuyển động loại animation/transition và cuộn mượt qua lớp tùy chỉnh; media
+query giảm chuyển động cũng áp dụng trong shell và trình duyệt. Không dùng
+chuyển động làm dấu hiệu duy nhất cho trạng thái.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** giữ nền trắng ngà, nút đen than và nhận diện BDSG đã chốt.
-- **Do** dùng khác biệt sắc độ và viền để phân lớp bề mặt tĩnh.
-- **Do** giữ font tiếng Việt và đường bao bàn phím của từng điều khiển.
-- **Do** đọc lớp diện mạo nạp cuối trước khi tái dùng giá trị CSS cũ.
+- **Do** giữ nhận diện BDSG, tiếng Việt và lựa chọn phong cách iOS mới nhất.
+- **Do** dùng hành động xanh, chữ tối và nhóm bề mặt sáng theo token.
+- **Do** giữ focus, tên trợ năng, phản hồi lỗi và hỗ trợ giảm chuyển động.
+- **Do** kiểm cả điện thoại, máy tính, chữ lớn và trạng thái rỗng trước nghiệm thu.
 
 ### Don't:
 
-- **Don't** thay thương hiệu BDSG bằng Manus.
-- **Don't** biến màu trạng thái nghiệp vụ thành màu nhấn chung.
-- **Don't** lấy các khai báo cũ đã bị ghi đè làm chuẩn mới.
-- **Don't** xem bố cục trang giao việc là khuôn cố định cho mọi màn hình.
-
-Không chuẩn hoá thành quy tắc: kicker/eyebrow, glyph icon hoặc font hệ thống
-cho tiêu đề display ở các nhánh cũ chưa được rà toàn bộ. Tệp này không xác
-nhận hay sửa các nhánh đó; chỉ ghi nhận hệ thống từ nguồn và phạm vi nêu trên.
+- **Don't** khôi phục nút đen và tiêu đề Lora từ stylesheet đã bị ghi đè.
+- **Don't** dùng tài sản Apple hoặc bịa pin, thời tiết, tín hiệu hay trạng thái kết nối.
+- **Don't** mô tả liên kết web như SSO, đồng bộ hoặc ứng dụng native đã cài.
+- **Don't** coi việc ghi tài liệu từ mã là bằng chứng giao diện đã qua kiểm thử hình ảnh.

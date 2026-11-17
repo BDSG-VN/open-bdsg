@@ -22,6 +22,10 @@ class ThuDongGoi(unittest.TestCase):
         self.assertFalse(any(p.suffix in (".py", ".db", ".env") for p in files))
         self.assertFalse(any(b"khong-duoc-xuat" in p.read_bytes() for p in files))
         self.assertIn('/dien-mao.css', (self.ra / 'index.html').read_text(encoding='utf-8'))
+        self.assertIn('/ios.css', (self.ra / 'index.html').read_text(encoding='utf-8'))
+        self.assertTrue((self.ra / 'workspace.html').is_file())
+        self.assertTrue((self.ra / 'trinh-duyet.html').is_file())
+        self.assertNotIn('canonical', (self.ra / 'workspace.html').read_text(encoding='utf-8'))
         for ten_font in ('lora-latin.woff2', 'lora-vietnamese.woff2'):
             self.assertTrue((self.ra / 'fonts' / ten_font).read_bytes().startswith(b'wOF2'))
         self.assertNotIn("/chat.js", (self.ra / "tro-chuyen/index.html").read_text(encoding="utf-8"))

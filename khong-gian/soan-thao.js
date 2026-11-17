@@ -12,6 +12,16 @@
     closed = false,
     clientDirty = false,
     closeRequest = null;
+  const guard = window.BDSGSessionGuard.create({ onInvalidate(message) {
+    closed = true; changed = working = clientDirty = false; key = null;
+    try { editor?.destroyEditor(); } catch (_) {}
+    editor = null;
+    document.querySelector("main").replaceChildren();
+    save.disabled = close.disabled = true;
+    retry.hidden = true;
+    status.textContent = "Phiên soạn thảo đã dừng.";
+    showError(message);
+  } });
   const showError = (message) => {
     error.textContent = message;
     error.hidden = false;
@@ -20,7 +30,7 @@
     if (!changed && !working) location.reload();
   });
   async function call(name, args) {
-    const response = await fetch("/api/tools", {
+    const response = await guard.fetch("/api/tools", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
@@ -28,6 +38,7 @@
       body: JSON.stringify({ name: "van_phong." + name, arguments: args }),
     });
     const value = await response.json();
+    guard.assertActive();
     if (!response.ok || !value.ok)
       throw new Error(
         "Không hoàn tất thao tác. Kiểm tra quyền, kết nối và dịch vụ soạn thảo rồi thử lại.",
@@ -63,7 +74,7 @@
     );
   }
   async function perform(final) {
-    if (working || !editor || closed) return;
+    if (working || !editor || closed || !guard.active) return;
     working = true;
     document.querySelector("main").inert = true;
     status.tabIndex = -1;
@@ -73,6 +84,7 @@
     status.textContent = "Đang chờ lưu phiên bản vào kho BDSG…";
     try {
       await store();
+      guard.assertActive();
       changed = false;
       if (final) {
         document.querySelector("main").inert = false;
@@ -92,6 +104,7 @@
           };
           editor.requestClose();
         });
+        guard.assertActive();
         editor.destroyEditor();
         editor = null;
         closed = true;
@@ -101,12 +114,13 @@
       }
       status.textContent = "Đã lưu phiên bản vào kho BDSG.";
     } catch (failure) {
+      if (closed) return;
       showError(failure.message);
       status.textContent = "Chưa xác nhận hoàn tất thao tác.";
     } finally {
       working = false;
-      document.querySelector("main").inert = false;
-      save.disabled = close.disabled = !editor;
+      document.querySelector("main").inert = !guard.active;
+      save.disabled = close.disabled = !editor || !guard.active;
     }
   }
   save.addEventListener("click", () => perform(false));
@@ -125,6 +139,7 @@
   });
   async function open() {
     try {
+      await guard.ready;
       if (matchMedia("(max-width: 750px)").matches)
         throw new Error(
           "Bản Community dùng bộ soạn thảo trên máy tính. Trên điện thoại, mở kho tệp để tải hoặc nhập tài liệu.",
@@ -158,7 +173,9 @@
         };
         document.head.append(script);
       });
+      guard.assertActive();
       const readyTimeout = setTimeout(() => {
+        if (!guard.active) return;
         showError(
           "Tài liệu mở lâu hơn dự kiến. Kiểm tra kết nối hoặc tải lại trình soạn thảo.",
         );
@@ -168,6 +185,7 @@
         ...result.config,
         events: {
           onDocumentReady: () => {
+            if (!guard.active) return;
             clearTimeout(readyTimeout);
             retry.hidden = true;
             error.hidden = true;
@@ -176,6 +194,7 @@
             save.disabled = close.disabled = false;
           },
           onDocumentStateChange: (event) => {
+            if (!guard.active) return;
             clientDirty = Boolean(event.data);
             if (event.data) {
               changed = true;
@@ -184,10 +203,12 @@
             }
           },
           onRequestClose: () => {
+            if (!guard.active) return;
             if (closeRequest) closeRequest();
             else perform(true);
           },
           onError: () => {
+            if (!guard.active) return;
             clearTimeout(readyTimeout);
             retry.hidden = changed || working;
             showError(
@@ -197,6 +218,7 @@
         },
       });
     } catch (failure) {
+      if (closed) return;
       status.textContent = "Chưa mở được tài liệu.";
       showError(failure.message);
       retry.hidden =

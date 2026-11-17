@@ -1,0 +1,12 @@
+{
+  "id": "/",
+  "name": "BDSG Thanh Hoá",
+  "short_name": "BDSG",
+  "lang": "vi",
+  "start_url": "/#desktop",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "icons": [{"src": "/bdsg-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}
