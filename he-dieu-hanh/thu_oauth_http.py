@@ -1,4 +1,4 @@
-"""Token/consent qua HTTP và cookie thật; authorize UI/discovery còn tiếp."""
+"""Authorize/token/consent qua HTTP và cookie thật; discovery còn tiếp."""
 import base64
 import hashlib
 import http.client

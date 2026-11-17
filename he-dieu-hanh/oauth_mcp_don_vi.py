@@ -1,4 +1,4 @@
-"""Authorization code S256 và consent BDSG; trang authorize/discovery còn tiếp."""
+"""Authorization code S256 và snapshot consent BDSG theo phiên/đơn vị thật."""
 import base64
 import hashlib
 import hmac

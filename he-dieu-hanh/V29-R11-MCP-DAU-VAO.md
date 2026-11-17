@@ -272,7 +272,7 @@ quản lý vẫn còn tiếp. Dependency chứng thư chỉ thuộc kiểm thử
 
 ## R11c — authorize và trang chấp thuận trong bản đơn vị thử
 
-Ngày 17/11/2026: GET `/oauth/authorize` đọc query có giới hạn, chặn trùng field,
+Ngày 18/11/2026: GET `/oauth/authorize` đọc query có giới hạn, chặn trùng field,
 UTF8/percent không hợp lệ và ký tự điều khiển. Client/redirect/scope/S256 vẫn
 qua backend; URI chưa đăng ký chỉ trả lỗi cục bộ, không redirect ra ngoài.
 Yêu cầu hợp lệ chuyển303 sang `/oauth/consent`, nonce ở fragment. Trang và
@@ -286,7 +286,7 @@ giữ lựa chọn cho chủ thể mới. Kiểm lại phiên trước và sau q
 không rõ không tự gửi lại. Trang này chỉ cấp profile tác vụ danh mục không
 AI hoặc công cụ nền tảng ngoài; giao diện profile đầy đủ còn tiếp.
 
-Ngày 17/11/2026: 11 bài HTTP và ba bài HTTPS cục bộ đạt, fixture HTTPS đã đi
+Ngày 18/11/2026: 11 bài HTTP và ba bài HTTPS cục bộ đạt, fixture HTTPS đã đi
 qua GET authorize thật. Kiểm Chrome headless riêng, desktop1440/mobile390:
 12 nghiệm thu gồm approve đổi code thật, deny không code, mạng lỗi/thử lại,
 loading/thu hồi membership, đổi tài khoản và expiry xóa biểu mẫu; 20 ảnh,

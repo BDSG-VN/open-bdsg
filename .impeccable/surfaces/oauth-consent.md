@@ -4,7 +4,7 @@ slug: oauth-consent
 primary_target: khong-gian/oauth-consent.html
 related_targets: [khong-gian/oauth-consent.js, khong-gian/oauth-consent.css]
 ---
-# Chấp thuận ứng dụng — 17/11/2026
+# Chấp thuận ứng dụng — 18/11/2026
 
 Mode: Operate. Phần mở rộng luồng Tài khoản trong thế giới iOS BDSG đã được
 chủ quản chọn. Code-led, không thay PRODUCT.md/DESIGN.md hoặc tài sản nhận diện.
