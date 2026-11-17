@@ -20,17 +20,26 @@ cập cache có key kiểm actor thuộc chính phạm vi đã tham gia, không 
 trùng ID. Callback đọc lại tham chiếu sau nhận/quét dữ liệu trước commit.
 Legacy giữ luồng cũ khi không bật đơn vị.
 
+Thế hệ phiên Office có tệp riêng `office-editor-epoch`, cố ý không nằm trong
+snapshot. Khởi động lại cùng kho giữ thế hệ; phục hồi vào kho mới sinh thế
+hệ khác, chặn nguồn/lưu/progress/cache/callback của phiên cũ trước fetch.
+Tài liệu và lịch sử vẫn được phục hồi, người dùng mở phiên mới để tiếp tục.
+Phiên từ schema chưa có thế hệ không tự nhận vào thế hệ mới. Tệp thế hệ
+hỏng làm khởi tạo thất bại và không tự bị ghi đè; yêu cầu nguồn không tự
+tạo lại tệp bị mất. Đây chưa là nghiệm thu phục hồi engine hoặc toàn máy.
+
 Kiểm cục bộ qua phương thức công khai `SoanThaoOffice`, đo 18/11/2026:
-`thu_phien_office_don_vi.py` có 5 bài đạt về nguồn ký, hai đơn vị, rejoin,
-quyền đổi trong scan/fetch, callback lưu và participant khác mất quyền.
+`thu_phien_office_don_vi.py` có 9 bài đạt về nguồn ký, hai đơn vị, rejoin,
+quyền đổi trong scan/fetch, callback lưu, participant khác mất quyền,
+restart/backup/restore, schema cũ và tệp thế hệ hỏng/bị mất.
 `thu_office_tich_hop.py` có 13 bài legacy đạt. Tệp Office thật và chữ ký thật;
 scanner tổng hợp, fetch callback là đầu nối giả, chưa kiểm engine thật.
 
 ## Chưa mở để sử dụng
 
 Còn kiểm lệnh force-save và kết quả sau IO; mọi nhánh callback 1–7 trong
-giao dịch; vòng đời khóa khi restart/restore (không để bản sao phục hồi hồi
-sinh quyền phiên cũ); proxy engine/cookie và cache/WebSocket theo phạm vi;
+giao dịch; phục hồi và vòng đời engine/cache bên ngoài gateway;
+proxy engine/cookie và cache/WebSocket theo phạm vi;
 nhân/HTTP, UI và engine thật; các định dạng DOCX/XLSX/PPTX đầy đủ.
 Google phải tách OAuth/tài khoản/token/callback và quyền nhập/xuất theo đơn
 vị trước khi mở. Kiểm backend nêu trên không chứng minh các phần đó xong.

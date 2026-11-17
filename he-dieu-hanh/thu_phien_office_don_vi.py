@@ -2,12 +2,15 @@
 import tempfile
 import unittest
 import time
+from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlsplit, parse_qs
 
 from may_chu import UngDung
 from chu_ky_office import sign
 from thu_office_tich_hop import Scanner, SECRET, changed_document
+from sao_luu_he_thong import backup, restore
+from soan_thao_office import SoanThaoOffice
 
 
 class ThuPhienOfficeDonVi(unittest.TestCase):
@@ -32,9 +35,82 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
     def actor(self,unit):
         return self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},unit)
 
-    def source(self,session):
+    def source(self,session,editor=None):
         url=session['config']['document']['url']
-        return self.editor.source(parse_qs(urlsplit(url).query),'Bearer '+sign({'operation':'download','url':url,'exp':time.time()+60},SECRET))
+        return (editor or self.editor).source(parse_qs(urlsplit(url).query),'Bearer '+sign({'operation':'download','url':url,'exp':time.time()+60},SECRET))
+
+    def test_restart_keeps_source_but_restore_does_not_revive_old_session(self):
+        first=self.editor.open(self.a,{'id':self.file['id']})
+        restarted=UngDung(self.tmp.name,'https://office-scope.test',True,unit_preview=True)
+        try:
+            restarted.office_editor.secret=SECRET
+            self.assertTrue(self.source(first,restarted.office_editor).startswith(b'PK'))
+        finally:
+            restarted.tasks.close();restarted.core.audit.close()
+        with tempfile.TemporaryDirectory() as area:
+            bundle,target=Path(area)/'bundle',Path(area)/'restored'
+            backup(self.app.kho.root,bundle)
+            self.assertFalse((bundle/'data/office-editor-epoch').exists())
+            restore(bundle,target)
+            restored=UngDung(target/'data','https://office-scope.test',True,unit_preview=True)
+            try:
+                restored.office_editor.secret=SECRET
+                restored.office.scanner=Scanner()
+                with self.assertRaises((PermissionError,ValueError)):
+                    self.source(first,restored.office_editor)
+                actor=restored.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},self.units[0])
+                for method in (restored.office_editor.progress,restored.office_editor.save):
+                    with self.assertRaises((PermissionError,ValueError)):
+                        method(actor,{'key':first['key']})
+                self.assertFalse(restored.office_editor.engine_access(actor,'/office-docs/cache/'+first['key']+'/doc'))
+                token=sign({'key':first['key'],'status':2,'users':['nguoi-a'],
+                    'url':'https://unused.test/fixture','exp':time.time()+60},SECRET)
+                with patch.object(restored.office_editor,'_fetch') as fetch:
+                    with self.assertRaises((PermissionError,ValueError)):
+                        restored.office_editor.callback({'token':token},'')
+                    fetch.assert_not_called()
+                fresh=restored.office_editor.open(actor,{'id':self.file['id']})
+                self.assertNotEqual(first['key'],fresh['key'])
+                self.assertTrue(self.source(fresh,restored.office_editor).startswith(b'PK'))
+                self.assertEqual(restored.office.read(actor,{'id':self.file['id']})['version'],1)
+            finally:
+                restored.tasks.close();restored.core.audit.close()
+
+    def test_damaged_epoch_stops_live_source_and_is_not_overwritten(self):
+        first=self.editor.open(self.a,{'id':self.file['id']})
+        path=self.app.kho.root/'office-editor-epoch'
+        path.write_bytes(b'broken-synthetic-epoch')
+        with self.assertRaises((PermissionError,ValueError)):
+            self.source(first)
+        with self.assertRaises((PermissionError,ValueError)):
+            SoanThaoOffice(self.app.office,'https://office-scope.test')
+        self.assertEqual(path.read_bytes(),b'broken-synthetic-epoch')
+
+    def test_old_schema_sessions_are_not_adopted_into_new_epoch(self):
+        first=self.editor.open(self.a,{'id':self.file['id']})
+        # Đây là schema đầu vào của migration R14 trước issuer, không dùng
+        # truy vấn DB thay cho assertion hành vi qua giao diện soạn thảo.
+        with self.app.kho.ket_noi() as db:
+            db.execute('ALTER TABLE office_editor_scopes DROP COLUMN issuer_epoch')
+        upgraded=SoanThaoOffice(self.app.office,'https://office-scope.test')
+        upgraded.secret=SECRET
+        with self.assertRaises((PermissionError,ValueError)):
+            self.source(first,upgraded)
+        fresh=upgraded.open(self.a,{'id':self.file['id']})
+        self.assertNotEqual(first['key'],fresh['key'])
+        self.assertTrue(self.source(fresh,upgraded).startswith(b'PK'))
+
+    def test_missing_epoch_does_not_regenerate_on_source_request(self):
+        first=self.editor.open(self.a,{'id':self.file['id']})
+        path=self.app.kho.root/'office-editor-epoch'
+        path.unlink()
+        with self.assertRaises(PermissionError):
+            self.source(first)
+        self.assertFalse(path.exists())
+        restarted=SoanThaoOffice(self.app.office,'https://office-scope.test')
+        restarted.secret=SECRET
+        with self.assertRaises(PermissionError):
+            self.source(first,restarted)
 
     def test_source_restores_scope_but_cross_unit_session_does_not_reuse_key(self):
         self.app.projects.share(self.a,{'id':self.project,'unit_id':self.units[1],'identity':'nguoi-a','role':'editor'})
