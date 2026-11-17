@@ -37,7 +37,8 @@ from hanh_dong_don_vi import HanhDongDonVi
 from mcp_uy_quyen_don_vi import UyQuyenMCPDonVi
 from mcp_http_don_vi import MCPHTTPDonVi
 from oauth_mcp_don_vi import OAuthMCPDonVi, LoiOAuth
-from oauth_http import read_request as read_oauth_request, validate_headers as validate_oauth_headers
+from oauth_http import (read_request as read_oauth_request, validate_headers as validate_oauth_headers,
+                        read_authorization_query)
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -469,9 +470,13 @@ def tao_may_chu(app, port=8766):
 
         def oauth_routes(self, method):
             path = urlsplit(self.path).path
-            routes = {'/oauth/token', '/api/oauth/clients', '/api/oauth/clients/disable',
+            assets = {'/oauth/consent': ('oauth-consent.html', 'text/html'),
+                      '/oauth/consent.js': ('oauth-consent.js', 'application/javascript'),
+                      '/oauth/consent.css': ('oauth-consent.css', 'text/css'),
+                      '/oauth/don-vi.js': ('don-vi.js', 'application/javascript')}
+            routes = {'/oauth/authorize', '/oauth/token', '/api/oauth/clients', '/api/oauth/clients/disable',
                       '/api/oauth/bind', '/api/oauth/decide', '/api/mcp/grants', '/api/mcp/grants/revoke'}
-            if not app.unit_preview or path not in routes:
+            if not app.unit_preview or path not in routes | assets.keys():
                 return False
             self.connection.settimeout(12)
             try:
@@ -479,14 +484,36 @@ def tao_may_chu(app, port=8766):
                 if not self.origin_ok(required=method == 'POST' and path != '/oauth/token'):
                     self.send(403, {'error': 'access_denied'})
                     return True
-                if urlsplit(self.path).query:
+                if path != '/oauth/authorize' and urlsplit(self.path).query:
                     raise LoiOAuth('invalid_request')
                 if app.operations.draining.is_set():
                     self.send(503, {'error': 'temporarily_unavailable'}, headers={'Retry-After': '5'})
                     return True
-                allowed = ('GET', 'POST') if path in ('/api/oauth/clients', '/api/mcp/grants') else ('POST',)
+                allowed = (('GET', 'HEAD') if path in assets else ('GET',) if path == '/oauth/authorize' else
+                           ('GET', 'POST') if path in ('/api/oauth/clients', '/api/mcp/grants') else ('POST',))
                 if method not in allowed:
                     self.send(405, {'error': 'invalid_request'}, headers={'Allow': ', '.join(allowed)})
+                    return True
+                if path in assets:
+                    filename, mime = assets[path]
+                    data = (GOC/'khong-gian'/filename).read_bytes()
+                    self.send_response(200)
+                    for key, value in {'Content-Type': mime+'; charset=utf-8', 'Content-Length': str(len(data)),
+                            'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+                            'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY',
+                            'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; "
+                            "connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}.items():
+                        self.send_header(key, value)
+                    self.end_headers()
+                    if method != 'HEAD': self.wfile.write(data)
+                    return True
+                if path == '/oauth/authorize':
+                    if not app.core.nhan.chinh_sach.cong_ghi.dang_mo:
+                        self.send(503, {'error': 'temporarily_unavailable'})
+                        return True
+                    pending = app.oauth_mcp.start(read_authorization_query(urlsplit(self.path).query))
+                    self.send(303, headers={'Location': '/oauth/consent#request='+quote(pending['request'], safe=''),
+                                             'Referrer-Policy': 'no-referrer', 'Pragma': 'no-cache'})
                     return True
                 if path == '/oauth/token':
                     if self.headers.get('Authorization') is not None:

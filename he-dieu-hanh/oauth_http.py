@@ -1,8 +1,26 @@
 """Đọc yêu cầu OAuth có giới hạn; token form và JSON consent dùng cùng parser."""
 import json
+import re
 from urllib.parse import parse_qsl
 
 from oauth_mcp_don_vi import LoiOAuth
+
+
+def read_authorization_query(query):
+    if (not query or len(query) > 8192 or not query.isascii()
+            or re.search(r'%(?![0-9a-fA-F]{2})', query)):
+        raise LoiOAuth('invalid_request')
+    try:
+        pairs = parse_qsl(query, keep_blank_values=True, strict_parsing=True,
+                          max_num_fields=12, encoding='utf-8', errors='strict')
+        result = {}
+        for key, value in pairs:
+            if key in result or any(ord(c) < 32 or ord(c) == 127 for c in key+value):
+                raise LoiOAuth('invalid_request')
+            result[key] = value
+        return result
+    except (ValueError, UnicodeError):
+        raise LoiOAuth('invalid_request') from None
 
 
 def validate_headers(headers):

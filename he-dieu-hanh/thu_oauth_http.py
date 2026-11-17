@@ -27,10 +27,49 @@ class ThuOAuthHTTP(unittest.TestCase):
         self.project = result[1]['ket_qua']['id']
 
     def pending(self):
-        # Phần start chưa nối authorize page; backend tạo request thật cho wire test.
-        return self.app.oauth_mcp.start({'client_id': self.client['id'], 'redirect_uri': self.client['redirect_uris'][0],
+        status, _, headers = self.request('/oauth/authorize?'+urlencode({'client_id': self.client['id'], 'redirect_uri': self.client['redirect_uris'][0],
             'response_type': 'code', 'resource': self.app.inbound_mcp.resource, 'scope': 'tool:du_an.danh_sach',
-            'state': 'synthetic-http-state', 'code_challenge': self.challenge, 'code_challenge_method': 'S256'})['request']
+            'state': 'synthetic-http-state', 'code_challenge': self.challenge, 'code_challenge_method': 'S256'}))
+        self.assertEqual(status, 303)
+        target = urlsplit(headers['Location'])
+        self.assertEqual(target.path, '/oauth/consent')
+        self.assertFalse(target.netloc)
+        self.assertEqual(headers['Referrer-Policy'], 'no-referrer')
+        return parse_qs(target.fragment)['request'][0]
+
+    def test_authorize_rejects_ambiguous_query_and_unregistered_redirect_locally(self):
+        for query in ('client_id=a&client_id=b', 'client_id=%ff', 'client_id=%zz',
+                      'client_id=a%00', 'client_id='+('a'*8192), ''):
+            status, body, headers = self.request('/oauth/authorize?'+query)
+            self.assertEqual(status, 400)
+            self.assertNotIn('Location', headers)
+            self.assertIn('error', body)
+        query = {'client_id': self.client['id'], 'redirect_uri': 'https://unregistered.test/callback',
+                 'response_type': 'code', 'resource': self.app.inbound_mcp.resource,
+                 'code_challenge': self.challenge, 'code_challenge_method': 'S256'}
+        status, body, headers = self.request('/oauth/authorize?'+urlencode(query))
+        self.assertEqual(status, 400)
+        self.assertEqual(body['error'], 'invalid_redirect_uri')
+        self.assertNotIn('Location', headers)
+        self.assertEqual(self.request('/oauth/authorize', query)[0], 405)
+
+    def test_consent_assets_fixed_allowlist_and_security_headers(self):
+        for path, mime in (('/oauth/consent','text/html'), ('/oauth/consent.js','application/javascript'),
+                           ('/oauth/consent.css','text/css'), ('/oauth/don-vi.js','application/javascript')):
+            for method in ('GET','HEAD'):
+                conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
+                conn.request(method, path)
+                response = conn.getresponse()
+                data = response.read()
+                self.assertEqual(response.status, 200)
+                self.assertTrue(response.getheader('Content-Type').startswith(mime))
+                self.assertEqual(response.getheader('Referrer-Policy'), 'no-referrer')
+                self.assertIn("frame-ancestors 'none'", response.getheader('Content-Security-Policy'))
+                self.assertEqual(response.getheader('Cache-Control'), 'no-store')
+                self.assertTrue(bool(data) if method == 'GET' else not data)
+                conn.close()
+        self.assertEqual(self.request('/oauth/consent?request=not-in-query')[0], 400)
+        self.assertEqual(self.request('/oauth/../../AGENTS.md')[0], 403)
 
     def approved(self):
         request = self.pending()

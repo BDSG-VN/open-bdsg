@@ -132,12 +132,13 @@ class ThuOAuthHTTPS(unittest.TestCase):
     def code(self):
         self.verifier = 'v'*64
         challenge = base64.urlsafe_b64encode(hashlib.sha256(self.verifier.encode()).digest()).decode().rstrip('=')
-        # Đây là start backend thật; chưa nhận discovery/authorize browser/SDK OAuth đã xong.
-        pending = self.app.oauth_mcp.start({'client_id': self.client['id'], 'response_type': 'code',
+        status, _, headers = self.request('/oauth/authorize?'+urlencode({'client_id': self.client['id'], 'response_type': 'code',
             'redirect_uri': self.client['redirect_uris'][0], 'resource': self.origin+'/mcp',
-            'code_challenge': challenge, 'code_challenge_method': 'S256', 'state': 'synthetic-tls-state'})
-        self.assertEqual(self.request('/api/oauth/bind', {'request': pending['request']}, 'nguoi-thu', self.unit)[0], 200)
-        status, result, _ = self.request('/api/oauth/decide', {'request': pending['request'], 'approve': True,
+            'code_challenge': challenge, 'code_challenge_method': 'S256', 'state': 'synthetic-tls-state'}))
+        self.assertEqual(status, 303)
+        pending = parse_qs(urlsplit(headers['Location']).fragment)['request'][0]
+        self.assertEqual(self.request('/api/oauth/bind', {'request': pending}, 'nguoi-thu', self.unit)[0], 200)
+        status, result, _ = self.request('/api/oauth/decide', {'request': pending, 'approve': True,
             'selection': {'tools': ['du_an.danh_sach'], 'project_ids': [self.project], 'expires_in': 900}},
             'nguoi-thu', self.unit)
         self.assertEqual(status, 200)

@@ -269,3 +269,30 @@ python3 -m unittest discover -s he-dieu-hanh -p 'thu_oauth_https.py' -v
 Start vẫn gọi backend trong fixture, token được gắn rõ cho SDK. Đây chưa là
 SDK tự discovery/OAuth authorize bằng trình duyệt; các phần đó và giao diện
 quản lý vẫn còn tiếp. Dependency chứng thư chỉ thuộc kiểm thử, không runtime.
+
+## R11c — authorize và trang chấp thuận trong bản đơn vị thử
+
+Ngày 17/11/2026: GET `/oauth/authorize` đọc query có giới hạn, chặn trùng field,
+UTF8/percent không hợp lệ và ký tự điều khiển. Client/redirect/scope/S256 vẫn
+qua backend; URI chưa đăng ký chỉ trả lỗi cục bộ, không redirect ra ngoài.
+Yêu cầu hợp lệ chuyển303 sang `/oauth/consent`, nonce ở fragment. Trang và
+asset dùng whitelist cố định trong gateway, no-store/no-referrer, CSP cùng
+nguồn và frame-ancestors none. Chỉ bật ở unit preview, chưa đổi production.
+
+Trang iOS BDSG đăng nhập thật, chọn đơn vị rồi bind yêu cầu. Người dùng chọn
+công cụ/dự án/thời hạn; không chọn sẵn. Duyệt/từ chối dùng API cookie với
+actor/unit epoch/revision. Đổi tài khoản hoặc membership xóa biểu mẫu, không
+giữ lựa chọn cho chủ thể mới. Kiểm lại phiên trước và sau quyết định; kết quả
+không rõ không tự gửi lại. Trang này chỉ cấp profile tác vụ danh mục không
+AI hoặc công cụ nền tảng ngoài; giao diện profile đầy đủ còn tiếp.
+
+Ngày 17/11/2026: 11 bài HTTP và ba bài HTTPS cục bộ đạt, fixture HTTPS đã đi
+qua GET authorize thật. Kiểm Chrome headless riêng, desktop1440/mobile390:
+12 nghiệm thu gồm approve đổi code thật, deny không code, mạng lỗi/thử lại,
+loading/thu hồi membership, đổi tài khoản và expiry xóa biểu mẫu; 20 ảnh,
+không lỗi JavaScript hoặc tràn ngang. Browser pin leaf tạm đúng fixture;
+kiểm HTTPS riêng vẫn xác minh CA/hostname. Không dùng phiên Chrome người dùng.
+
+Còn metadata/discovery, client SDK tự thực hiện OAuth, quản lý client/grant,
+profile AI/MCP nâng cao, review/CI và phát hành/hậu kiểm. Chưa nhận toàn R11
+hoặc kết nối ChatGPT/Claude thật đã hoàn tất.
