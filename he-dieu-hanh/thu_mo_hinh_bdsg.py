@@ -70,6 +70,27 @@ class Core:
 
 
 class ThuMoHinh(unittest.TestCase):
+    def test_response_after_deadline_keeps_usage_but_not_result(self):
+        clock = {"now": 10.0}
+        events = []
+        transport = Transport([answer("Kết quả đến quá hạn")])
+        original = transport.open
+
+        def late(*args, **kwargs):
+            clock["now"] += 181
+            return original(*args, **kwargs)
+
+        transport.open = late
+        with patch("mo_hinh_bdsg.time.monotonic", side_effect=lambda: clock["now"]):
+            with self.assertRaisesRegex(LoiMoHinhBDSG, "hết thời gian"):
+                MoHinhBDSG(environ=ENV, opener=transport).run(
+                    "Thử giới hạn thời gian", {}, Core(), {"id": "test", "role": "operator"},
+                    lambda kind, message, **extra: events.append(kind),
+                )
+        self.assertEqual(len(transport.requests), 1)
+        self.assertIn("model-usage", events)
+        self.assertNotIn("model-complete", events)
+
     def test_module_read_crosses_real_core_policy_and_audit(self):
         actor = {"id": "chu-quan", "name": "Chu", "role": "quan-tri"}
         args = {"platform_id": "bdsg_crm", "tool": "crm.list", "arguments": {"limit": 1}}

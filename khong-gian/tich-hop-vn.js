@@ -9,6 +9,9 @@
     latestContext = null,
     active = false,
     readVersion = 0;
+  let syncJobs = [], syncVersion = 0, syncRequest = null, syncCount = 0, syncControlling = false, syncNotice = 0;
+  const syncStates = {ready: "Sẵn sàng đọc trang tiếp", running: "Đang đọc", paused: "Đã tạm dừng", completed: "Hoàn tất", cancelled: "Đã hủy"};
+  const syncErrors = {interrupted: "Gián đoạn sau khởi động lại", page_limit: "Đã đạt giới hạn trang", authorization_required: "Cần cấp lại quyền kết nối", connection_changed: "Kết nối đã đổi hoặc bị ngắt", rate_limited: "Nhà cung cấp đang giới hạn lượt gọi", invalid_response: "Phản hồi chưa hợp lệ", response_too_large: "Đã đạt giới hạn dữ liệu", provider_unavailable: "Nhà cung cấp chưa sẵn sàng"};
   const columnNames = {
     id: "Mã định danh",
     code: "Mã",
@@ -168,7 +171,7 @@
     }<div id="vn-history" aria-live="polite"></div></section>`;
   }
   function readForm() {
-    const rows = connections.filter((row) => row.enabled);
+    const rows = connections.filter((row) => row.enabled && row.readiness?.can_attempt_read !== false);
     if (!rows.length) return "";
     return `<section class="panel vn-read"><h2>Đọc dữ liệu có kiểm chứng</h2><p class="muted">Mỗi lần bấm chỉ đọc một trang. Chức năng này không gửi tin, tạo thanh toán, chuyển tiền hoặc phát hành hóa đơn.</p><form id="vn-read"><label>Kết nối<select id="vn-read-connection" name="connection">${rows.map((row) => `<option value="${esc(row.id)}">${esc(row.label)}</option>`).join("")}</select></label><label>Thao tác<select name="operation" id="vn-read-operation"></select></label><div id="vn-read-arguments"></div><button class="button primary" type="submit" ${pending ? "disabled" : ""}>Đọc một trang dữ liệu</button></form><div id="vn-result" role="status" aria-live="polite"></div></section>`;
   }
@@ -190,6 +193,7 @@
   }
   function refreshReadArguments() {
     readVersion++;
+    syncRequest = null;
     const row = connections.find(
       (item) =>
         item.id === document.querySelector("#vn-read-connection")?.value,
@@ -217,10 +221,98 @@
       )
       .join("")}</dl></section></section>`;
     refreshReadOperations();
+    const read = document.querySelector("#vn-read");
+    if (read) read.insertAdjacentHTML("beforeend", '<button class="button" type="button" data-vn-sync-create>Tạo phiên đồng bộ đọc</button>');
+    document.querySelector(".vn-pending")?.insertAdjacentHTML("beforebegin", '<section class="panel vn-read" aria-labelledby="vn-sync-title"><h2 id="vn-sync-title">Đồng bộ đọc từng trang</h2><p class="muted">Tạo phiên từ kết nối và thao tác ở trên. Mỗi lần chạy chỉ đọc một trang; không tự chạy nền hoặc ghi dữ liệu về nền tảng gốc. Tiến độ được giữ khi đóng trang.</p><button class="button" type="button" data-vn-sync-refresh>Làm mới tiến độ</button><div id="vn-sync-jobs" aria-live="polite"></div><div id="vn-sync-result" aria-live="polite"></div></section>');
+    renderSync();
+  }
+  function renderSync() {
+    const target = document.querySelector("#vn-sync-jobs");
+    if (!target) return;
+    target.innerHTML = syncJobs.length ? syncJobs.map(job => {
+      const wait = job.retry_at && job.retry_at * 1000 > Date.now();
+      const done = ["completed", "cancelled"].includes(job.state);
+      const action = (name, label, disabled = false) => {
+        const canInterrupt = ["pause", "cancel"].includes(name) && syncCount > 0 && !syncControlling;
+        return `<button class="button small" type="button" data-vn-sync-action="${name}" data-job="${esc(job.id)}" ${(pending && !canInterrupt) || disabled ? "disabled" : ""}>${label}</button>`;
+      };
+      return `<article class="connector-row"><div><strong>${esc(job.label)}</strong><span class="mini-tag">${esc(syncStates[job.state] || job.state)}</span></div><p>${job.pages}/${job.max_pages} trang · ${job.records} bản ghi · ${esc(connections.find(row => row.id === job.connection_id)?.label || "Kết nối đã thay đổi")}</p>${job.error_code ? `<p>${esc(syncErrors[job.error_code] || "Phiên cần kiểm tra trước khi tiếp tục")}${wait ? " · Thử lại sau " + esc(date(job.retry_at)) : ""}.</p>` : ""}<div class="connector-actions">${job.state === "ready" ? action("step", "Đọc trang tiếp") : ""}${job.state === "paused" ? action("resume", "Tiếp tục", wait || job.pages >= job.max_pages) : ""}${["ready", "running"].includes(job.state) ? action("pause", "Tạm dừng") : ""}${!done ? action("cancel", "Hủy phiên") : ""}${job.pages && job.state !== "cancelled" ? `<label>Trang đã lưu<select data-vn-sync-page="${esc(job.id)}" aria-label="Trang đã lưu của ${esc(job.label)}">${Array.from({length: job.pages}, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("")}</select></label>${action("page", "Xem trang đã lưu")}` : ""}</div></article>`;
+    }).join("") : '<p>Chưa có phiên đồng bộ. Lưu kết nối và chọn thao tác đọc để bắt đầu.</p>';
+  }
+  async function loadSync() {
+    const ticket = epoch, identity = state.user?.id, version = ++syncVersion;
+    try {
+      const result = await tool("tich_hop_vn.dong_bo_danh_sach");
+      if (!valid(ticket, identity) || version !== syncVersion) return;
+      syncJobs = result.jobs;
+      renderSync();
+    } catch (error) {
+      if (valid(ticket, identity) && version === syncVersion) {
+        const target = document.querySelector("#vn-sync-jobs");
+        if (target) target.textContent = "Chưa tải được tiến độ: " + error.message + ". Chọn Làm mới tiến độ để thử lại.";
+      }
+    }
+  }
+  async function syncAction(button) {
+    const action = button.dataset.vnSyncAction;
+    const control = ["pause", "cancel"].includes(action);
+    if (pending && !(control && syncCount > 0 && !syncControlling)) return;
+    const ticket = epoch, identity = state.user?.id;
+    const id = button.dataset.job;
+    const notice = ++syncNotice;
+    syncCount++;
+    if (control) syncControlling = true;
+    pending = true;
+    renderSync();
+    const target = document.querySelector("#vn-sync-result");
+    if (target) target.textContent = "Đang xử lý phiên đồng bộ…";
+    try {
+      let result;
+      if (button.matches("[data-vn-sync-create]")) {
+        const read = document.querySelector("#vn-read");
+        if (!read?.reportValidity()) return;
+        const values = new FormData(read);
+        const row = connections.find(item => item.id === values.get("connection"));
+        if (!row) return;
+        const args = {};
+        operationFields(row.provider, values.get("operation")).forEach(([key, , type]) => {
+          args[key] = type === "number" ? Number(values.get("arg-" + key)) : values.get("arg-" + key);
+        });
+        // Giữ request key khi mất phản hồi để thử lại không tạo hai phiên.
+        syncRequest ||= {connection_id: row.id, operation: values.get("operation"), label: row.label + " · " + values.get("operation"), arguments: args, max_pages: 20, request_key: crypto.randomUUID()};
+        syncRequest.label = syncRequest.label.slice(0, 120);
+        result = await tool("tich_hop_vn.dong_bo_tao", syncRequest);
+      } else if (action === "page") {
+        const select = [...document.querySelectorAll("[data-vn-sync-page]")].find(item => item.dataset.vnSyncPage === id);
+        result = await tool("tich_hop_vn.dong_bo_trang", {id, page: Number(select?.value)});
+      } else if (action === "step") result = await tool("tich_hop_vn.dong_bo_buoc", {id});
+      else result = await tool("tich_hop_vn.dong_bo_dieu_khien", {id, action});
+      if (!valid(ticket, identity)) return;
+      if (target && notice === syncNotice) {
+        if (action === "page") {
+          target.replaceChildren();
+          const heading = document.createElement("h3");
+          heading.textContent = `Trang ${result.page} · ${result.items.length} bản ghi`;
+          const pre = document.createElement("pre"); pre.className = "vn-sync-data";
+          pre.textContent = JSON.stringify(result.items, null, 2);
+          target.append(heading, pre);
+        } else target.textContent = button.matches("[data-vn-sync-create]") ? "Đã tạo phiên; chưa gọi nhà cung cấp. Chọn Đọc trang tiếp để bắt đầu." : "Đã cập nhật tiến độ phiên.";
+      }
+    } catch (error) {
+      if (valid(ticket, identity) && notice === syncNotice && target) target.textContent = error.message + ". Làm mới tiến độ để đối chiếu trước khi thử lại.";
+    } finally {
+      if (valid(ticket, identity)) {
+        syncCount--;
+        if (control) syncControlling = false;
+        pending = syncCount > 0;
+        await loadSync();
+      }
+    }
   }
   async function open() {
     active = true;
     pending = false;
+    syncCount = 0; syncControlling = false;
     const ticket = ++epoch,
       identity = state.user?.id;
     if (state.user?.role !== "quan-tri") {
@@ -239,6 +331,8 @@
       providers = result.providers;
       connections = result.connections;
       draw();
+      await loadSync();
+      if (!valid(ticket, identity)) return;
       if (!result.vault_configured) {
         document
           .querySelectorAll(
@@ -318,6 +412,9 @@
     }
   }
   document.addEventListener("click", async (event) => {
+    const sync = event.target.closest("[data-vn-sync-create],[data-vn-sync-action]");
+    if (sync && valid(epoch, state.user?.id)) return syncAction(sync);
+    if (event.target.closest("[data-vn-sync-refresh]") && valid(epoch, state.user?.id)) return loadSync();
     if (event.target.closest("[data-vn-open],[data-vn-retry]")) return open();
     if (event.target.closest("[data-vn-mcp]")) {
       epoch++;
@@ -396,6 +493,7 @@
     }
   });
   document.addEventListener("change", (event) => {
+    if (event.target.closest("#vn-read")) syncRequest = null;
     if (event.target.id === "vn-provider") {
       document.querySelector("#vn-config-fields").innerHTML = configuration(
         event.target.value,
@@ -507,6 +605,7 @@
       epoch++;
       providers = [];
       connections = [];
+      syncJobs = []; syncRequest = null; syncVersion++;
       selected = "";
       latest = latestContext = null;
       pending = false;

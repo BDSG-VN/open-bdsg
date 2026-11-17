@@ -77,10 +77,32 @@
   margin: 18px 0;
   max-height: 520px;
 }
+.vn-sync-data {
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 16px;
+  background: var(--surface-subtle, #f4f4f1);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+#vn-sync-result {
+  margin-top: 18px;
+  overflow-wrap: anywhere;
+}
+#vn-sync-jobs .connector-actions label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#vn-sync-jobs select { width: auto; padding: 8px 12px; }
 .vn-scroll-hint {
   display: none;
 }
-#vn-connection-list .mini-tag {
+#vn-connection-list .mini-tag,
+#vn-sync-jobs .mini-tag {
   font-size: 13px;
   line-height: 1.5;
   padding: 3px 7px;

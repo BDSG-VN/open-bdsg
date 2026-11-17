@@ -83,7 +83,7 @@ class DongBoVietNam:
 
     def _connection(self, db, actor, row):
         current = db.execute(
-            "SELECT revision,enabled,operations,expires FROM vn_connections WHERE id=? AND owner=?",
+            "SELECT revision,enabled,operations,expires,state FROM vn_connections WHERE id=? AND owner=?",
             (row["connection_id"], actor["id"]),
         ).fetchone()
         if (
@@ -94,6 +94,8 @@ class DongBoVietNam:
             raise LoiTichHop("connection_changed")
         if current["expires"] is not None and current["expires"] <= self.clock():
             raise LoiTichHop("authorization_required")
+        if current["state"] in ("authorization_required", "permission_denied", "configuration_required"):
+            raise LoiTichHop(current["state"])
         if row["operation"] not in json.loads(current["operations"]):
             raise LoiTichHop("permission_denied")
 

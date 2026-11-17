@@ -408,6 +408,10 @@ class MoHinhBDSG:
                 **usage,
                 request_count=1,
             )
+            # Timeout socket chỉ giới hạn từng thao tác mạng; vẫn kiểm deadline tổng
+            # sau phản hồi để không nhận báo cáo đến quá hạn là đã hoàn tất.
+            if time.monotonic() - started >= self.MAX_RUN_SECONDS:
+                raise LoiMoHinhBDSG("Đã hết thời gian xử lý tác vụ.")
             if cancelled():
                 raise LoiMoHinhBDSG("Tác vụ đã được yêu cầu dừng.")
             calls = message.get("tool_calls")

@@ -10,6 +10,7 @@ import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -483,6 +484,121 @@ class ThuKhoTichHop(unittest.TestCase):
             self.assertNotIn(KEY.encode(), path.read_bytes())
         with self.assertRaises(PermissionError):
             self.integration.list({"id": "operator-a", "role": "operator"})
+
+    def test_readiness_is_local_and_tracks_verified_expired_revoked_states(self):
+        self.integration.clock = lambda: 1000
+        row = self.save(expires_at=2000)
+        self.assertEqual(row["readiness"], {
+            "can_attempt_read": True, "blockers": [], "last_read_verified": False,
+        })
+        self.assertEqual(self.transport.calls, [])
+        self.read(row)
+        current = self.integration.list(OWNER)["connections"][0]
+        self.assertTrue(current["readiness"]["last_read_verified"])
+        self.integration.clock = lambda: 2001
+        current = self.integration.list(OWNER)["connections"][0]
+        self.assertFalse(current["readiness"]["can_attempt_read"])
+        self.assertFalse(current["readiness"]["last_read_verified"])
+        self.assertIn("authorization_required", current["readiness"]["blockers"])
+        with self.assertRaises(LoiTichHop) as failure:
+            self.integration.validate_read(OWNER, row["id"], "banks", {})
+        self.assertEqual(failure.exception.code, "authorization_required")
+        revoked = self.integration.disconnect(OWNER, {"id": row["id"], "expected_revision": 1})
+        self.assertIn("connection_changed", revoked["readiness"]["blockers"])
+        self.assertEqual(len(self.transport.calls), 1)
+
+    def test_expiry_during_read_discards_provider_payload(self):
+        self.integration.clock = lambda: 1000
+        row = self.save(expires_at=2000)
+        original = self.transport.request
+        def response_after_expiry(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.integration.clock = lambda: 2001
+            return result
+        with patch.object(self.transport, "request", side_effect=response_after_expiry):
+            with self.assertRaises(LoiTichHop) as failure:
+                self.read(row)
+        self.assertEqual(failure.exception.code, "authorization_required")
+        with self.app.kho.ket_noi() as db:
+            run = db.execute("SELECT state,result,error_code FROM vn_runs").fetchone()
+        self.assertEqual((run["state"], run["result"], run["error_code"]),
+                         ("failed", None, "authorization_required"))
+
+    def test_expiry_while_acquiring_transaction_denies_send_replay_and_commit(self):
+        for expired_transaction, replay in ((1, False), (1, True), (2, False)):
+            with self.subTest(transaction=expired_transaction, replay=replay):
+                self.integration.clock = lambda: 1000
+                row = self.save(expires_at=2000)
+                request_key = "transaction-test-" + row["id"]
+                if replay:
+                    self.read(row, key=request_key)
+                calls_before = len(self.transport.calls)
+                original = self.app.kho.ket_noi
+                acquired = [0]
+                integration = self.integration
+
+                class ConnectionAfterWait:
+                    def __init__(self, db):
+                        self.db = db
+
+                    def execute(self, sql, *args):
+                        result = self.db.execute(sql, *args)
+                        if sql == "BEGIN IMMEDIATE":
+                            acquired[0] += 1
+                            if acquired[0] == expired_transaction:
+                                # Đồng hồ đổi sau khi lấy khóa, như thời gian đã trôi khi chờ.
+                                integration.clock = lambda: 2001
+                        return result
+
+                    def __getattr__(self, name):
+                        return getattr(self.db, name)
+
+                @contextmanager
+                def connection():
+                    with original() as db:
+                        yield ConnectionAfterWait(db)
+
+                with patch.object(self.app.kho, "ket_noi", side_effect=connection):
+                    with self.assertRaises(LoiTichHop) as failure:
+                        self.read(row, key=request_key)
+                self.assertEqual(failure.exception.code, "authorization_required")
+                self.assertEqual(len(self.transport.calls) - calls_before,
+                                 1 if expired_transaction == 2 else 0)
+                with self.app.kho.ket_noi() as db:
+                    runs = db.execute(
+                        "SELECT state,result,error_code FROM vn_runs WHERE connection_id=?",
+                        (row["id"],),
+                    ).fetchall()
+                if replay:
+                    # Payload cũ còn lưu, nhưng không được trả lại sau khi hết quyền.
+                    self.assertEqual(len(runs), 1)
+                    self.assertEqual(runs[0]["state"], "succeeded")
+                elif expired_transaction == 1:
+                    self.assertEqual(runs, [])
+                else:
+                    self.assertEqual(len(runs), 1)
+                    self.assertEqual((runs[0]["state"], runs[0]["result"], runs[0]["error_code"]),
+                                     ("failed", None, "authorization_required"))
+
+    def test_local_validation_observes_auth_failure_and_cooldown_without_network(self):
+        row = self.save()
+        self.transport.error = LoiTichHop("authorization_required")
+        with self.assertRaises(LoiTichHop):
+            self.read(row)
+        current = self.integration.list(OWNER)["connections"][0]
+        self.assertIn("authorization_required", current["readiness"]["blockers"])
+        with self.assertRaises(LoiTichHop) as failure:
+            self.integration.validate_read(OWNER, row["id"], "banks", {})
+        self.assertEqual(failure.exception.code, "authorization_required")
+        updated = self.save(id=row["id"], expected_revision=1)
+        self.transport.error = LoiTichHop("rate_limited", 300)
+        with self.assertRaises(LoiTichHop):
+            self.read(updated, key="rate-request-001")
+        with self.assertRaises(LoiTichHop) as failure:
+            self.integration.validate_read(OWNER, updated["id"], "banks", {})
+        self.assertEqual(failure.exception.code, "rate_limited")
+        self.assertGreaterEqual(failure.exception.retry_after, 299)
+        self.assertEqual(len(self.transport.calls), 2)
 
     def test_read_is_idempotent_within_revision_and_arguments(self):
         row = self.save()

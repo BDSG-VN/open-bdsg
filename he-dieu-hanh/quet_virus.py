@@ -34,6 +34,8 @@ class QuetVirus:
     def _socket(self):
         if not self.path or not self.path.startswith("/"):
             raise LoiChuaQuetVirus("Chưa cấu hình quét virus")
+        if getattr(socket, "AF_UNIX", None) is None:
+            raise LoiChuaQuetVirus("Môi trường chưa hỗ trợ kết nối bộ quét")
         connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         connection.settimeout(self.timeout)
         try:

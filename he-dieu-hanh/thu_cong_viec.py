@@ -160,6 +160,57 @@ class ThuCongViec(unittest.TestCase):
         self.assertIn("Bổ sung phần tiếp cận", task["artifacts"][-1]["content"])
         self.assertEqual(len([m for m in task["messages"] if m["role"] == "user"]), 2)
 
+    def test_cancel_during_report_does_not_publish_late_result(self):
+        entered, release = threading.Event(), threading.Event()
+        original = self.tasks._report
+
+        def delayed(*args):
+            entered.set()
+            if not release.wait(3):
+                raise RuntimeError("test wait exceeded")
+            return original(*args)
+
+        with patch.object(self.tasks, "_report", side_effect=delayed):
+            task_id = self.create()
+            try:
+                self.assertTrue(entered.wait(3))
+                self.tasks.cancel(A, task_id)
+            finally:
+                release.set()
+            task = self.completed(A, task_id)
+        self.assertEqual(task["status"], "cancelled")
+        self.assertEqual(task["artifacts"], [])
+        self.assertFalse(any(m["role"] == "assistant" for m in task["messages"]))
+
+    def test_revocation_during_report_does_not_publish_late_result(self):
+        entered, release = threading.Event(), threading.Event()
+        active = {"value": True}
+        self.core.verify_actor = lambda actor: active["value"]
+        original = self.tasks._report
+
+        def delayed(*args):
+            entered.set()
+            if not release.wait(3):
+                raise RuntimeError("test wait exceeded")
+            return original(*args)
+
+        with patch.object(self.tasks, "_report", side_effect=delayed):
+            task_id = self.create()
+            try:
+                self.assertTrue(entered.wait(3))
+                active["value"] = False
+            finally:
+                release.set()
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                with self.tasks.lock:
+                    task = self.tasks._load(task_id)
+                if task["status"] in ("completed", "failed", "cancelled"):
+                    break
+                time.sleep(0.01)
+        self.assertEqual(task["status"], "failed")
+        self.assertEqual(task["artifacts"], [])
+
     def test_restart_preserves_results_without_replaying(self):
         task_id = self.create()
         original = self.completed(A, task_id)

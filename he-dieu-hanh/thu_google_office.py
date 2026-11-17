@@ -200,6 +200,85 @@ class ThuGoogleOffice(unittest.TestCase):
         with self.assertRaises(LoiKetNoiGoogle):
             google.start(OWNER, self.session)
 
+    def test_upload_requires_matching_confirmation_and_keeps_uncertain_ledger(self):
+        self.google._store(OWNER["id"], self.token)
+        file = self.app.office_editor.create(
+            OWNER, {"project_id": self.project["id"], "name": "thu.docx"}
+        )
+        args = {"id": file["id"], "request_key": "c" * 32}
+        for response in (b"{}", b"[]", b"not-json", b'{"id":"wrong-drive-id-123"}'):
+            with self.subTest(response=response):
+                with self.app.kho.ket_noi() as db:
+                    db.execute("DELETE FROM google_office_exports")
+                with patch.object(self.google, "_request", side_effect=[
+                    b'{"ids":["fixed-drive-id-123"]}', response
+                ]), self.assertRaises(LoiKetNoiGoogle):
+                    self.google.export_file(OWNER, args)
+                with self.app.kho.ket_noi() as db:
+                    self.assertEqual(db.execute(
+                        "SELECT state FROM google_office_exports"
+                    ).fetchone()[0], "pending")
+        with self.app.kho.ket_noi() as db:
+            db.execute("DELETE FROM google_office_exports")
+        with patch.object(self.google, "_request", side_effect=[
+            b'{"ids":["fixed-drive-id-123"]}', b'{"id":"fixed-drive-id-123"}'
+        ]):
+            self.assertEqual(self.google.export_file(OWNER, args)["state"], "da-xuat-ban-sao")
+
+    def test_invalid_oauth_payload_is_controlled_and_never_stored(self):
+        base = {"access_token": "test", "token_type": "Bearer", "expires_in": 3600, "scope": SCOPE}
+        values = [[], None, "invalid", {**base, "token_type": []},
+                  {**base, "scope": []}, {**base, "access_token": ""},
+                  {**base, "refresh_token": []}]
+        for payload in values:
+            with self.subTest(payload=payload), patch.object(
+                self.google, "_request", return_value=json.dumps(payload).encode()
+            ), self.assertRaises(LoiKetNoiGoogle):
+                self.google._token_request({"grant_type": "authorization_code"})
+        self.assertEqual(self.google.status(OWNER)["state"], "chua-ket-noi")
+
+    def test_invalid_drive_metadata_does_not_download_or_publish(self):
+        self.google._store(OWNER["id"], self.token)
+        for metadata in ([], {}, {"name": "x.docx", "mimeType": "x", "size": []},
+                         {"name": None, "mimeType": "x"}):
+            with self.subTest(metadata=metadata), patch.object(
+                self.google, "_request", return_value=json.dumps(metadata).encode()
+            ) as request, self.assertRaises(LoiKetNoiGoogle):
+                self.google.import_file(OWNER, {"project_id": self.project["id"],
+                    "drive_id": "test-file-id-123", "request_key": "d" * 32})
+            self.assertEqual(request.call_count, 1)
+        with self.app.kho.ket_noi() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM google_office_imports").fetchone()[0], 0)
+
+    def test_resumable_upload_requires_confirmed_identity_too(self):
+        self.google._store(OWNER["id"], self.token)
+        file = self.app.office.create_bytes(
+            OWNER, self.project["id"], "lon.txt", b"a" * (6 * 1024 * 1024)
+        )
+        with patch.object(self.google, "_request", side_effect=[
+            b'{"ids":["fixed-drive-id-123"]}',
+            (b"", {"Location": "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=test-only"}),
+            b'{"id":"wrong-drive-id-123"}'
+        ]), self.assertRaises(LoiKetNoiGoogle):
+            self.google.export_file(OWNER, {"id": file["id"], "request_key": "e" * 32})
+        with self.app.kho.ket_noi() as db:
+            self.assertEqual(db.execute("SELECT state FROM google_office_exports").fetchone()[0], "pending")
+
+    def test_drive_list_validates_and_only_returns_declared_metadata(self):
+        self.google._store(OWNER["id"], self.token)
+        for payload in ([], {"files": {}}, {"files": [None]}, {"files": [{"id": "bad"}]}):
+            with self.subTest(payload=payload), patch.object(
+                self.google, "_request", return_value=json.dumps(payload).encode()
+            ), self.assertRaises(LoiKetNoiGoogle):
+                self.google.list(OWNER)
+        item = {"id": "test-file-id-123", "name": "thu.docx", "mimeType": "test/type", "size": "3"}
+        with patch.object(self.google, "_request", return_value=json.dumps(
+            {"files": [{**item, "unexpected": "not-for-interface"}], "nextPageToken": "next"}
+        ).encode()):
+            result = self.google.list(OWNER)
+            self.assertEqual(result["files"], [item])
+            self.assertTrue(result["limited"])
+
     def test_disconnect_cannot_be_undone_by_inflight_reconnect_callback(self):
         self.google._store(OWNER["id"], self.token)
         url, binding = self.google.start(OWNER, self.session)

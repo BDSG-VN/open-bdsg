@@ -828,6 +828,10 @@ class CongViec:
                 content = self._report(task, products, connections)
             with self.lock:
                 task = self._load(task_id)
+                # Chốt cùng khóa với cancel: kết quả đến muộn không được xuất bản.
+                if self.closed or task["cancel_requested"]:
+                    raise RuntimeError("Tác vụ đã được yêu cầu dừng")
+                self._auth(actor, True)
                 additions = [
                     {
                         "id": secrets.token_hex(8),
@@ -841,13 +845,13 @@ class CongViec:
                 ]
                 kiem_han_ket_qua(task["artifacts"], additions)
                 task["artifacts"].extend(additions)
-                self._save(task)
-            self._finish_step(task_id, step, "Đã lưu báo cáo riêng tư cho tác vụ.")
-            with self.lock:
-                task = self._load(task_id)
-                task["status"] = (
-                    "cancelled" if task["cancel_requested"] else "completed"
+                current_step = next(s for s in task["steps"] if s["id"] == step)
+                current_step.update(
+                    status="completed", finished=time.time(),
+                    summary="Đã lưu báo cáo riêng tư cho tác vụ.",
                 )
+                self._event(task, "step_completed", current_step["summary"], step_id=step)
+                task["status"] = "completed"
                 message = (
                     "Đã lưu kết quả do API mô hình đã cấu hình tạo; các công cụ đọc vẫn đi qua nhân và quyền hiện tại."
                     if model.configured
@@ -862,7 +866,7 @@ class CongViec:
             # Không ghi exception công cụ vào thông điệp công khai: có thể chứa endpoint/chứng thư.
             with self.lock:
                 task = self._load(task_id)
-                task["status"] = "cancelled" if task["cancel_requested"] else "failed"
+                task["status"] = "cancelled" if self.closed or task["cancel_requested"] else "failed"
                 for s in task["steps"]:
                     if s["status"] == "running":
                         s.update(status=task["status"], finished=time.time())

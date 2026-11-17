@@ -57,13 +57,17 @@ class GoogleOffice:
             try:
                 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-                data = json.loads(Path(config_path).read_text())
+                data = self._object(Path(config_path).read_text())
                 data = data.get("web", data)
                 if (
-                    not data.get("client_id", "").endswith(
+                    not isinstance(data, dict)
+                    or not isinstance(data.get("client_id"), str)
+                    or not data["client_id"].endswith(
                         ".apps.googleusercontent.com"
                     )
-                    or not data.get("client_secret")
+                    or not isinstance(data.get("client_secret"), str)
+                    or not data["client_secret"]
+                    or not isinstance(data.get("redirect_uris"), list)
                     or self.redirect not in data.get("redirect_uris", [])
                 ):
                     raise ValueError
@@ -95,6 +99,30 @@ class GoogleOffice:
     def _require(self):
         if not self.config or not self.aes:
             raise LoiKetNoiGoogle("Chưa cấu hình OAuth Google")
+
+    @staticmethod
+    def _object(raw):
+        # HTTP thành công vẫn có thể mang lỗi proxy hoặc JSON sai hợp đồng.
+        try:
+            value = json.loads(raw)
+        except (ValueError, TypeError, UnicodeError):
+            raise LoiKetNoiGoogle("Phản hồi Google không hợp lệ") from None
+        if not isinstance(value, dict):
+            raise LoiKetNoiGoogle("Phản hồi Google không hợp lệ")
+        return value
+
+    def _upload_confirmed(self, raw, identifier):
+        if self._object(raw).get("id") != identifier:
+            # Giữ ledger pending để lần thử lại đối soát ID, không tạo bản sao mù.
+            raise LoiKetNoiGoogle("Google chưa xác nhận đúng bản sao đã xuất")
+
+    @staticmethod
+    def _size(value):
+        if type(value) is int and value >= 0:
+            return value
+        if isinstance(value, str) and re.fullmatch(r"[0-9]{1,20}", value):
+            return int(value)
+        raise LoiKetNoiGoogle("Kích thước tệp Google không hợp lệ")
 
     def _request(
         self,
@@ -149,14 +177,24 @@ class GoogleOffice:
             ),
             {"Content-Type": "application/x-www-form-urlencoded"},
         )
-        data = json.loads(raw)
+        data = self._object(raw)
         if fields.get("grant_type") == "refresh_token" and "scope" not in data:
             data["scope"] = SCOPE
         if (
             not isinstance(data.get("access_token"), str)
-            or data.get("token_type", "").lower() != "bearer"
-            or not isinstance(data.get("expires_in"), int)
+            or not data["access_token"]
+            or len(data["access_token"]) > 16384
+            or any(ord(c) < 33 or ord(c) > 126 for c in data["access_token"])
+            or not isinstance(data.get("token_type"), str)
+            or data["token_type"].lower() != "bearer"
+            or type(data.get("expires_in")) is not int
             or not 60 <= data["expires_in"] <= 86400
+            or not isinstance(data.get("scope"), str)
+            or ("refresh_token" in data and (
+                not isinstance(data["refresh_token"], str)
+                or not data["refresh_token"]
+                or len(data["refresh_token"]) > 16384
+            ))
         ):
             raise LoiKetNoiGoogle("Phản hồi OAuth không hợp lệ")
         if SCOPE not in data.get("scope", "").split():
@@ -386,7 +424,7 @@ class GoogleOffice:
                 "fields": "files(id,name,mimeType,size),nextPageToken",
             }
         )
-        data = json.loads(
+        data = self._object(
             self._request(
                 "www.googleapis.com",
                 "GET",
@@ -394,8 +432,26 @@ class GoogleOffice:
                 headers=self._access(actor),
             )
         )
+        files = data.get("files", [])
+        if not isinstance(files, list) or len(files) > 50:
+            raise LoiKetNoiGoogle("Danh sách tệp Google không hợp lệ")
+        for file in files:
+            if not isinstance(file, dict) or not all(
+                isinstance(file.get(field), str) and file[field]
+                for field in ("id", "name", "mimeType")
+            ):
+                raise LoiKetNoiGoogle("Thông tin tệp Google không hợp lệ")
+            try:
+                self._id(file["id"])
+            except ValueError:
+                raise LoiKetNoiGoogle("Mã tệp Google không hợp lệ") from None
+            if "size" in file:
+                self._size(file["size"])
         return {
-            "files": data.get("files", []),
+            "files": [
+                {key: value for key, value in file.items() if key in ("id", "name", "mimeType", "size")}
+                for file in files
+            ],
             "limited": bool(data.get("nextPageToken")),
             "scope": "chi-tep-da-cap-cho-ung-dung",
         }
@@ -414,7 +470,7 @@ class GoogleOffice:
             if existing:
                 return existing
         headers = self._access(actor)
-        meta = json.loads(
+        meta = self._object(
             self._request(
                 "www.googleapis.com",
                 "GET",
@@ -424,7 +480,10 @@ class GoogleOffice:
                 headers=headers,
             )
         )
-        if meta.get("trashed") or int(meta.get("size", 0)) > self.office.MAX_FILE_BYTES:
+        if (not isinstance(meta.get("name"), str) or not meta["name"]
+                or not isinstance(meta.get("mimeType"), str)):
+            raise LoiKetNoiGoogle("Thông tin tệp Google không hợp lệ")
+        if meta.get("trashed") or self._size(meta.get("size", 0)) > self.office.MAX_FILE_BYTES:
             raise ValueError("Tệp không tồn tại hoặc vượt giới hạn")
         extension = NATIVE.get(meta.get("mimeType"))
         name = meta["name"]
@@ -518,7 +577,7 @@ class GoogleOffice:
             if old["state"] == "complete":
                 return {"drive_id": identifier, "state": "da-xuat-ban-sao"}
             try:
-                remote = json.loads(
+                remote = self._object(
                     self._request(
                         "www.googleapis.com",
                         "GET",
@@ -527,7 +586,8 @@ class GoogleOffice:
                     )
                 )
                 if (
-                    int(remote.get("size", -1)) != len(raw)
+                    remote.get("id") != identifier
+                    or self._size(remote.get("size")) != len(raw)
                     or remote.get("md5Checksum")
                     != hashlib.md5(raw, usedforsecurity=False).hexdigest()
                 ):
@@ -544,7 +604,7 @@ class GoogleOffice:
                 if error.status != 404:
                     raise
         else:
-            generated = json.loads(
+            generated = self._object(
                 self._request(
                     "www.googleapis.com",
                     "GET",
@@ -552,7 +612,13 @@ class GoogleOffice:
                     headers=headers,
                 )
             )
-            identifier = self._id(generated["ids"][0])
+            ids = generated.get("ids")
+            if not isinstance(ids, list) or len(ids) != 1:
+                raise LoiKetNoiGoogle("Google chưa cấp mã bản sao")
+            try:
+                identifier = self._id(ids[0])
+            except ValueError:
+                raise LoiKetNoiGoogle("Google cấp mã bản sao không hợp lệ") from None
             with self.kho.ket_noi() as db:
                 self.office._file(actor, file["id"], db)
                 db.execute(
@@ -593,13 +659,14 @@ class GoogleOffice:
                 or not query.get("upload_id")
             ):
                 raise LoiKetNoiGoogle("Nguồn phiên tải Google không hợp lệ")
-            self._request(
+            response = self._request(
                 "www.googleapis.com",
                 "PUT",
                 url.path + "?" + url.query,
                 raw,
                 {**headers, "Content-Type": mime, "Content-Length": str(len(raw))},
             )
+            self._upload_confirmed(response, identifier)
             with self.kho.ket_noi() as db:
                 db.execute(
                     "UPDATE google_office_exports SET state='complete' WHERE actor=? AND request=?",
@@ -622,13 +689,14 @@ class GoogleOffice:
             + raw
             + ("\r\n--" + boundary + "--\r\n").encode()
         )
-        self._request(
+        response = self._request(
             "www.googleapis.com",
             "POST",
             "/upload/drive/v3/files?uploadType=multipart&fields=id",
             body,
             {**headers, "Content-Type": "multipart/related; boundary=" + boundary},
         )
+        self._upload_confirmed(response, identifier)
         with self.kho.ket_noi() as db:
             db.execute(
                 "UPDATE google_office_exports SET state='complete' WHERE actor=? AND request=?",

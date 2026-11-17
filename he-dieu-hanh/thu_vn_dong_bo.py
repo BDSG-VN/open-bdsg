@@ -212,6 +212,22 @@ class ThuDongBo(unittest.TestCase):
             self.sync.page(OWNER, {"id": job["id"], "page": 1})
         self.assertEqual(failure.exception.code, "authorization_required")
 
+    def test_provider_auth_revocation_blocks_existing_snapshot_and_new_sync(self):
+        job = self.create()
+        self.step(job)
+        self.transport.error = LoiTichHop("authorization_required")
+        with self.assertRaises(LoiTichHop):
+            self.step(job)
+        for action in (
+            lambda: self.sync.page(OWNER, {"id": job["id"], "page": 1}),
+            lambda: self.create(request_key="after-auth-revoked"),
+            lambda: self.sync.control(OWNER, {"id": job["id"], "action": "resume"}),
+        ):
+            with self.assertRaises(LoiTichHop) as failure:
+                action()
+            self.assertEqual(failure.exception.code, "authorization_required")
+        self.assertEqual(len(self.transport.calls), 2)
+
     def test_cycle_and_size_limit_never_commit_partial_page(self):
         job = self.create()
         original = self.app.vn_integrations.read

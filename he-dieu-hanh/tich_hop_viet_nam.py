@@ -103,8 +103,42 @@ class TichHopVietNam:
         except (InvalidTag, ValueError, TypeError, KeyError, UnicodeError):
             raise LoiTichHop("authorization_required") from None
 
-    @staticmethod
-    def _public(row):
+    def _readiness(self, row):
+        """Chỉ đánh giá điều kiện cục bộ; không biến cấu hình thành nghiệm thu API."""
+        blockers = []
+        if not row["enabled"] or row["cipher"] is None:
+            blockers.append("connection_changed")
+        if self.aes is None:
+            blockers.append("configuration_required")
+        if row["expires"] is not None and row["expires"] <= self.clock():
+            blockers.append("authorization_required")
+        if row["state"] in (
+            "authorization_required", "permission_denied", "configuration_required"
+        ) and row["state"] not in blockers:
+            blockers.append(row["state"])
+        if row["cooldown"] > self.clock():
+            blockers.append("rate_limited")
+        return {
+            "can_attempt_read": not blockers,
+            "blockers": blockers,
+            "last_read_verified": (
+                not blockers
+                and row["state"] == "last_read_succeeded"
+                and row["checked"] is not None
+            ),
+        }
+
+    def _check_readable(self, row):
+        blockers = self._readiness(row)["blockers"]
+        if blockers:
+            code = blockers[0]
+            retry = (
+                max(1, int(row["cooldown"] - self.clock()) + 1)
+                if code == "rate_limited" else 0
+            )
+            raise LoiTichHop(code, retry)
+
+    def _public(self, row):
         return {
             "id": row["id"],
             "provider": row["provider"],
@@ -119,6 +153,7 @@ class TichHopVietNam:
             "checked_at": row["checked"],
             "cooldown_until": row["cooldown"],
             "external_writes_enabled": False,
+            "readiness": self._readiness(row),
         }
 
     @staticmethod
@@ -295,8 +330,7 @@ class TichHopVietNam:
         self._auth(actor)
         with self.kho.ket_noi() as db:
             row = self._row(db, actor, identifier)
-        if not row["enabled"] or row["cipher"] is None:
-            raise LoiTichHop("connection_changed")
+        self._check_readable(row)
         if not isinstance(operation, str) or operation not in json.loads(
             row["operations"]
         ):
@@ -353,18 +387,7 @@ class TichHopVietNam:
             type(expected) is not int or expected != row["revision"]
         ):
             raise LoiTichHop("connection_changed")
-        if not row["enabled"] or row["cipher"] is None:
-            raise LoiTichHop("connection_changed")
-        if row["expires"] is not None and row["expires"] <= now:
-            raise LoiTichHop("authorization_required")
-        if row["state"] in (
-            "authorization_required",
-            "permission_denied",
-            "configuration_required",
-        ):
-            raise LoiTichHop(row["state"])
-        if row["cooldown"] > now:
-            raise LoiTichHop("rate_limited", int(row["cooldown"] - now) + 1)
+        self._check_readable(row)
         operation = arguments.get("operation")
         if not isinstance(operation, str) or operation not in json.loads(
             row["operations"]
@@ -392,6 +415,8 @@ class TichHopVietNam:
             current = self._row(db, actor, row["id"])
             if not current["enabled"] or current["revision"] != row["revision"]:
                 raise LoiTichHop("connection_changed")
+            # BEGIN có thể chờ khóa SQLite; chỉ gửi hoặc replay khi quyền vẫn còn hiệu lực.
+            self._check_readable(current)
             existing = db.execute(
                 "SELECT * FROM vn_runs WHERE owner=? AND request_key=?",
                 (actor["id"], arguments["request_key"]),
@@ -459,10 +484,12 @@ class TichHopVietNam:
             if len(encoded.encode()) > 512 * 1024:
                 raise LoiTichHop("response_too_large")
             with self.kho.ket_noi() as db:
+                # Chứng thư có thể hết hạn khi provider đang xử lý: không lưu payload đến muộn.
                 db.execute("BEGIN IMMEDIATE")
                 current = self._row(db, actor, row["id"])
                 if not current["enabled"] or current["revision"] != row["revision"]:
                     raise LoiTichHop("connection_changed")
+                self._check_readable(current)
                 db.execute(
                     "UPDATE vn_runs SET state='succeeded',finished=?,records=?,result=? WHERE id=?",
                     (self.clock(), len(result["items"]), encoded, run_id),
