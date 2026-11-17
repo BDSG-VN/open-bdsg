@@ -247,3 +247,25 @@ chưa có. Còn discovery, GET authorize/consent UI, trang quản lý client/gra
 SDK OAuth HTTPS end-to-end và nghiệm thu phát hành/hậu kiểm.
 Manual bearer/SDK tổng hợp chưa chứng minh ChatGPT hoặc Claude đã kết nối
 thật. Chưa nhận toàn R11/lộ trình hệ sinh thái đã hoàn tất.
+
+## R11c — kiểm TLS cho token và SDK dùng token đã cấp
+
+Ngày 17/11/2026: ba bài HTTPS cục bộ đạt. Fixture bind cổng loopback trước
+khi tạo ứng dụng, nên issuer/resource giữ URL HTTPS thật từ đầu; không đổi
+audience sau khi cấp quyền. CA và leaf ngẫu nhiên tồn tại trong thư mục tạm,
+client chỉ tin CA này và vẫn xác minh hostname. Sai CA hoặc hostname bị chặn.
+
+Cookie Secure đăng nhập qua TLS, bind/approve và đổi code S256 qua socket
+thật; resource sai bị chặn và không tiêu thụ code. SDK chính thức dùng token
+đã cấp để initialize/list/call qua TLS, chỉ thấy công cụ/dự án được cấp;
+ngắt client làm lần gọi tiếp theo trả401. Logout phiên duyệt trước exchange
+làm code không còn đổi được. Không gọi endpoint nghiệp vụ hoặc API tính phí.
+
+```sh
+python3 -m pip install --only-binary=:all: -r requirements-mcp-test.txt
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_oauth_https.py' -v
+```
+
+Start vẫn gọi backend trong fixture, token được gắn rõ cho SDK. Đây chưa là
+SDK tự discovery/OAuth authorize bằng trình duyệt; các phần đó và giao diện
+quản lý vẫn còn tiếp. Dependency chứng thư chỉ thuộc kiểm thử, không runtime.

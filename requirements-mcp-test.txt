@@ -1,2 +1,4 @@
 # Client kiểm nghiệm, không phải dependency runtime gateway. Ghim ngày 17/11/2026.
 mcp==2.3.0
+# Chứng thư CA/leaf tạm cho thử HTTPS, không nhập vào runtime gateway.
+cryptography==50.0.2
