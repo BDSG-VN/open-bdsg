@@ -94,6 +94,20 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertNotIn("unit_scope", json.dumps(me))
         self.assertEqual(self.value(self.tool("du_an.danh_sach"))["projects"][0]["id"], project["id"])
 
+    def test_unit_mailbox_cookie_and_scope_headers(self):
+        for unit in self.units:
+            admin = self.app.units.bind({'id':'nguoi-a','role':'operator'}, unit)
+            self.app.units.set_member(admin, {'unit_id':unit,'identity':'nguoi-b','role':'member'})
+        sent = self.value(self.tool('agent.gui_tin', {'recipient':'nguoi-b','body':'Thu HTTP don vi A'}))
+        inbox = self.value(self.tool('agent.doc_hop_thu', who='nguoi-b'))['messages']
+        self.assertEqual([r['id'] for r in inbox], [sent['id']])
+        self.assertEqual(self.value(self.tool('agent.doc_hop_thu', who='nguoi-b', unit=self.units[1])), {'messages':[]})
+        self.assertEqual(self.request('/api/tools', {'name':'agent.doc_hop_thu','arguments':{}}, 'nguoi-b')[0], 403)
+        self.assertEqual(self.tool('agent.doc_hop_thu', who='chu-quan')[0], 403)
+        self.assertEqual({r['id'] for r in self.value(self.tool('agent.danh_sach'))['agents']}, {'nguoi-a','nguoi-b'})
+        self.assertEqual(self.request('/api/tools', {'name':'agent.gui_tin','arguments':{
+            'recipient':'nguoi-b','body':'Sai origin'}}, 'nguoi-a', self.units[0], {'Origin':'https://other.test'})[0], 403)
+
     def test_ghi_mcp_qua_http_can_de_xuat_va_admin_duyet_dung_digest(self):
         one = self.units[0]
         self.app.units.set_member(self.root, {'unit_id': one, 'identity': 'nguoi-b', 'role': 'member'})

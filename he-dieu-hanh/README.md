@@ -1,6 +1,8 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
-[V29 R11 — nền ủy quyền MCP đầu vào, đang phát triển](V29-R11-MCP-DAU-VAO.md).
+[V29 R12 — hộp thư đơn vị, đang phát triển](V29-R12-HOP-THU-DON-VI.md).
+
+[V29 R11 — nền ủy quyền MCP đầu vào và pilot](V29-R11-MCP-DAU-VAO.md).
 
 [V29 R10 — phê duyệt ghi MCP theo đơn vị thử nghiệm](V29-R10-PHE-DUYET-GHI-DON-VI.md).
 

@@ -17,6 +17,7 @@ from nhan.nhat_ky import NhatKy
 from nhan.quyen import ChinhSach, CongGhi
 from nhan.mcp import MayChuMCP
 from nhan_dong_thoi import HanMucDongThoi, NhatKyDongThoi
+from hop_thu import HopThu
 
 
 class KhongChuyenHuong(HTTPRedirectHandler):
@@ -191,8 +192,9 @@ def schema(properties=None, required=None):
 
 
 class DieuPhoi:
-    def __init__(self, kho, catalogue, ghi=False, connections=None):
+    def __init__(self, kho, catalogue, ghi=False, connections=None, *, units=None):
         self.kho = kho
+        self.mailbox = HopThu(kho, units)
         self.catalogue = catalogue
         self.actor = contextvars.ContextVar("bdsg_actor", default=None)
         self.connection_guard = contextvars.ContextVar('bdsg_connection_guard', default=None)
@@ -251,25 +253,19 @@ class DieuPhoi:
                 [
                     BanKhaiCongCu(
                         "danh_sach",
-                        lambda a: {"agents": self.kho.agents(self.actor.get())},
+                        lambda a: self.mailbox.call(self.actor.get(), 'danh_sach', a),
                         mo_ta="Danh sách hộp thư agent được đăng ký, không hàm ý đã có mô hình AI.",
                         luoc_do=schema(),
                     ),
                     BanKhaiCongCu(
                         "doc_hop_thu",
-                        lambda a: {
-                            "messages": self.kho.hop_thu(
-                                self.actor.get()["id"], a.get("peer")
-                            )
-                        },
+                        lambda a: self.mailbox.call(self.actor.get(), 'doc_hop_thu', a),
                         mo_ta="Đọc thông điệp mà danh tính này gửi hoặc nhận.",
                         luoc_do=schema({"peer": text}),
                     ),
                     BanKhaiCongCu(
                         "gui_tin",
-                        lambda a: self.kho.gui(
-                            self.actor.get()["id"], a.get("recipient"), a.get("body")
-                        ),
+                        lambda a: self.mailbox.call(self.actor.get(), 'gui_tin', a),
                         ghi=True,
                         mo_ta="Giao thông điệp vào hộp thư agent; danh tính người gửi lấy từ xác thực, không từ tham số.",
                         luoc_do=schema(

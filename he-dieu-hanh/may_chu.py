@@ -54,6 +54,7 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
+    'agent.danh_sach', 'agent.doc_hop_thu', 'agent.gui_tin',
     "ket_noi.ghi", "hanh_dong.danh_sach", "hanh_dong.de_xuat", "hanh_dong.duyet", "hanh_dong.doi_soat",
     "nen_tang.ket_noi", "ket_noi.doc", "cau_hinh.dau_noi", "cau_hinh.luu_dau_noi",
     "cau_hinh.kiem_tra_dau_noi", "cau_hinh.ngat_dau_noi",
@@ -102,7 +103,8 @@ class UngDung:
         self.node = ThietBiMayChu(self.kho.root, node_id=os.environ.get("BDSG_NODE_ID"))
         self.customer_support = HoTroKhach(self.catalogue)
         self.chatgpt_connection = KetNoiChatGPT(self.kho)
-        self.core = DieuPhoi(self.kho, self.catalogue, ghi, None if unit_preview else connections)
+        self.core = DieuPhoi(self.kho, self.catalogue, ghi, None if unit_preview else connections,
+                            units=self.units)
 
         def verify(actor):
             try:
