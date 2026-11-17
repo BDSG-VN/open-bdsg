@@ -384,6 +384,11 @@ class CongViec:
             return self.scoped_ai.bind(actor)
         return self.model
 
+    def _check_scoped_selection(self, model, selection):
+        if self.units is not None and self.scoped_ai is not None and selection != 'auto':
+            if not model.configured or selection not in {m['id'] for m in model.catalogue()['models']}:
+                raise ValueError('Mô hình không nằm trong danh mục đang hoạt động')
+
     def create(self, actor, args):
         self._auth(actor, True)
         model = self._model_for(actor)
@@ -438,6 +443,7 @@ class CongViec:
         model_selection = args.get("model_selection","auto")
         if not isinstance(model_selection,str):
             raise ValueError("Mô hình được chọn chưa hợp lệ")
+        self._check_scoped_selection(model,model_selection)
         hub = model if self.units is not None and self.scoped_ai is not None else getattr(self,"ai",None)
         if model_selection != "auto" and (model is not hub or model_selection not in {m["id"] for m in hub.catalogue()["models"]}):
             raise ValueError("Mô hình không nằm trong danh mục đang hoạt động")
@@ -610,6 +616,7 @@ class CongViec:
             if task["run"] >= 10:
                 raise ValueError("Tác vụ đã đạt giới hạn 10 lượt")
             self._capacity(actor)
+            self._check_scoped_selection(model,task.get('model_selection','auto'))
             hub = getattr(self,"ai",None)
             if task.get("team"):
                 task.setdefault("team_history", []).append(task.pop("team"))

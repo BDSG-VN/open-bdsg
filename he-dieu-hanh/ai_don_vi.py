@@ -9,6 +9,7 @@ import secrets
 
 from mo_hinh_bdsg import LoiMoHinhBDSG
 from ngan_sach_ai import DEFAULT_POLICY, NganSachAI
+from quyen_tac_vu import authorize_run
 from trung_tam_ai import TrungTamAI, MoHinhLiteLLM, validate_catalogue, choose_catalogue
 
 
@@ -232,4 +233,14 @@ class _AIPhamVi:
                     MoHinhLiteLLM.MAX_OUTPUT_TOKENS,model['prices'],config['policy'],
                     project_id=context.get('project_id',''),run=context.get('run'),guard=guard)
             emit(kind,message,**extra)
+            if kind=='model-reserve':
+                # Callback có thể vừa thu hồi quyền hoặc xoay cấu hình. Kiểm lần
+                # cuối sau callback, không giữ khóa writer khi gọi mã bên ngoài.
+                stop()
+                with self.service.kho.ket_noi() as db:
+                    db.execute('BEGIN IMMEDIATE')
+                    self._live(db,actor)
+                    authorize_run(db,actor,context.get('task_id',''),context.get('run'),
+                        self.service.units,self.service.projects,context.get('project_id',''))
+                    self.service._consistent(db)
         return adapter.run(prompt,context,core,actor,event,cancelled)

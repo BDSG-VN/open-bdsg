@@ -167,6 +167,49 @@ class ThuAITheoDonVi(unittest.TestCase):
         for actor in actors[:8]: self.assertEqual(len(self.ai.catalogue(actor)['models']),16)
         self.assertEqual(self.ai.catalogue(actors[8])['models'],[])
 
+    def test_real_adapter_callback_revocation_blocks_transport_after_reserve(self):
+        from trung_tam_ai import MoHinhLiteLLM
+        from thu_mo_hinh_bdsg import Transport, answer, Core
+        from du_an import DuAn
+        for mode in ('rotation','disabled','project','cancel'):
+            with self.subTest(mode=mode):
+                self.setUp()
+                actor=self.actors[0]
+                projects=DuAn(self.kho,units=self.units)
+                self.ai.projects=projects; self.ai.budget.projects=projects
+                self.ai.save(actor,config()); bound=self.ai.bind(actor)
+                context=self.task(actor,'callback-task',bound)
+                project=None
+                if mode=='project':
+                    self.units.set_member(ROOT,{'unit_id':self.ids[0],'identity':ROOT['id'],'role':'member'})
+                    owner=self.units.bind(ROOT,self.ids[0])
+                    project=projects.create(owner,{'name':'Dự án giả'})['id']
+                    projects.share(owner,{'id':project,'identity':USER['id'],'role':'viewer'})
+                    with self.kho.ket_noi() as db:
+                        row=db.execute('SELECT document FROM cong_viec_tasks WHERE id=?',('callback-task',)).fetchone()
+                        doc=json.loads(row[0]); doc['project_id']=project
+                        db.execute('UPDATE cong_viec_tasks SET document=? WHERE id=?',(json.dumps(doc),'callback-task'))
+                    context['project_id']=project
+                transport=Transport([answer('Không được gửi')])
+                self.ai.factory=lambda alias,key:MoHinhLiteLLM(alias,key,opener=transport)
+                def event(kind,message,**extra):
+                    if kind!='model-reserve': return
+                    if mode in ('rotation','disabled'):
+                        settings=config('synthetic-rotated-key')
+                        if mode=='disabled': settings['enabled']=False
+                        self.ai.save(actor,settings)
+                    elif mode=='project':
+                        projects.share(owner,{'id':project,'identity':USER['id'],'role':'revoke'})
+                    elif mode=='cancel':
+                        with self.kho.ket_noi() as db:
+                            row=db.execute('SELECT document FROM cong_viec_tasks WHERE id=?',('callback-task',)).fetchone()
+                            doc=json.loads(row[0]); doc['cancel_requested']=True
+                            db.execute('UPDATE cong_viec_tasks SET document=? WHERE id=?',(json.dumps(doc),'callback-task'))
+                with self.assertRaises((PermissionError,ValueError,LoiMoHinhBDSG)):
+                    bound.run('Kiểm vòng gọi thật',context,Core(),actor,on_event=event)
+                self.assertEqual(transport.requests,[])
+                self.assertEqual(self.ai.quota(actor)['calls_used'],1)
+
     def test_owner_repairs_proxy_from_canonical_database_without_rotation(self):
         actor=self.actors[0]; before=self.ai.save(actor,config())
         bound=self.ai.bind(actor); context=self.task(actor,'repair-task',bound)

@@ -20,6 +20,10 @@ Trước mỗi lần gửi, ngân sách kiểm tác vụ/lượt/quyền dự á
 trong cùng giao dịch. Thu hồi thành viên, đổi vai vòng, thay khóa, tắt mô hình,
 hủy tác vụ hoặc callback lượt cũ không được dùng để gửi tiếp hoặc ghi sang lượt
 mới. Yêu cầu đã gửi ra ngoài không thể được rút lại bằng thao tác thu hồi.
+Kiểm cuối thực hiện sau callback tiến trình, trước khi trả quyền gửi cho
+adapter. Nếu bị chặn ở đây, khoản giữ trước vẫn được ghi nhận bảo thủ;
+không tự hoàn suất khi chưa có cơ sở đối soát. Chọn rõ mô hình khi AI đơn vị
+đã tắt bị từ chối; không đổi yêu cầu đó thành quy trình có kịch bản.
 
 ## Proxy và bí mật
 

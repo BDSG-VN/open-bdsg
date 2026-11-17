@@ -175,6 +175,24 @@ class ThuCongViecAITheoDonVi(unittest.TestCase):
         self.assertEqual(self.ai.quota(self.a1)['tasks_used'],1)
         self.assertEqual(len(self.calls),1)
 
+    def test_chon_mo_hinh_ro_rang_khi_ai_tat_khong_chuyen_qua_quy_trinh(self):
+        self.configure()
+        identifier=self.create(self.a1,model_selection='same-model')
+        self.assertEqual(self.finished(self.a1,identifier)['status'],'completed')
+        disabled=config();disabled['enabled']=False
+        self.ai.save(self.a1,disabled)
+        before=self.ai.quota(self.a1)
+        with self.assertRaises(ValueError): self.create(self.a1,model_selection='same-model')
+        with self.assertRaises(ValueError):
+            self.tasks.followup(self.a1,identifier,'Không chuyển lựa chọn AI rõ ràng thành quy trình')
+        self.assertEqual(len(self.tasks.list(self.a1)['tasks']),1)
+        task=self.tasks.detail(self.a1,identifier)
+        self.assertEqual((task['run'],task['status']),(1,'completed'))
+        after=self.ai.quota(self.a1)
+        self.assertEqual((after['tasks_used'],after['calls_used']),
+                         (before['tasks_used'],before['calls_used']))
+        self.assertEqual(len(self.calls),1)
+
     def test_ai_don_vi_tat_bo_qua_cau_hinh_chung_da_bat(self):
         self.configure()
         disabled=config();disabled['enabled']=False
