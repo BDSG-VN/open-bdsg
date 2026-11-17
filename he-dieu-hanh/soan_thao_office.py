@@ -16,6 +16,7 @@ from urllib.parse import unquote, urlencode, urlsplit
 from chu_ky_office import sign, verify
 from kiem_tep_office import kiem_tep
 from van_phong import LoiXungDotVanPhong
+from phien_office_don_vi import PhienOfficeDonVi
 
 
 class SoanThaoOffice:
@@ -23,6 +24,7 @@ class SoanThaoOffice:
         self.office, self.kho, self.origin = office, office.kho, origin
         self.secret = os.environ.get("BDSG_OFFICE_JWT_SECRET", "")
         self.prefix = "/office-docs/"
+        self.scopes = PhienOfficeDonVi(office)
         with self.kho.ket_noi() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS office_editors(
@@ -64,16 +66,22 @@ class SoanThaoOffice:
         row = db.execute("SELECT * FROM office_editors WHERE key=?", (key,)).fetchone()
         if not row or row["expires"] < time.time() or row["state"] != "active":
             raise PermissionError("Phiên soạn thảo đã hết hiệu lực")
+        if self.scopes.units is not None:
+            self.scopes.actors(key,db)
         return dict(row)
 
-    def _actor(self, session):
+    def _actor(self, session, db):
+        if self.scopes.units is not None:
+            return self.scopes.actor(session['key'],session['actor'],db)
         return {"id": session["actor"], "role": session["role"]}
 
     def open(self, actor, args):
         if self.status()["state"] != "da-cau-hinh":
             raise ValueError("Chưa cấu hình bộ soạn thảo")
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
             file = self.office._file(actor, args.get("id"), db, True)
+            reference = self.scopes.reference(actor,file['project_id'],db)
             if file["trashed"]:
                 raise ValueError("Tệp đang trong thùng rác")
             extension = file["name"].rsplit(".", 1)[-1].lower()
@@ -92,10 +100,19 @@ class SoanThaoOffice:
             db.execute("BEGIN IMMEDIATE")
             current = self.office._file(actor, file["id"], db, True)
             self.office._check_revision(current, file["revision"])
-            old = db.execute(
-                "SELECT * FROM office_editors WHERE file_id=? AND state='active' AND expires>?",
-                (file["id"], time.time()),
-            ).fetchone()
+            if self.scopes.reference(actor,file['project_id'],db)!=reference:
+                raise PermissionError('Quyền thay đổi trong lúc kiểm tệp Office')
+            sql="SELECT * FROM office_editors e WHERE file_id=? AND state='active' AND expires>?"
+            params=[file['id'],time.time()]
+            if reference is not None:
+                sql+=" AND EXISTS(SELECT 1 FROM office_editor_scopes s WHERE s.key=e.key AND json_extract(s.unit_ref,'$.unit_id')=?)"
+                params.append(reference['unit']['unit_id'])
+            old=db.execute(sql,params).fetchone()
+            if old and reference is not None:
+                try:self._row(db,old['key'])
+                except (PermissionError,ValueError):
+                    db.execute("UPDATE office_editors SET state='revoked',pending=NULL WHERE key=?",(old['key'],))
+                    old=None
             if old:
                 session = dict(old)
                 if old["revision"] != file["revision"]:
@@ -123,6 +140,8 @@ class SoanThaoOffice:
                 "INSERT INTO office_editor_members VALUES (?,?,?) ON CONFLICT(key,actor) DO UPDATE SET role=excluded.role",
                 (session["key"], actor["id"], actor["role"]),
             )
+            if reference is not None and not db.execute('SELECT 1 FROM office_editor_scopes WHERE key=? AND actor=?',(session['key'],actor['id'])).fetchone():
+                self.scopes.remember(session['key'],actor,file['project_id'],db)
         url = (
             self.origin
             + "/api/office-source?"
@@ -165,10 +184,11 @@ class SoanThaoOffice:
         if signed.get("url") != url:
             raise PermissionError("Nguồn Office không khớp chữ ký")
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
             session = self._row(db, key)
             if not secrets.compare_digest(cap, session["cap"]):
                 raise PermissionError("Không có quyền tải nguồn")
-            file = self.office._file(self._actor(session), session["file_id"], db, True)
+            file = self.office._file(self._actor(session,db), session["file_id"], db, True)
             self.office._check_revision(file, session["revision"])
             raw = db.execute(
                 "SELECT content FROM office_versions WHERE file_id=? AND version=?",
@@ -193,7 +213,10 @@ class SoanThaoOffice:
         for key in matches:
             try:
                 with self.kho.ket_noi() as db:
+                    db.execute('BEGIN')
                     session = self._row(db, key)
+                    if self.scopes.units is not None:
+                        self.scopes.actor(key,actor['id'],db,current=actor)
                     self.office._file(actor, session["file_id"], db)
             except (ValueError, PermissionError):
                 return False
@@ -203,6 +226,8 @@ class SoanThaoOffice:
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             session = self._row(db, args.get("key"))
+            if self.scopes.units is not None:
+                self.scopes.actor(session['key'],actor['id'],db,current=actor)
             file = self.office._file(actor, session["file_id"], db, True)
             if not db.execute(
                 "SELECT 1 FROM office_editor_members WHERE key=? AND actor=?",
@@ -257,6 +282,7 @@ class SoanThaoOffice:
 
     def progress(self, actor, args):
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
             row = db.execute(
                 "SELECT * FROM office_editors WHERE key=?", (args.get("key"),)
             ).fetchone()
@@ -269,6 +295,8 @@ class SoanThaoOffice:
             ):
                 raise PermissionError("Không có quyền xem phiên")
             file = self.office._file(actor, row["file_id"], db)
+            if self.scopes.units is not None:
+                self.scopes.actor(row['key'],actor['id'],db,current=actor)
             return {
                 "state": row["state"],
                 "pending": bool(row["pending"]),
@@ -363,7 +391,8 @@ class SoanThaoOffice:
                 member = {"actor": session["actor"], "role": session["role"]}
             if not member:
                 raise PermissionError("Không xác định được người lưu phiên")
-            actor = {"id": member["actor"], "role": member["role"]}
+            actor = (self.scopes.actor(key,member['actor'],db) if self.scopes.units is not None
+                     else {"id": member["actor"], "role": member["role"]})
             file = self.office._file(actor, session["file_id"], db, True)
             self.office._check_revision(file, session["revision"])
             if status == 6 and (
