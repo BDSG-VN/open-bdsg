@@ -56,6 +56,7 @@ class NganSachAI:
     def __init__(self, kho, clock=time.time, *, units=None, projects=None, host_policy=None):
         self.kho, self.clock = kho, clock
         self.units, self.projects = units, projects
+        self.run_authorizer = None
         # Chính sách máy chủ chỉ đến từ cấu hình tin cậy, không từ cấu hình đơn vị.
         self.host_policy = MappingProxyType(validate_policy(
             dict(DEFAULT_POLICY if host_policy is None else host_policy)))
@@ -241,7 +242,7 @@ class NganSachAI:
     def _reserve_scoped(self,db,actor,task_id,model_id,input_tokens,output_tokens,
                         cost,policy,project_id,run,day,guard):
         scope, project_id = authorize_run(
-            db,actor,task_id,run,self.units,self.projects,project_id)
+            db,actor,task_id,run,self.units,self.projects,project_id,authorizer=self.run_authorizer)
         credit = db.execute("""SELECT 1 FROM ai_task_credits c
             JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
             WHERE c.task_id=? AND c.run=? AND c.owner=? AND s.unit_id=?""",

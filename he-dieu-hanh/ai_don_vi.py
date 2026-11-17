@@ -45,6 +45,7 @@ def unit_proxy_config(db):
 class AITheoDonVi:
     def __init__(self,kho,units,projects,*,probe=None,adapter_factory=None,host_policy=None):
         self.kho,self.units,self.projects=kho,units,projects
+        self.run_authorizer = None
         self.probe=probe or TrungTamAI._probe
         self.factory=adapter_factory or (lambda alias,key:MoHinhLiteLLM(alias,key))
         self.proxy_path=kho.root/'litellm-config.json'
@@ -248,6 +249,7 @@ class _AIPhamVi:
                     db.execute('BEGIN IMMEDIATE')
                     self._live(db,actor)
                     authorize_run(db,actor,context.get('task_id',''),context.get('run'),
-                        self.service.units,self.service.projects,context.get('project_id',''))
+                        self.service.units,self.service.projects,context.get('project_id',''),
+                        authorizer=self.service.run_authorizer)
                     self.service._consistent(db)
         return adapter.run(prompt,context,core,actor,event,cancelled)

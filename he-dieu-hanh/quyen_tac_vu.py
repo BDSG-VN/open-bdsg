@@ -69,7 +69,7 @@ def authorize_claim(db, actor, task_id, units, projects, project_id=''):
     return scope, _project(db, actor, task, project_id, projects)
 
 
-def authorize_run(db, actor, task_id, run, units, projects, project_id=''):
+def authorize_run(db, actor, task_id, run, units, projects, project_id='', *, authorizer=None):
     """Kiểm tư cách sống, lượt, vòng đời và tham chiếu đóng băng trước AI."""
     scope = units.require(actor, db)
     if type(run) is not int or run < 1:
@@ -81,6 +81,10 @@ def authorize_run(db, actor, task_id, run, units, projects, project_id=''):
     if stored is None:
         raise PermissionError('Không tìm thấy tác vụ trong phạm vi')
     task, reference, status = stored
+    if task.get('mcp_delegated'):
+        if authorizer is None:
+            raise PermissionError('Thiếu bộ kiểm nguồn ủy quyền của lượt chạy')
+        authorizer(actor, task, db)
     if (reference != {'identity':scope.identity, 'unit_id':scope.unit_id,
                       'epoch':scope.epoch, 'revision':scope.revision}
             or status not in ('queued','running')):

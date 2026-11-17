@@ -13,6 +13,8 @@ from urllib.parse import urlsplit
 READ_TOOLS = frozenset({'nen_tang.danh_sach', 'nen_tang.ket_noi', 'mo_dun.danh_sach',
                         'du_an.danh_sach', 'cong_viec.danh_sach', 'cong_viec.chi_tiet'})
 RESOURCE_TOOLS = frozenset({'du_an.danh_sach', 'cong_viec.danh_sach', 'cong_viec.chi_tiet'})
+TASK_TOOLS = frozenset({'cong_viec.tao', 'cong_viec.tiep_tuc', 'cong_viec.dung'})
+EXECUTION_TOOLS = frozenset({'nen_tang.danh_sach', 'mo_dun.danh_sach'})
 
 
 class LoiChungThuMCP(PermissionError):
@@ -24,6 +26,8 @@ class _UyQuyen:
     id: str
     revision: str
     _issuer: object = field(repr=False, compare=False)
+    task_id: str = ''
+    run: int = 0
 
 
 class UyQuyenMCPDonVi:
@@ -42,6 +46,9 @@ class UyQuyenMCPDonVi:
             db.execute('''CREATE TABLE IF NOT EXISTS unit_mcp_grants(
                 id TEXT PRIMARY KEY,unit_id TEXT NOT NULL REFERENCES don_vi(id),owner TEXT NOT NULL,
                 token_hash TEXT NOT NULL UNIQUE,revision TEXT NOT NULL,document TEXT NOT NULL)''')
+            db.execute('''CREATE TABLE IF NOT EXISTS unit_mcp_task_runs(
+                task_id TEXT NOT NULL REFERENCES cong_viec_tasks(id),run INTEGER NOT NULL,
+                reference TEXT NOT NULL,PRIMARY KEY(task_id,run))''')
 
     def _load_epoch(self):
         # Cố ý ngoài ALLOWED của data backup: restore không hồi sinh bearer cũ.
@@ -85,24 +92,32 @@ class UyQuyenMCPDonVi:
                       issuer_current=document['issuer_epoch'] == self._epoch, credential_type='manual_bearer')
         if own:
             result['project_ids'] = list(document['project_ids'])
+            result['task_profile'] = document.get('task_profile')
         return result
 
     def create(self, actor, data):
-        if not isinstance(data, dict) or set(data) != {'name', 'client_id', 'tools', 'project_ids', 'expires_in'}:
+        required = {'name', 'client_id', 'tools', 'project_ids', 'expires_in'}
+        if not isinstance(data, dict) or not required <= set(data) or set(data)-required-{'task_profile'}:
             raise ValueError('Cần nhãn, client, công cụ, dự án và hạn dùng cụ thể')
         name, client, tools, project_ids, duration = (data[key] for key in (
             'name', 'client_id', 'tools', 'project_ids', 'expires_in'))
         if (not isinstance(name, str) or not 3 <= len(name.strip()) <= 100 or not name.isprintable()
                 or not isinstance(client, str) or not re.fullmatch(r'[A-Za-z0-9_-]{3,80}', client)):
             raise ValueError('Nhãn hoặc mã client không hợp lệ')
-        if (not isinstance(tools, list) or not tools or len(tools) > len(READ_TOOLS)
-                or any(not isinstance(tool, str) or tool not in READ_TOOLS for tool in tools)
+        if (not isinstance(tools, list) or not tools or len(tools) > len(READ_TOOLS | TASK_TOOLS)
+                or any(not isinstance(tool, str) or tool not in READ_TOOLS | TASK_TOOLS for tool in tools)
                 or len(set(tools)) != len(tools)):
-            raise ValueError('Chỉ cấp công cụ đọc đã chuyển theo đơn vị, không wildcard')
+            raise ValueError('Chỉ cấp công cụ đã chuyển theo đơn vị, không wildcard')
+        profile = data.get('task_profile')
+        if TASK_TOOLS.intersection(tools):
+            if not isinstance(profile, dict) or set(profile) != {'allow_ai'} or type(profile['allow_ai']) is not bool:
+                raise ValueError('Tác vụ cần cấp rõ profile danh mục và quyền gọi AI')
+        elif profile is not None:
+            raise ValueError('Profile tác vụ cần công cụ tác vụ được cấp rõ')
         if (not isinstance(project_ids, list) or len(project_ids) > 100
                 or any(not isinstance(identifier, str) or len(identifier) > 80 for identifier in project_ids)
                 or len(set(project_ids)) != len(project_ids)
-                or (RESOURCE_TOOLS.intersection(tools) and not project_ids)):
+                or ((RESOURCE_TOOLS | TASK_TOOLS).intersection(tools) and not project_ids)):
             raise ValueError('Cần phạm vi dự án cụ thể; chuỗi rỗng chỉ cho việc độc lập')
         if type(duration) is not int or not 900 <= duration <= 86400:
             raise ValueError('Hạn credential cần từ 15 phút đến 24 giờ')
@@ -113,8 +128,7 @@ class UyQuyenMCPDonVi:
             db.execute('BEGIN IMMEDIATE')
             scope = self._web_scope(actor, db)
             project_refs = self._project_scope(actor, project_ids, db)
-            declarations = {item['ten'] for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))
-                            if not item['ghi']}
+            declarations = {item['ten'] for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))}
             if not set(tools) <= declarations:
                 raise PermissionError('Không được ủy quyền công cụ mình chưa có')
             count = db.execute('''SELECT count(*) FROM unit_mcp_grants WHERE unit_id=? AND owner=?
@@ -129,6 +143,7 @@ class UyQuyenMCPDonVi:
                         'unit_id': scope.unit_id, 'owner': scope.identity,
                         'owner_scope': self.units.reference(actor, db), 'tools': list(tools),
                         'project_ids': list(project_ids), 'project_refs': project_refs, 'resource': self.resource,
+                        'task_profile': dict(profile) if profile is not None else None,
                         'issuer_epoch': self._epoch, 'created': now, 'expires': now+duration, 'enabled': True}
             db.execute('INSERT INTO unit_mcp_grants VALUES(?,?,?,?,?,?)',
                        (identifier, scope.unit_id, scope.identity, hashlib.sha256(credential.encode()).hexdigest(),
@@ -202,14 +217,75 @@ class UyQuyenMCPDonVi:
 
     def reference(self, actor, db):
         document = self._require(actor, db)
-        return {'id': document['id'], 'revision': document['revision']}
+        return {'id': document['id'], 'revision': document['revision'], 'issuer_epoch': self._epoch}
+
+    def restore(self, reference, db):
+        """Chỉ backend phục hồi tham chiếu đã lưu, không phải credential HTTP."""
+        if (not isinstance(reference, dict) or set(reference) != {'id', 'revision', 'issuer_epoch'}
+                or reference['issuer_epoch'] != self._epoch):
+            raise LoiChungThuMCP('Nguồn ủy quyền không còn hiệu lực')
+        row = db.execute('SELECT document FROM unit_mcp_grants WHERE id=?', (reference['id'],)).fetchone()
+        document = json.loads(row[0]) if row else None
+        if not document or document['revision'] != reference['revision']:
+            raise LoiChungThuMCP('Nguồn ủy quyền không còn hiệu lực')
+        actor = self.units.restore(document['owner_scope'], db)
+        actor['mcp_delegation'] = _UyQuyen(document['id'], document['revision'], self._issuer)
+        self._require(actor, db)
+        return actor
+
+    def bind_task(self, actor, task, db, *, renew=False):
+        """Lưu nguồn cùng giao dịch tạo lượt; không nhận nguồn từ JSON client."""
+        previous = db.execute('SELECT reference FROM unit_mcp_task_runs WHERE task_id=? AND run=?',
+                              (task['id'], task['run']-1)).fetchone() if renew else None
+        delegated = 'mcp_delegation' in actor
+        if renew and (bool(previous) != delegated):
+            raise PermissionError('Không tự đổi nguồn ủy quyền của tác vụ')
+        if not delegated:
+            task['mcp_delegated'] = False
+            return
+        document = self._require(actor, db)
+        marker = actor['mcp_delegation']
+        if marker.task_id or ('cong_viec.tiep_tuc' if renew else 'cong_viec.tao') not in document['tools']:
+            raise PermissionError('Chưa cấp quyền tạo lượt từ client')
+        reference = self.reference(actor, db)
+        if previous and json.loads(previous[0]) != reference:
+            raise PermissionError('Lượt mới cần cùng nguồn ủy quyền')
+        profile = document.get('task_profile')
+        if not profile or task.get('project_id', '') not in document['project_ids']:
+            raise PermissionError('Tác vụ ngoài profile hoặc dự án được cấp')
+        if any(task.get(key) for key in ('allow_python', 'allow_delegation', 'browser_hosts',
+                'documents', 'allow_module_reads', 'allow_action_drafts')):
+            raise PermissionError('Profile tác vụ chưa cấp công cụ ngoài danh mục')
+        if task.get('mode') == 'mo-hinh-api' and not profile['allow_ai']:
+            raise PermissionError('Profile tác vụ chưa cấp quyền gọi AI')
+        db.execute('INSERT INTO unit_mcp_task_runs VALUES(?,?,?)',
+                   (task['id'], task['run'], json.dumps(reference)))
+        task['mcp_delegated'] = True
+
+    def restore_task(self, actor, task, db):
+        row = db.execute('SELECT reference FROM unit_mcp_task_runs WHERE task_id=? AND run=?',
+                         (task['id'], task['run'])).fetchone()
+        if bool(row) != bool(task.get('mcp_delegated')):
+            raise PermissionError('Tác vụ mất ràng buộc nguồn ủy quyền')
+        if not row:
+            if 'mcp_delegation' in actor:
+                raise PermissionError('Không dùng token để nhận quyền của tác vụ web')
+            return actor
+        restored = self.restore(json.loads(row[0]), db)
+        if self.units.reference(restored, db) != self.units.reference(actor, db):
+            raise PermissionError('Nguồn ủy quyền không thuộc tác vụ này')
+        if 'mcp_delegation' in actor and self.reference(actor, db) != json.loads(row[0]):
+            raise PermissionError('Token khác nguồn của tác vụ')
+        restored['mcp_delegation'] = _UyQuyen(restored['mcp_delegation'].id,
+            restored['mcp_delegation'].revision, self._issuer, task['id'], task['run'])
+        return restored
 
     def tools(self, actor):
         with self.kho.ket_noi() as db:
             db.execute('BEGIN')
             document = self._require(actor, db)
         result = [item for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))
-                  if not item['ghi'] and item['ten'] in document['tools'] and item['ten'] in READ_TOOLS]
+                  if item['ten'] in document['tools'] and item['ten'] in READ_TOOLS | TASK_TOOLS]
         with self.kho.ket_noi() as db:
             db.execute('BEGIN')
             self._require(actor, db)
@@ -217,8 +293,34 @@ class UyQuyenMCPDonVi:
                           for item in result]}
 
     def _arguments(self, db, actor, document, name, arguments):
-        if name not in document['tools'] or name not in READ_TOOLS:
+        marker = actor['mcp_delegation']
+        if marker.task_id:
+            row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?', (marker.task_id,)).fetchone()
+            task = json.loads(row[0]) if row else {}
+            if (task.get('run') != marker.run or task.get('status') != 'running' or task.get('cancel_requested')
+                    or name not in EXECUTION_TOOLS or arguments != {}):
+                raise PermissionError('Công cụ ngoài profile lượt chạy')
+            self.restore_task(actor, task, db)
+            return
+        if name not in document['tools'] or name not in READ_TOOLS | TASK_TOOLS:
             raise PermissionError('Công cụ ngoài phạm vi ủy quyền')
+        if name == 'cong_viec.tao':
+            if not isinstance(arguments, dict) or set(arguments)-{'prompt', 'project_id', 'module_ids', 'template', 'model_selection'}:
+                raise ValueError('Tham số tạo tác vụ ngoài profile')
+            if arguments.get('project_id', '') not in document['project_ids']:
+                raise PermissionError('Dự án ngoài grant')
+            return
+        if name in ('cong_viec.tiep_tuc', 'cong_viec.dung'):
+            expected = {'id', 'text'} if name == 'cong_viec.tiep_tuc' else {'id'}
+            if not isinstance(arguments, dict) or set(arguments) != expected:
+                raise ValueError('Tham số tác vụ không hợp lệ')
+            if not isinstance(arguments['id'], str) or not re.fullmatch(r'[a-f0-9]{24}', arguments['id']):
+                raise ValueError('Mã tác vụ không hợp lệ')
+            row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?', (arguments['id'],)).fetchone()
+            if not row:
+                raise PermissionError('Không có tác vụ trong phạm vi')
+            self.restore_task(actor, json.loads(row[0]), db)
+            return
         if not isinstance(arguments, dict) or set(arguments) != ({'id'} if name == 'cong_viec.chi_tiet' else set()):
             raise ValueError('Tham số công cụ không hợp lệ')
         if name == 'cong_viec.chi_tiet':

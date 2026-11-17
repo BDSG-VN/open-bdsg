@@ -192,6 +192,10 @@ class UngDung:
         self.inbound_mcp = (UyQuyenMCPDonVi(self.kho, self.units, self.core, self.projects, origin=self.origin)
                             if unit_preview else None)
         self.core.delegated_calls = self.inbound_mcp
+        self.tasks.inbound_mcp = self.inbound_mcp
+        if self.unit_ai is not None:
+            self.unit_ai.run_authorizer = self.inbound_mcp.restore_task
+            self.unit_ai.budget.run_authorizer = self.inbound_mcp.restore_task
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):

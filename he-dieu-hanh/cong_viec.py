@@ -95,6 +95,7 @@ class CongViec:
         self.units = units
         self.scoped_ai = scoped_ai
         self.scoped_connectors = None
+        self.inbound_mcp = None
         self.lock = threading.RLock()
         self.closed = False
         self.context_override = contextvars.ContextVar(
@@ -285,6 +286,10 @@ class CongViec:
                 if reference != execution['reference']: raise _StaleRun()
                 reference = execution['reference']
             actor = self.units.restore(reference,db)
+            if self.inbound_mcp is not None:
+                actor = self.inbound_mcp.restore_task(actor, task, db)
+            elif task.get('mcp_delegated'):
+                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
             if task.get('project_id'):
                 self.projects.authorize(actor,task['project_id'],db=db)
             return actor
@@ -301,6 +306,13 @@ class CongViec:
                 if execution and execution['id']==task['id'] and execution.get('reference') != reference:
                     raise _StaleRun()
                 current = actor or self.units.restore(reference,db)
+                if self.inbound_mcp is not None:
+                    if renew:
+                        self.inbound_mcp.bind_task(current, task, db, renew=True)
+                    elif actor is None:
+                        self.inbound_mcp.restore_task(current, task, db)
+                elif task.get('mcp_delegated'):
+                    raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
                 scope = self.units.require(current,db)
                 if scope.identity != task['owner'] or scope.unit_id != reference['unit_id']:
                     raise PermissionError('Phạm vi tác vụ không khớp')
@@ -428,6 +440,10 @@ class CongViec:
 
     def create(self, actor, args):
         self._auth(actor, True)
+        if 'mcp_delegation' in actor:
+            if self.inbound_mcp is None:
+                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
+            self.inbound_mcp.authorize_call(actor, 'cong_viec.tao', args)
         model = self._model_for(actor)
         if model.configuration_error:
             raise ValueError(model.configuration_error)
@@ -588,11 +604,6 @@ class CongViec:
                     task['unit_id'] = scope.unit_id
                     if project_id:
                         self.projects.authorize(actor,project_id,db=db)
-                if model is hub and hub.configured:
-                    if self.units is not None:
-                        hub.admit(db,actor,task["id"],task["run"],model_selection,project_id=project_id)
-                    else:
-                        hub.admit(db,actor,task["id"],task["run"],model_selection)
                 db.execute(
                     "INSERT INTO cong_viec_tasks VALUES (?,?,?,?,?,?)",
                     (
@@ -607,6 +618,15 @@ class CongViec:
                 if self.units is not None:
                     db.execute('INSERT INTO cong_viec_units VALUES(?,?,?,?)',
                                (task['id'],scope.unit_id,scope.epoch,scope.revision))
+                    if self.inbound_mcp is not None:
+                        self.inbound_mcp.bind_task(actor, task, db)
+                        db.execute('UPDATE cong_viec_tasks SET document=? WHERE id=?',
+                                   (json.dumps(task, ensure_ascii=False), task['id']))
+                if model is hub and hub.configured:
+                    if self.units is not None:
+                        hub.admit(db,actor,task["id"],task["run"],model_selection,project_id=project_id)
+                    else:
+                        hub.admit(db,actor,task["id"],task["run"],model_selection)
             self.pool.submit(self._run, dict(actor), task["id"], model, task['run'], reference)
         return {"id": task["id"], "status": "queued"}
 
@@ -666,6 +686,10 @@ class CongViec:
 
     def followup(self, actor, task_id, text):
         self._auth(actor, True)
+        if 'mcp_delegation' in actor:
+            if self.inbound_mcp is None:
+                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
+            self.inbound_mcp.authorize_call(actor, 'cong_viec.tiep_tuc', {'id': task_id, 'text': text})
         model = self._model_for(actor)
         if self.units is not None and self.scoped_ai is None and model.configured:
             raise PermissionError('Chưa có mô hình riêng theo đơn vị')
@@ -722,6 +746,8 @@ class CongViec:
                 raise PermissionError('Phạm vi tác vụ không khớp')
             if task.get('project_id'):
                 self.projects.authorize(actor,task['project_id'],db=db)
+            if self.inbound_mcp is not None:
+                self.inbound_mcp.bind_task(actor, task, db, renew=True)
             model.admit(db,actor,task['id'],task['run'],task.get('model_selection','auto'),
                         project_id=task.get('project_id',''))
             db.execute('UPDATE cong_viec_units SET epoch=?,revision=? WHERE task_id=?',
@@ -732,6 +758,10 @@ class CongViec:
 
     def cancel(self, actor, task_id):
         self._auth(actor, True)
+        if 'mcp_delegation' in actor:
+            if self.inbound_mcp is None:
+                raise PermissionError('Thiếu bộ kiểm nguồn tác vụ')
+            self.inbound_mcp.authorize_call(actor, 'cong_viec.dung', {'id': task_id})
         with self.lock:
             task = self.detail(actor, task_id)
             if task["status"] not in FINAL or task.get("runtime_running"):
@@ -1065,6 +1095,8 @@ class CongViec:
                 def cancelled_check():
                     with self.lock:
                         verify = getattr(self.core, "verify_actor", None)
+                        if self.units is not None:
+                            self._worker_actor(task_id)
                         return (
                             self.closed
                             or self._load(task_id)["cancel_requested"]
