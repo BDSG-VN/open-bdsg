@@ -987,11 +987,35 @@ def tao_may_chu(app, port=8766):
     return server
 
 
+PILOT_MARKER = 'bdsg-unit-preview-v1\n'
+
+
+def check_workspace(data, action, preview):
+    """Chặn nhầm kho khi vận hành; marker không thay quyền truy cập hệ tệp."""
+    root = Path(data)
+    marker = root / 'unit-preview.mode'
+    if not preview:
+        if marker.exists() or marker.is_symlink():
+            raise SystemExit('Kho thử đơn vị cần --unit-preview; không mở bằng chế độ legacy')
+        return marker
+    if action not in ('init', 'serve'):
+        raise SystemExit('Pilot dùng phiên web và grant đơn vị; không cấp agent legacy qua CLI')
+    if action == 'init':
+        # Không tự thêm marker vào kho cũ, kể cả kho chưa có đơn vị.
+        if root.exists() or root.is_symlink():
+            raise SystemExit('Khởi tạo pilot cần đường dẫn dữ liệu mới chưa tồn tại')
+        root.mkdir(parents=True, mode=0o700)
+    elif (root.is_symlink() or marker.is_symlink() or not marker.is_file()
+          or marker.read_text(encoding='utf-8') != PILOT_MARKER):
+        raise SystemExit('Kho chưa được khởi tạo bằng init --unit-preview')
+    return marker
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("action", choices=["serve", "init", "create-agent", "revoke-agent"])
     ap.add_argument(
-        "--data", default=os.environ.get("BDSG_DATA_DIR", "/var/lib/bdsg-thanhhoa")
+        "--data", help='Thư mục dữ liệu; pilot bắt buộc chỉ định trực tiếp'
     )
     ap.add_argument(
         "--origin", default=os.environ.get("BDSG_ORIGIN", "https://thanhhoa.bdsg.vn")
@@ -1003,14 +1027,19 @@ def main():
     ap.add_argument("--name")
     ap.add_argument("--role", choices=["agent", "operator"], default="agent")
     ap.add_argument("--output", type=Path)
+    ap.add_argument('--unit-preview', action='store_true',
+                    help='Pilot đơn vị trên kho mới riêng; không chuyển dữ liệu legacy')
     args = ap.parse_args()
+    if args.unit_preview and args.data is None:
+        ap.error('--unit-preview cần --data riêng, không dùng đường dẫn mặc định hoặc môi trường')
+    if args.data is None:
+        args.data = os.environ.get('BDSG_DATA_DIR', '/var/lib/bdsg-thanhhoa')
     os.umask(0o077)
+    if args.action in ('init', 'create-agent') and (not args.output or args.output.exists()):
+        raise SystemExit('Cần đường dẫn đầu ra riêng tư mới để nhận chứng thư một lần')
+    marker = check_workspace(args.data, args.action, args.unit_preview)
     kho = Kho(args.data)
     if args.action in ("init", "create-agent"):
-        if not args.output or args.output.exists():
-            raise SystemExit(
-                "Cần đường dẫn đầu ra riêng tư mới để nhận chứng thư một lần"
-            )
         if args.action == "init":
             password = secrets.token_urlsafe(24)
             kho.tao_chu(password)
@@ -1029,6 +1058,10 @@ def main():
         with args.output.open("x", encoding="utf-8") as f:
             json.dump(credentials, f, ensure_ascii=False, indent=2)
         os.chmod(args.output, 0o600)
+        if args.unit_preview:
+            with marker.open('x', encoding='utf-8', newline='\n') as stream:
+                stream.write(PILOT_MARKER)
+            os.chmod(marker, 0o600)
         print(
             "Đã ghi chứng thư riêng tư vào đường dẫn yêu cầu; không in bí mật ra nhật ký."
         )
@@ -1042,6 +1075,7 @@ def main():
         args.origin,
         os.environ.get("BDSG_ALLOW_WRITES") == "1",
         connections=os.environ.get("BDSG_CONNECTIONS"),
+        unit_preview=args.unit_preview,
     )
     server = tao_may_chu(app, args.port)
     app.schedules.start()

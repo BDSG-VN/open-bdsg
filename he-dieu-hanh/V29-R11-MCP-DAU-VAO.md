@@ -2,9 +2,10 @@
 
 Ngày 17/11/2026, tiếp [R10](V29-R10-PHE-DUYET-GHI-DON-VI.md). Đây là chặng
 nền grant/credential, worker và HTTP MCP trong chế độ đơn vị thử nghiệm.
-OAuth có nền backend và HTTP token/API đang kiểm, chưa có luồng authorize/consent/giao diện quản lý
-hoàn chỉnh hoặc chuyển dữ liệu production; chưa hoàn tất R11 và chưa triển
-khai thay đổi này lên website.
+Đến ngày 18/11/2026, backend/HTTP OAuth, authorize/consent, quản lý quyền và
+SDK/browser đã qua kiểm thử trên dữ liệu tổng hợp. Chưa chuyển dữ liệu
+production; R11d đang kiểm đường vận hành/phục hồi trước phát hành, chưa
+triển khai thay đổi này lên website.
 
 ## Danh tính và phạm vi
 
@@ -395,5 +396,42 @@ và R11c6 bị helper cũ ghi đè đã được tái tạo bằng đúng commit
 độc lập, có audit note. Helper mặc định tạo output theo thời gian, không ghi
 đè báo cáo phát hành trước.
 
-Còn review/CI và các cửa nghiệm thu R11d trước triển khai. Không nhận toàn
+Còn các cửa nghiệm thu R11d trước triển khai. Không nhận toàn
 mục tiêu, cutover đơn vị hoặc client ChatGPT/Claude thật đã hoàn tất.
+
+## R11d — khởi chạy pilot bằng lệnh vận hành
+
+Ngày 18/11/2026: CLI có `--unit-preview` cho `init` và `serve`, luôn cần
+`--data` chỉ định trực tiếp. Biến môi trường `BDSG_DATA_DIR` không thay được
+lựa chọn này. `init` chỉ nhận thư mục mới chưa tồn tại, không biến kho cũ
+thành kho thử. Sau khi tạo chủ quản/chứng thư riêng mới ghi marker
+`unit-preview.mode`. `serve` yêu cầu marker đúng; mở kho có marker bằng chế
+độ legacy bị chặn ngay trước khởi tạo SQLite. Không cấp agent legacy trong
+pilot; dùng phiên web và grant đơn vị.
+
+Ví dụ cho máy thử Linux, không dùng đường dẫn production:
+
+```sh
+umask 077
+python3 he-dieu-hanh/may_chu.py init --unit-preview \
+  --data /var/lib/bdsg-unit-pilot \
+  --output /root/bdsg-unit-pilot-login.json
+python3 he-dieu-hanh/may_chu.py serve --unit-preview \
+  --data /var/lib/bdsg-unit-pilot \
+  --origin https://pilot.example.test --port 18766
+```
+
+Thay origin bằng tên thử được kiểm soát và có TLS hợp lệ trước khi dùng
+trình duyệt/OAuth. Cổng vẫn chỉ nghe loopback. Chạy bằng tài khoản hệ điều
+hành riêng với dữ liệu/cấu hình riêng, không nạp EnvironmentFile của
+production: các cấu hình Google/Office/backup/node môi trường vẫn có ý
+nghĩa với tiến trình. Không đưa gói dữ liệu thật vào pilot.
+
+Marker là chốt chống nhầm thao tác, không là xác thực hay sandbox. Người
+có quyền sửa thư mục vẫn có thể sửa marker/dữ liệu. Nếu init bị ngắt hoặc
+không ghi được chứng thư/marker, dừng kiểm tra thư mục riêng đó; không tự
+chạy lại init lên kho đã có hoặc sửa marker của production.
+
+Các ứng dụng pilot được công bố trong `PREVIEW_APPS`; Google Office/editor,
+workflow/lịch và runtime chưa được nhận là hoàn tất cách ly đơn vị. CLI mới
+không thay nghiệm thu migration/cutover hoặc phục hồi toàn máy chủ.
