@@ -269,9 +269,11 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
             with self.assertRaises(ValueError):self.callback(opened,5)
             self.assertTrue(self.editor.progress(self.a,{'key':opened['key']})['pending'])
             self.assertEqual(self.callback(opened,status),{'error':0})
+            self.assertEqual(self.callback(opened,status),{'error':0})
             progress=self.editor.progress(self.a,{'key':opened['key'],'request_id':result['request_id']})
             self.assertEqual(progress['state'],state)
             self.assertEqual(progress['command_state'],command_state)
+            self.assertEqual(progress['save_error'],status==3)
             self.assertFalse(progress['pending'])
             self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['version'],1)
 

@@ -444,6 +444,7 @@ class SoanThaoOffice:
                 result.update(request_id=command['id'] if command else row['pending'],
                     pending_request_id=row['pending'],
                     command_state=command['state'] if command else ('unknown' if row['pending'] else None))
+                result['save_error']=result['save_error'] or bool(command and command['state']=='failed')
             return result
 
     def _fetch(self, url, key):
@@ -483,6 +484,14 @@ class SoanThaoOffice:
         finally:
             connection.close()
 
+    def _callback_receipt(self,db,key,status,request,fingerprint):
+        row=db.execute('SELECT fingerprint FROM office_editor_callbacks WHERE key=? AND status=? AND request=?',
+                       (key,status,request)).fetchone()
+        if row is None:return False
+        if row['fingerprint']!=fingerprint:
+            raise LoiXungDotVanPhong('Callback cùng mã nhưng khác dữ liệu')
+        return True
+
     def callback(self, body, authorization):
         token = body.get("token") or authorization.removeprefix("Bearer ")
         payload = verify(token, self.secret, "callback")
@@ -503,14 +512,7 @@ class SoanThaoOffice:
         ).hexdigest()
         with self.kho.ket_noi() as db:
             db.execute('BEGIN')
-            committed = db.execute(
-                "SELECT fingerprint FROM office_editor_callbacks WHERE key=? AND status=? AND request=?",
-                (key, status, request),
-            ).fetchone()
-            if committed:
-                if committed[0] != fingerprint:
-                    raise LoiXungDotVanPhong("Callback cùng mã nhưng khác dữ liệu")
-                return {"error": 0}
+            if self._callback_receipt(db,key,status,request,fingerprint):return {'error':0}
             session = self._row(db, key)
             if status == 6:
                 member = db.execute(
@@ -543,14 +545,7 @@ class SoanThaoOffice:
                 raise ValueError("Kết quả chưa được quét")
             with self.kho.ket_noi() as db:
                 db.execute("BEGIN IMMEDIATE")
-                committed = db.execute(
-                    "SELECT fingerprint FROM office_editor_callbacks WHERE key=? AND status=? AND request=?",
-                    (key, status, request),
-                ).fetchone()
-                if committed:
-                    if committed[0] != fingerprint:
-                        raise LoiXungDotVanPhong("Callback cùng mã nhưng khác dữ liệu")
-                    return {"error": 0}
+                if self._callback_receipt(db,key,status,request,fingerprint):return {'error':0}
                 latest = self._row(db, key)
                 current = self.office._file(actor, session["file_id"], db, True)
                 self.office._check_revision(current, session["revision"])
@@ -599,6 +594,7 @@ class SoanThaoOffice:
         elif status == 7:
             with self.kho.ket_noi() as db:
                 db.execute("BEGIN IMMEDIATE")
+                if self._callback_receipt(db,key,status,request,fingerprint):return {'error':0}
                 latest = self._save_session(db,actor,key)
                 if latest["pending"] and payload.get("userdata") == latest["pending"]:
                     self._settle_command(db,latest,'failed')
@@ -610,24 +606,29 @@ class SoanThaoOffice:
                         "INSERT INTO office_editor_failures VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET request=excluded.request,created=excluded.created",
                         (key, latest["pending"], time.time()),
                     )
+                    db.execute('INSERT INTO office_editor_callbacks VALUES(?,?,?,?,?)',(key,status,request,fingerprint,time.time()))
         elif status == 3:
             with self.kho.ket_noi() as db:
                 db.execute('BEGIN IMMEDIATE')
+                if self._callback_receipt(db,key,status,request,fingerprint):return {'error':0}
                 latest=self._save_session(db,actor,key)
                 self._settle_command(db,latest,'failed')
                 db.execute(
                     "UPDATE office_editors SET state='error',pending=NULL WHERE key=?",
                     (key,),
                 )
+                db.execute('INSERT INTO office_editor_callbacks VALUES(?,?,?,?,?)',(key,status,request,fingerprint,time.time()))
         elif status == 4:
             with self.kho.ket_noi() as db:
                 db.execute('BEGIN IMMEDIATE')
+                if self._callback_receipt(db,key,status,request,fingerprint):return {'error':0}
                 latest=self._save_session(db,actor,key)
                 self._settle_command(db,latest,'superseded')
                 db.execute(
                     "UPDATE office_editors SET state='closed',pending=NULL WHERE key=?",
                     (key,),
                 )
+                db.execute('INSERT INTO office_editor_callbacks VALUES(?,?,?,?,?)',(key,status,request,fingerprint,time.time()))
         elif status != 1:
             raise ValueError("Trạng thái callback chưa hỗ trợ")
         return {"error": 0}
