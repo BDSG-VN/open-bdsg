@@ -17,7 +17,7 @@ from urllib.parse import urlsplit, parse_qs, quote
 GOC = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(GOC))
 from kho import Kho
-from dieu_phoi import DieuPhoi
+from dieu_phoi import DieuPhoi, CongCu, BanKhaiCongCu
 from cong_viec import CongViec
 from cau_hinh_mo_hinh import CauHinhMoHinh
 from trung_tam_ai import TrungTamAI
@@ -40,13 +40,27 @@ from thiet_bi_may_chu import ThietBiMayChu
 from kiem_tra_khoi_phuc import read_status
 from tinh_trang_offsite import read_offsite_status
 from phien_web import PhienWeb
-from don_vi import assert_unscoped_store
+from don_vi import DonVi, assert_unscoped_store
 from tich_hop_viet_nam import TichHopVietNam
 from vn_dong_bo import DongBoVietNam
 
 
+PREVIEW_TOOLS = frozenset({
+    'cong_viec.danh_sach','cong_viec.chi_tiet','cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung',
+    "du_an.danh_sach", "du_an.tao", "du_an.cap_nhat", "du_an.luu_tru", "du_an.khoi_phuc",
+    "cong_tac.thanh_vien", "cong_tac.chia_se",
+    "don_vi.chia_se_du_an",
+    "tai_lieu.danh_sach", "tai_lieu.tai_len",
+    *("van_phong." + name for name in (
+        "trang_thai", "danh_sach", "tao", "doc", "lich_su", "cap_nhat",
+        "bat_dau_tai", "ghi_phan", "ket_thuc_tai", "trang_thai_tai",
+        "phien_tai", "huy_tai", "doc_phan")),
+})
+
+
 class UngDung:
-    def __init__(self, data, origin, ghi=False, catalogue=None, connections=None):
+    def __init__(self, data, origin, ghi=False, catalogue=None, connections=None, *, unit_preview=False):
+        self.unit_preview = unit_preview
         self.origin = origin.rstrip("/")
         self.catalogue = (
             catalogue
@@ -57,8 +71,10 @@ class UngDung:
         self.kho = Kho(data)
         # Chưa lắp mọi đường HTTP/MCP/worker với phạm vi đơn vị: không khởi
         # động gateway toàn cổng trên kho đã chuyển rồi rơi về quyền cũ.
-        with self.kho.ket_noi() as db:
-            assert_unscoped_store(db)
+        if not unit_preview:
+            with self.kho.ket_noi() as db:
+                assert_unscoped_store(db)
+        self.units = DonVi(self.kho) if unit_preview else None
         self.web_sessions = PhienWeb(self.kho)
         self.node = ThietBiMayChu(self.kho.root, node_id=os.environ.get("BDSG_NODE_ID"))
         self.customer_support = HoTroKhach(self.catalogue)
@@ -67,13 +83,18 @@ class UngDung:
 
         def verify(actor):
             try:
-                return active_actor(self.kho, actor["id"])["role"] == actor["role"]
+                if active_actor(self.kho, actor["id"])["role"] != actor["role"]:
+                    return False
+                if self.units:
+                    with self.kho.ket_noi() as db:
+                        self.units.require(actor, db)
+                return True
             except (ValueError, PermissionError, KeyError, TypeError):
                 return False
 
         self.core.verify_actor = verify
-        self.tasks = CongViec(self.kho, self.core)
-        self.projects = DuAn(self.kho)
+        self.tasks = CongViec(self.kho, self.core, units=self.units) if unit_preview else CongViec(self.kho, self.core)
+        self.projects = DuAn(self.kho, units=self.units)
         self.tasks.projects = self.projects
         self.documents = TaiLieu(self.kho, self.projects)
         self.office = VanPhong(self.kho, self.projects)
@@ -113,6 +134,21 @@ class UngDung:
             self.projects,
         )
         self.core.dang_ky_mo_rong(self)
+        if unit_preview:
+            # Khai riêng trên instance thử; không sửa schema dùng bởi gateway cũ.
+            self.core.nhan.dang_ky("don_vi", CongCu([BanKhaiCongCu(
+                "chia_se_du_an", lambda args: self.projects.share(self.core.actor.get(), args),
+                ghi=True, mo_ta="Chia sẻ dự án đích danh trong đơn vị nhận",
+                luoc_do={"type": "object", "properties": {
+                    key: {"type": "string"} for key in ("id", "identity", "role", "unit_id")
+                }, "required": ["id", "identity", "role", "unit_id"], "additionalProperties": False},
+            )]))
+            for role in ("operator", "quan-tri"):
+                tools = self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh({
+                    "id": "preview-policy", "name": "Preview", "role": role}))
+                self.core.nhan.chinh_sach.khai_vai(role,
+                    doc=[tool["ten"] for tool in tools if not tool["ghi"]],
+                    ghi=[tool["ten"] for tool in tools if tool["ghi"]] + ["don_vi.chia_se_du_an"])
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):
@@ -217,6 +253,56 @@ def tao_may_chu(app, port=8766):
                 return False
             return True
 
+        def preview_path(self, path, method):
+            if not app.unit_preview:
+                return True
+            allowed = ({"/api/me", "/api/sessions", "/api/units", "/api/units/members",
+                        "/api/document", "/api/tasks", "/api/task", "/api/suc-khoe", "/api/ready"} if method == "GET" else
+                       {"/api/login", "/api/logout", "/api/tools", "/api/upload", "/api/units",
+                        "/api/units/members", "/api/sessions/rename", "/api/sessions/revoke",
+                        "/api/sessions/revoke-others"})
+            if path not in allowed:
+                self.send(403, {"error": "Đường này chưa hỗ trợ phạm vi đơn vị trong bản thử"})
+                return False
+            return True
+
+        def scoped_actor(self, actor):
+            if not app.unit_preview:
+                return actor
+            try:
+                return app.units.bind(actor, self.headers.get("X-BDSG-Unit", ""))
+            except (ValueError, PermissionError):
+                self.send(403, {"error": "Cần chọn đơn vị có tư cách thành viên còn hiệu lực"})
+                return None
+
+        def units_response(self, actor, path, body=None):
+            if not actor:
+                return self.send(401, {"error": "Cần đăng nhập"})
+            if body is not None and not app.core.nhan.chinh_sach.cong_ghi.dang_mo:
+                return self.send(403, {"error": "Cổng ghi đang đóng"})
+            try:
+                if path == "/api/units":
+                    if body is None:
+                        return self.send(200, app.units.list(actor))
+                    if set(body) != {"name", "admin"}:
+                        raise ValueError("Yêu cầu tạo đơn vị không hợp lệ")
+                    return self.send(200, app.units.create(actor, body))
+                unit_id = self.headers.get("X-BDSG-Unit", "")
+                # Chủ quản chỉ có quyền control plane; nội dung vẫn cần bind.
+                if actor["role"] != "quan-tri":
+                    actor = self.scoped_actor(actor)
+                    if not actor:
+                        return
+                if body is None:
+                    return self.send(200, app.units.members(actor, unit_id))
+                if set(body) != {"identity", "role"}:
+                    raise ValueError("Yêu cầu quản lý thành viên không hợp lệ")
+                return self.send(200, app.units.set_member(actor, {**body, "unit_id": unit_id}))
+            except PermissionError:
+                return self.send(403, {"error": "Không có quyền quản lý đơn vị"})
+            except ValueError as error:
+                return self.send(400, {"error": str(error)})
+
         def client_hint(self):
             agent = self.headers.get("User-Agent", "")[:512].lower()
             for words, hint in ((("iphone", "ipad"), "iPhone/iPad"),
@@ -276,14 +362,20 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             path = urlsplit(self.path).path
+            if not self.preview_path(path, "GET"):
+                return
             public_paths = {
                 "/api/auth/google", "/api/ready", "/api/google/callback",
                 "/api/office-source", "/mcp", "/api/catalogue",
                 "/api/customer-agents", "/api/customer-agent", "/api/modules",
                 "/api/model", "/api/suc-khoe", "/api/me",
             }
+            if app.unit_preview:
+                public_paths = {"/api/ready", "/api/suc-khoe", "/api/me"}
             if path not in public_paths and not self.cookie_actor_matches(self.actor()):
                 return
+            if app.unit_preview and path in ("/api/units", "/api/units/members"):
+                return self.units_response(self.actor(), path)
             if path == '/api/auth/google':
                 return self.send(200, app.google_login.status())
             if path == "/api/ready":
@@ -383,6 +475,9 @@ def tao_may_chu(app, port=8766):
             if path == "/api/document":
                 if not actor:
                     return self.send(401, {"error": "Cần đăng nhập"})
+                actor = self.scoped_actor(actor)
+                if not actor:
+                    return
                 try:
                     document, raw = app.documents.download(
                         actor, parse_qs(urlsplit(self.path).query).get("id", [""])[0]
@@ -411,7 +506,8 @@ def tao_may_chu(app, port=8766):
                     except sqlite3.Error:
                         return self.send(503, {"error": "Chưa xác minh được phiên; hãy thử lại"})
                 return self.send(
-                    200, {"authenticated": actor is not None, "user": actor}
+                    200, {"authenticated": actor is not None, "user":
+                          {key: actor[key] for key in ("id", "name", "role")} if actor else None}
                 )
             routes = {
                 "/api/agents": "agent.danh_sach",
@@ -426,6 +522,9 @@ def tao_may_chu(app, port=8766):
                 return self.send(404, {"error": "Không tìm thấy"})
             if not actor:
                 return self.send(401, {"error": "Cần đăng nhập"})
+            if app.unit_preview and path in ('/api/tasks','/api/task'):
+                actor = self.scoped_actor(actor)
+                if not actor: return
             arguments = (
                 {"id": parse_qs(urlsplit(self.path).query).get("id", [""])[0]}
                 if path == "/api/task"
@@ -436,6 +535,8 @@ def tao_may_chu(app, port=8766):
         def do_POST(self):
             self.connection.settimeout(12)
             path = urlsplit(self.path).path
+            if not self.preview_path(path, "POST"):
+                return
             if path == "/api/office-callback":
                 try:
                     return self.send(200, app.office_editor.callback(self.body(), self.headers.get("Authorization", "")))
@@ -464,6 +565,8 @@ def tao_may_chu(app, port=8766):
                     400, {"error": "Nội dung yêu cầu không hợp lệ hoặc quá lớn"}
                 )
             try:
+                if app.unit_preview and path in ("/api/units", "/api/units/members"):
+                    return self.units_response(actor, path, body)
                 if path in ("/api/sessions/rename", "/api/sessions/revoke", "/api/sessions/revoke-others"):
                     return self.sessions_response(path.rsplit("/", 1)[1], body)
                 if path == '/api/auth/google/start':
@@ -547,11 +650,29 @@ def tao_may_chu(app, port=8766):
                         body.get("arguments", {}), dict
                     ):
                         return self.send(400, {"error": "Lời gọi công cụ không hợp lệ"})
+                    if app.unit_preview:
+                        if set(body) - {"name", "arguments"}:
+                            return self.send(400, {"error": "Lời gọi công cụ không hợp lệ"})
+                        if body["name"] not in PREVIEW_TOOLS:
+                            return self.send(403, {"error": "Công cụ chưa hỗ trợ phạm vi đơn vị"})
+                        if set(body.get("arguments", {})) & {"actor", "owner", "unit_scope"}:
+                            return self.send(400, {"error": "Danh tính và phạm vi do máy chủ xác lập"})
+                        if "unit_id" in body.get("arguments", {}) and body["name"] != "don_vi.chia_se_du_an":
+                            return self.send(400, {"error": "Đơn vị làm việc phải chọn bằng phiên và tiêu đề"})
+                        actor = self.scoped_actor(actor)
+                        if not actor:
+                            return
                     return self.send(
                         200,
                         app.core.goi(actor, body["name"], body.get("arguments", {})),
                     )
                 if path == "/api/upload":
+                    if app.unit_preview:
+                        if set(body) & {"actor", "owner", "unit_scope", "unit_id"}:
+                            return self.send(400, {"error": "Danh tính và phạm vi do máy chủ xác lập"})
+                        actor = self.scoped_actor(actor)
+                        if not actor:
+                            return
                     target = body.pop("destination", "documents")
                     if target not in ("documents", "office-part"):
                         return self.send(400, {"error":"Loại tải lên chưa hỗ trợ"})

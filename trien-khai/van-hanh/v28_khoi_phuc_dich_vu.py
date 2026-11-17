@@ -28,7 +28,7 @@ from sao_luu_he_thong import verify
 
 
 IDENTITY_TABLES = ("chu", "agents", "web_users", "phien", "phien_web", "google_login_identities", "du_an_members",
-                   "don_vi", "don_vi_members", "don_vi_migrations", "du_an_units", "du_an_unit_grants")
+                   "don_vi", "don_vi_members", "don_vi_migrations", "du_an_units", "du_an_unit_grants", "cong_viec_units")
 COUNTS = {"files": "office_files", "versions": "office_versions", "projects": "du_an", "tasks": "cong_viec_tasks"}
 FORBIDDEN = tuple(Path(p) for p in ("/var/lib/bdsg-thanhhoa", "/etc/bdsg-thanhhoa", "/srv/bdsg-thanhhoa/open-bdsg"))
 

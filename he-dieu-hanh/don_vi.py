@@ -21,6 +21,7 @@ class _PhamVi:
     unit_id: str
     role: str
     epoch: int
+    revision: int
     _issuer: object = field(repr=False, compare=False)
 
 
@@ -36,11 +37,13 @@ class DonVi:
                 CREATE TABLE IF NOT EXISTS don_vi_members(
                     unit_id TEXT NOT NULL REFERENCES don_vi(id),
                     identity TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('admin','member')),
-                    active INTEGER NOT NULL,epoch INTEGER NOT NULL,
+                    active INTEGER NOT NULL,epoch INTEGER NOT NULL,revision INTEGER NOT NULL DEFAULT 1,
                     PRIMARY KEY(unit_id,identity));
                 CREATE TABLE IF NOT EXISTS don_vi_migrations(
                     version TEXT PRIMARY KEY,unit_id TEXT NOT NULL REFERENCES don_vi(id),created REAL NOT NULL);
             """)
+            if 'revision' not in {row[1] for row in db.execute('PRAGMA table_info(don_vi_members)')}:
+                db.execute('ALTER TABLE don_vi_members ADD COLUMN revision INTEGER NOT NULL DEFAULT 1')
 
     @staticmethod
     def _identity(db, actor):
@@ -61,7 +64,7 @@ class DonVi:
     def _membership(db, identity, unit_id):
         if not isinstance(unit_id, str) or not 1 <= len(unit_id) <= 80:
             raise PermissionError("Không có quyền trong đơn vị")
-        row = db.execute("""SELECT m.role,m.epoch FROM don_vi_members m JOIN don_vi u ON u.id=m.unit_id
+        row = db.execute("""SELECT m.role,m.epoch,m.revision FROM don_vi_members m JOIN don_vi u ON u.id=m.unit_id
             WHERE m.unit_id=? AND m.identity=? AND m.active=1 AND u.active=1""",
             (unit_id, identity)).fetchone()
         if not row:
@@ -88,7 +91,7 @@ class DonVi:
             self._identity(db, target)
             unit_id = "dv-" + secrets.token_hex(12)
             db.execute("INSERT INTO don_vi(id,name,created) VALUES(?,?,?)", (unit_id, name.strip(), time.time()))
-            db.execute("INSERT INTO don_vi_members VALUES(?,?,?,1,1)", (unit_id, admin, "admin"))
+            db.execute("INSERT INTO don_vi_members(unit_id,identity,role,active,epoch) VALUES(?,?,?,1,1)", (unit_id, admin, "admin"))
             self._audit(db, identity, "tao-don-vi", unit_id)
         return {"id": unit_id, "name": name.strip()}
 
@@ -105,7 +108,7 @@ class DonVi:
             db.execute("BEGIN")
             identity = self._identity(db, actor)
             row = self._membership(db, identity, unit_id)
-            scope = _PhamVi(identity, unit_id, row["role"], row["epoch"], self._issuer)
+            scope = _PhamVi(identity, unit_id, row["role"], row["epoch"], row["revision"], self._issuer)
         return {**actor, "unit_scope": scope}
 
     def require(self, actor, db):
@@ -114,9 +117,30 @@ class DonVi:
         if not isinstance(scope, _PhamVi) or scope._issuer is not self._issuer or scope.identity != identity:
             raise PermissionError("Cần phạm vi đơn vị do máy chủ xác lập")
         row = self._membership(db, identity, scope.unit_id)
-        if row["epoch"] != scope.epoch or row["role"] != scope.role:
+        if row["epoch"] != scope.epoch or row["role"] != scope.role or row["revision"] != scope.revision:
             raise PermissionError("Quyền đơn vị đã thay đổi; cần xác lập lại phạm vi")
         return scope
+
+    def reference(self, actor, db):
+        """Tham chiếu lưu trong kho máy chủ, không phải chứng thư đăng nhập."""
+        scope = self.require(actor, db)
+        return {"identity":scope.identity,"unit_id":scope.unit_id,
+                "epoch":scope.epoch,"revision":scope.revision}
+
+    def restore(self, reference, db):
+        """Worker chỉ truyền tham chiếu đã đọc từ dữ liệu máy chủ tin cậy."""
+        if (not isinstance(reference, dict) or set(reference) != {"identity","unit_id","epoch","revision"}
+                or any(type(reference[key]) is not int or reference[key] < 1 for key in ("epoch","revision"))):
+            raise PermissionError("Tham chiếu phạm vi không hợp lệ")
+        identity = reference["identity"]
+        actor = {"id":identity,"role":"quan-tri" if identity == "chu-quan" else "operator"}
+        self._identity(db, actor)
+        membership = self._membership(db, identity, reference["unit_id"])
+        if any(membership[key] != reference[key] for key in ('epoch','revision')):
+            raise PermissionError("Quyền của lượt chạy đã thay đổi")
+        scope = _PhamVi(identity,reference["unit_id"],membership["role"],membership["epoch"],membership["revision"],self._issuer)
+        name = 'Chủ quản' if identity == 'chu-quan' else db.execute('SELECT ten FROM agents WHERE ma=?',(identity,)).fetchone()[0]
+        return {**actor,"name":name,"unit_scope":scope}
 
     def _admin(self, db, actor, unit_id):
         identity = self._identity(db, actor)
@@ -163,15 +187,15 @@ class DonVi:
                     raise ValueError("Cần giữ ít nhất một quản trị đơn vị còn hiệu lực")
             if role == "revoke":
                 if old and old["active"]:
-                    db.execute("UPDATE don_vi_members SET active=0,epoch=epoch+1 WHERE unit_id=? AND identity=?", (unit_id, target))
+                    db.execute("UPDATE don_vi_members SET active=0,epoch=epoch+1,revision=revision+1 WHERE unit_id=? AND identity=?", (unit_id, target))
                 else:
                     return {"changed": False}
             elif old and old["active"] and old["role"] == role:
                 return {"changed": False}
             else:
-                db.execute("""INSERT INTO don_vi_members VALUES(?,?,?,1,1)
+                db.execute("""INSERT INTO don_vi_members(unit_id,identity,role,active,epoch) VALUES(?,?,?,1,1)
                     ON CONFLICT(unit_id,identity) DO UPDATE SET
-                    role=excluded.role,active=1,
+                    role=excluded.role,active=1,revision=don_vi_members.revision+1,
                     epoch=don_vi_members.epoch+CASE WHEN don_vi_members.active=0 THEN 1 ELSE 0 END""", (unit_id, target, role))
             self._audit(db, identity, "doi-thanh-vien-don-vi", unit_id + ":" + target + ":" + role)
         return {"changed": True}

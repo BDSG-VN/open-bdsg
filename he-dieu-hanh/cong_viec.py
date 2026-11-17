@@ -11,10 +11,15 @@ from concurrent.futures import ThreadPoolExecutor
 from mo_hinh_bdsg import MoHinhBDSG, LoiMoHinhBDSG
 from nhan_su import NhanSu
 from doi_ngu import DoiNgu
+from don_vi import assert_unscoped_store
 
 
 TEMPLATES = {"de-xuat-giai-phap", "kiem-tra-ket-noi", "tong-quan", "nhan-su-chuyen-mon"}
 FINAL = {"completed", "cancelled", "failed", "interrupted"}
+
+
+class _StaleRun(RuntimeError):
+    """Worker cũ thoát mà không sửa hoặc dừng lượt mới."""
 
 
 def _text(value, minimum=1, maximum=4000):
@@ -48,17 +53,21 @@ def kiem_han_ket_qua(hien_co, bo_sung):
 class CongViec:
     """Hai worker, hàng đợi có giới hạn; chỉ gọi các công cụ đọc đã định trước."""
 
-    def __init__(self, kho, core):
+    def __init__(self, kho, core, *, units=None):
         self.kho, self.core = kho, core
+        self.units = units
         self.lock = threading.RLock()
         self.closed = False
         self.context_override = contextvars.ContextVar(
             "bdsg_delegated_context", default=None
         )
+        self.execution = contextvars.ContextVar('bdsg_task_execution',default=None)
         self.model = MoHinhBDSG()
         self.staff = NhanSu()
         self.workforce = DoiNgu(self.staff)
         with kho.ket_noi() as db:
+            if units is None:
+                assert_unscoped_store(db)
             db.execute(
                 "CREATE TABLE IF NOT EXISTS model_calls(owner TEXT,created REAL)"
             )
@@ -77,14 +86,22 @@ class CongViec:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS cong_viec_tasks(id TEXT PRIMARY KEY, owner TEXT, created REAL, updated REAL, status TEXT, document TEXT)"
             )
+            if units is not None:
+                db.execute("""CREATE TABLE IF NOT EXISTS cong_viec_units(
+                    task_id TEXT PRIMARY KEY REFERENCES cong_viec_tasks(id),
+                    unit_id TEXT NOT NULL REFERENCES don_vi(id),epoch INTEGER NOT NULL,
+                    revision INTEGER NOT NULL)""")
             db.execute(
                 "CREATE INDEX IF NOT EXISTS cong_viec_owner ON cong_viec_tasks(owner,created)"
             )
             # Không tự chạy lại tác vụ sau khởi động: công cụ ngoài có thể đã chạy.
-            for row in db.execute(
-                "SELECT document FROM cong_viec_tasks WHERE status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1"
-            ).fetchall():
+            condition = "(status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1)"
+            if units is not None:
+                condition += ' AND id IN (SELECT task_id FROM cong_viec_units)'
+            for row in db.execute('SELECT document FROM cong_viec_tasks WHERE '+condition).fetchall():
                 task = json.loads(row[0])
+                if units is not None:
+                    self._binding(db,task)
                 task["status"] = "interrupted"
                 task["runtime_running"] = False
                 if task.get("team"):
@@ -115,6 +132,8 @@ class CongViec:
 
     def reserve_model(self, actor, project_id=""):
         self._auth(actor, True)
+        if self.units is not None:
+            raise PermissionError('Ngân sách mô hình theo đơn vị chưa sẵn sàng')
         now = time.time()
         day = ((now + 25200) // 86400) * 86400 - 25200
         with self.kho.ket_noi() as db:
@@ -171,19 +190,91 @@ class CongViec:
             raise PermissionError("Cần danh tính đã xác thực")
         if write and actor["role"] not in ("operator", "quan-tri"):
             raise PermissionError("Danh tính này không có quyền điều phối tác vụ")
+        if self.units is not None:
+            with self.kho.ket_noi() as db:
+                self.units.require(actor, db)
 
     def _load(self, task_id):
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
             row = db.execute(
                 "SELECT document FROM cong_viec_tasks WHERE id=?", (task_id,)
             ).fetchone()
-        if not row:
-            raise ValueError("Không tìm thấy tác vụ trong phạm vi quyền")
-        return json.loads(row[0])
+            if not row:
+                raise ValueError("Không tìm thấy tác vụ trong phạm vi quyền")
+            task = json.loads(row[0])
+            self._check_generation(task)
+            if self.units is not None:
+                self._binding(db,task)
+            return task
 
-    def _save(self, task):
+    def _binding(self, db, task):
+        row = db.execute('''SELECT t.owner,s.unit_id,s.epoch,s.revision FROM cong_viec_tasks t
+            JOIN cong_viec_units s ON s.task_id=t.id WHERE t.id=?''',(task['id'],)).fetchone()
+        if not row or row['owner'] != task['owner'] or row['unit_id'] != task.get('unit_id'):
+            raise ValueError('Không tìm thấy tác vụ trong phạm vi quyền')
+        return {'identity':row['owner'],'unit_id':row['unit_id'],'epoch':row['epoch'],'revision':row['revision']}
+
+    def _check_generation(self, task):
+        execution = self.execution.get()
+        if execution and execution['id']==task['id'] and execution['run']!=task['run']:
+            raise _StaleRun()
+
+    def _bind_execution(self, callback):
+        execution = self.execution.get()
+        def bound(*args, **kwargs):
+            token = self.execution.set(execution)
+            try: return callback(*args, **kwargs)
+            finally: self.execution.reset(token)
+        return bound
+
+    def _save_generation(self, db, task, renew=False):
+        row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?',(task['id'],)).fetchone()
+        if not row: raise _StaleRun()
+        previous = json.loads(row[0])
+        self._check_generation(previous)
+        self._check_generation(task)
+        if renew:
+            if previous['run']+1 != task['run'] or previous['status'] not in FINAL or previous.get('runtime_running'):
+                raise _StaleRun()
+        elif previous['run']!=task['run']:
+            raise _StaleRun()
+
+    def _worker_actor(self, task_id):
+        task = self._load(task_id)
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
+            reference = self._binding(db,task)
+            execution = self.execution.get()
+            if execution and execution.get('reference') is not None:
+                if reference != execution['reference']: raise _StaleRun()
+                reference = execution['reference']
+            actor = self.units.restore(reference,db)
+            if task.get('project_id'):
+                self.projects.authorize(actor,task['project_id'],db=db)
+            return actor
+
+    def _save(self, task, *, actor=None, renew=False):
         task["updated"] = time.time()
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self._save_generation(db,task,renew)
+            reference = None
+            if self.units is not None:
+                reference = self._binding(db,task)
+                execution = self.execution.get()
+                if execution and execution['id']==task['id'] and execution.get('reference') != reference:
+                    raise _StaleRun()
+                current = actor or self.units.restore(reference,db)
+                scope = self.units.require(current,db)
+                if scope.identity != task['owner'] or scope.unit_id != reference['unit_id']:
+                    raise PermissionError('Phạm vi tác vụ không khớp')
+                if (actor is None or renew) and task.get('project_id'):
+                    self.projects.authorize(current,task['project_id'],db=db)
+                if renew:
+                    db.execute('UPDATE cong_viec_units SET epoch=?,revision=? WHERE task_id=?',
+                               (scope.epoch,scope.revision,task['id']))
+                    reference = self.units.reference(current,db)
             db.execute(
                 "UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?",
                 (
@@ -193,6 +284,28 @@ class CongViec:
                     task["id"],
                 ),
             )
+        return reference
+
+    def _stop_unit_task(self, task_id, cancel=False):
+        # Chỉ ghi chuyển trạng thái từ bản đang lưu; không nhận kết quả đến
+        # muộn của worker đã mất quyền và không cần hồi sinh quyền để dừng.
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?',(task_id,)).fetchone()
+            if not row: return
+            task = json.loads(row[0])
+            try: self._check_generation(task)
+            except _StaleRun: return
+            self._binding(db,task)
+            task['status'] = 'cancelled' if cancel or task.get('cancel_requested') else 'failed'
+            task['runtime_running'] = False
+            task['updated'] = time.time()
+            if cancel: task['cancel_requested'] = True
+            for step in task['steps']:
+                if step['status']=='running': step.update(status=task['status'],finished=time.time())
+            self._event(task,task['status'],'Đã dừng lượt chạy; kiểm quyền đơn vị và cấu hình trước khi tiếp tục.')
+            db.execute('UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?',
+                       (task['updated'],task['status'],json.dumps(task,ensure_ascii=False),task_id))
 
     def _event(self, task, kind, text, **extra):
         task["events"].append(
@@ -235,6 +348,14 @@ class CongViec:
 
     def _visible(self, actor, task):
         self._auth(actor)
+        if self.units is not None:
+            with self.kho.ket_noi() as db:
+                db.execute('BEGIN')
+                scope = self.units.require(actor, db)
+                row = db.execute('SELECT unit_id FROM cong_viec_units WHERE task_id=?',(task['id'],)).fetchone()
+                if not row or row[0] != scope.unit_id or task.get('unit_id') != scope.unit_id or task['owner'] != scope.identity:
+                    raise ValueError("Không tìm thấy tác vụ trong phạm vi quyền")
+            return task
         if task["owner"] != actor["id"] and actor["role"] != "quan-tri":
             raise ValueError("Không tìm thấy tác vụ trong phạm vi quyền")
         return task
@@ -249,6 +370,12 @@ class CongViec:
             own = db.execute(
                 "SELECT count(*) FROM cong_viec_tasks WHERE owner=?", (actor["id"],)
             ).fetchone()[0]
+            if self.units is not None:
+                scope = self.units.require(actor,db)
+                active = db.execute('''SELECT count(*) FROM cong_viec_tasks t JOIN cong_viec_units s ON s.task_id=t.id
+                    WHERE t.status IN ('queued','running','cancelling')''').fetchone()[0]
+                own = db.execute('''SELECT count(*) FROM cong_viec_tasks t JOIN cong_viec_units s ON s.task_id=t.id
+                    WHERE t.owner=? AND s.unit_id=?''',(scope.identity,scope.unit_id)).fetchone()[0]
         if active >= 16:
             raise ValueError("Hàng đợi đã đầy; đợi tác vụ hiện tại hoàn tất")
         if creating and own >= 100:
@@ -260,6 +387,9 @@ class CongViec:
             raise ValueError(self.model.configuration_error)
         if not isinstance(args, dict):
             raise ValueError("Thông tin tác vụ không hợp lệ")
+        if self.units is not None and (self.model.configured or any(args.get(key) for key in (
+                'allow_python','allow_action_drafts','allow_delegation','allow_module_reads','browser_hosts'))):
+            raise PermissionError('Chưa có cấu hình công cụ và mô hình riêng theo đơn vị')
         prompt = _text(args.get("prompt"), 10)
         project_id = args.get("project_id", "")
         if not isinstance(project_id, str):
@@ -376,9 +506,16 @@ class CongViec:
         with self.lock:
             self._capacity(actor, True)
             model = self.model
+            reference = None
             task["mode"] = model.public_status()["mode"]
             with self.kho.ket_noi() as db:
                 db.execute("BEGIN IMMEDIATE")
+                if self.units is not None:
+                    scope = self.units.require(actor,db)
+                    reference = self.units.reference(actor,db)
+                    task['unit_id'] = scope.unit_id
+                    if project_id:
+                        self.projects.authorize(actor,project_id,db=db)
                 if self.model is hub and hub.configured:
                     hub.admit(db,actor,task["id"],task["run"],model_selection)
                 db.execute(
@@ -392,7 +529,10 @@ class CongViec:
                         json.dumps(task, ensure_ascii=False),
                     ),
                 )
-            self.pool.submit(self._run, dict(actor), task["id"], model)
+                if self.units is not None:
+                    db.execute('INSERT INTO cong_viec_units VALUES(?,?,?,?)',
+                               (task['id'],scope.unit_id,scope.epoch,scope.revision))
+            self.pool.submit(self._run, dict(actor), task["id"], model, task['run'], reference)
         return {"id": task["id"], "status": "queued"}
 
     def list(self, actor):
@@ -400,12 +540,20 @@ class CongViec:
         with self.kho.ket_noi() as db:
             query = "SELECT document FROM cong_viec_tasks"
             params = ()
-            if actor["role"] != "quan-tri":
+            if self.units is not None:
+                db.execute('BEGIN')
+                scope = self.units.require(actor,db)
+                query = '''SELECT t.document FROM cong_viec_tasks t JOIN cong_viec_units s ON s.task_id=t.id
+                    WHERE t.owner=? AND s.unit_id=?'''
+                params = (scope.identity,scope.unit_id)
+            elif actor["role"] != "quan-tri":
                 query += " WHERE owner=?"
                 params = (actor["id"],)
             rows = db.execute(
                 query + " ORDER BY created DESC LIMIT 100", params
             ).fetchall()
+            if self.units is not None:
+                for row in rows: self._binding(db,json.loads(row[0]))
         keys = (
             "id",
             "owner",
@@ -431,6 +579,7 @@ class CongViec:
                     "browser_hosts": t.get("browser_hosts", []),
                     "usage": t.get("usage"),
                     "artifact_count": len(t["artifacts"]),
+                    **({'unit_id':t['unit_id']} if self.units is not None else {}),
                 }
                 for t in (json.loads(r[0]) for r in rows)
             ]
@@ -442,6 +591,8 @@ class CongViec:
 
     def followup(self, actor, task_id, text):
         self._auth(actor, True)
+        if self.units is not None and self.model.configured:
+            raise PermissionError('Chưa có mô hình riêng theo đơn vị')
         if self.model.configuration_error:
             raise ValueError(self.model.configuration_error)
         text = _text(text, 10)
@@ -466,16 +617,18 @@ class CongViec:
                 task, "queued", "Đã nhận yêu cầu bổ sung; giữ lại các kết quả trước."
             )
             hub = getattr(self,"ai",None)
+            reference = None
             if self.model is hub and hub.configured:
                 task["updated"] = time.time()
                 with self.kho.ket_noi() as db:
                     db.execute("BEGIN IMMEDIATE")
+                    self._save_generation(db,task,renew=True)
                     hub.admit(db,actor,task_id,task["run"],task.get("model_selection","auto"))
                     db.execute("UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?",
                                (task["updated"],task["status"],json.dumps(task,ensure_ascii=False),task_id))
             else:
-                self._save(task)
-            self.pool.submit(self._run, dict(actor), task_id, self.model)
+                reference = self._save(task,actor=actor,renew=True)
+            self.pool.submit(self._run, dict(actor), task_id, self.model, task['run'], reference)
             return task
 
     def cancel(self, actor, task_id):
@@ -492,7 +645,7 @@ class CongViec:
                     "cancel_requested",
                     "Đã yêu cầu dừng. Lời gọi đang chạy chỉ kết thúc theo giới hạn của công cụ.",
                 )
-                self._save(task)
+                self._save(task,actor=actor)
         callback = getattr(self, "on_cancel", None)
         if callback:
             callback(task["owner"], task["id"] + ":" + str(task["run"]))
@@ -501,12 +654,14 @@ class CongViec:
     def cancel_owner(self, identity):
         with self.lock:
             with self.kho.ket_noi() as db:
-                rows = db.execute(
-                    "SELECT document FROM cong_viec_tasks WHERE owner=? AND (status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1)",
-                    (identity,),
-                ).fetchall()
+                query = "SELECT document FROM cong_viec_tasks WHERE owner=? AND (status IN ('queued','running','cancelling') OR json_extract(document,'$.runtime_running')=1)"
+                if self.units is not None: query += ' AND id IN (SELECT task_id FROM cong_viec_units)'
+                rows = db.execute(query,(identity,)).fetchall()
             for row in rows:
                 task = json.loads(row[0])
+                if self.units is not None:
+                    self._stop_unit_task(task['id'],cancel=True)
+                    continue
                 task["cancel_requested"] = True
                 task["status"] = (
                     "cancelled" if task["status"] == "queued" else "cancelling"
@@ -519,6 +674,9 @@ class CongViec:
                 self._save(task)
 
     def _read(self, actor, name):
+        self._auth(actor)
+        if self.units is not None and name != 'nen_tang.danh_sach':
+            raise PermissionError('Đầu nối theo đơn vị chưa sẵn sàng')
         response = self.core.goi(actor, name, {})
         if not response.get("ok"):
             raise RuntimeError("Công cụ đọc không sẵn sàng trong phạm vi quyền")
@@ -664,6 +822,7 @@ class CongViec:
         for p in selected:
             connection = mapping.get(p["id"])
             state = (
+                'Chưa sẵn sàng theo đơn vị' if task.get('unit_id') else
                 "Đã khai báo, chưa được tác vụ kiểm tra"
                 if connection
                 else "Chưa cấu hình"
@@ -685,6 +844,7 @@ class CongViec:
             "",
             "## Bằng chứng và giới hạn",
             f"- Đọc danh mục qua nhân BDSG: {len(products)} mục.",
+            '- Không đọc cấu hình đầu nối toàn cổng; đầu nối theo đơn vị chưa sẵn sàng.' if task.get('unit_id') else
             f"- Đọc cấu hình đầu nối: {len(connections)} đã khai báo; số này không chứng minh kết nối thành công.",
             f"- Đề xuất {len(selected)} mô-đun dựa trên lựa chọn rõ ràng hoặc đối sánh từ khoá; chưa có tối ưu bằng AI.",
             "- Các liên kết web không tạo đăng nhập dùng chung hoặc đồng bộ dữ liệu.",
@@ -692,10 +852,22 @@ class CongViec:
         ]
         return "\n".join(lines)
 
-    def _run(self, actor, task_id, model=None):
+    def _run(self, actor, task_id, model=None, run=None, reference=None):
+        if run is None: run = self._load(task_id)['run']
+        token = self.execution.set({'id':task_id,'run':run,'reference':reference})
+        try:
+            self._execute(actor,task_id,model)
+        except _StaleRun:
+            return
+        finally:
+            self.execution.reset(token)
+
+    def _execute(self, actor, task_id, model=None):
         # Giữ nguyên nhà cung cấp/chứng thư của lượt chạy khi chủ quản đổi cấu hình.
         model = model or self.model
         try:
+            if self.units is not None:
+                actor = self._worker_actor(task_id)
             step = self._begin_step(
                 task_id, "Đọc danh mục nền tảng", "nen_tang.danh_sach"
             )
@@ -707,14 +879,15 @@ class CongViec:
             )
             step = self._begin_step(
                 task_id, "Đối chiếu đầu nối MCP đã khai báo", "nen_tang.ket_noi"
-            )
+            ) if self.units is None else self._begin_step(task_id,'Đầu nối theo đơn vị chưa sẵn sàng')
             if not step:
                 return
-            connections = self._read(actor, "nen_tang.ket_noi")["connections"]
+            connections = [] if self.units is not None else self._read(actor, "nen_tang.ket_noi")["connections"]
             self._finish_step(
                 task_id,
                 step,
-                f"Có {len(connections)} đầu nối khai báo; chưa gọi nghiệp vụ bên ngoài.",
+                'Đầu nối theo đơn vị chưa sẵn sàng; không đọc cấu hình toàn cổng.' if self.units is not None
+                else f"Có {len(connections)} đầu nối khai báo; chưa gọi nghiệp vụ bên ngoài.",
             )
             step = self._begin_step(
                 task_id,
@@ -758,10 +931,12 @@ class CongViec:
                 }
 
                 def on_event(kind, message, **extra):
-                    if kind == "model-reserve" and model is not getattr(self,"ai",None):
-                        self.reserve_model(actor, task.get("project_id", ""))
                     with self.lock:
                         current = self._load(task_id)
+                        if self.closed or current['cancel_requested']:
+                            raise RuntimeError('Tác vụ đã được yêu cầu dừng')
+                        if kind == "model-reserve" and model is not getattr(self,"ai",None):
+                            self.reserve_model(actor, task.get("project_id", ""))
                         if kind == "team-state":
                             snapshot = extra.pop("team")
                             self._keep_team_outputs(current, snapshot)
@@ -785,7 +960,7 @@ class CongViec:
                         self._event(current, kind, message, **extra)
                         self._save(current)
 
-                def cancelled():
+                def cancelled_check():
                     with self.lock:
                         verify = getattr(self.core, "verify_actor", None)
                         return (
@@ -793,6 +968,15 @@ class CongViec:
                             or self._load(task_id)["cancel_requested"]
                             or bool(verify and not verify(actor))
                         )
+
+                def cancelled():
+                    try: return cancelled_check()
+                    except (_StaleRun, PermissionError, ValueError): return True
+
+                # Provider/đội chuyên môn có thể gọi callback trên thread khác;
+                # ContextVar của worker không tự lan sang các thread đó.
+                on_event = self._bind_execution(on_event)
+                cancelled = self._bind_execution(cancelled)
 
                 if task["template"] == "nhan-su-chuyen-mon":
                     content = self.workforce.run(
@@ -862,9 +1046,14 @@ class CongViec:
                 )
                 self._event(task, task["status"], message)
                 self._save(task)
+        except _StaleRun:
+            return
         except Exception as error:
             # Không ghi exception công cụ vào thông điệp công khai: có thể chứa endpoint/chứng thư.
             with self.lock:
+                if self.units is not None:
+                    self._stop_unit_task(task_id,cancel=self.closed)
+                    return
                 task = self._load(task_id)
                 task["status"] = "cancelled" if self.closed or task["cancel_requested"] else "failed"
                 for s in task["steps"]:

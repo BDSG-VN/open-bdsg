@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V29 R3 — HTTP/tác vụ đơn vị thử nghiệm và chống worker/callback ghi nhầm lượt](V29-R3-HTTP-VA-TAC-VU.md).
+
 [V29 — quản lý phiên đăng nhập web và hướng tách dữ liệu theo đơn vị](V29-PHIEN-WEB.md).
 [V29 R2 — backend đơn vị/dự án/tệp trên dữ liệu thử, chưa bật production](V29-R2-DON-VI-DU-AN.md).
 

@@ -9,13 +9,6 @@ def migrate_legacy(projects, actor):
         db.execute("BEGIN IMMEDIATE")
         identity = projects.units.require_system_admin(actor, db)
         marker = db.execute("SELECT unit_id FROM don_vi_migrations WHERE version='projects-v1'").fetchone()
-        if marker:
-            missing = db.execute("SELECT 1 FROM du_an p LEFT JOIN du_an_units s ON s.project_id=p.id WHERE s.project_id IS NULL LIMIT 1").fetchone()
-            if missing:
-                raise ValueError("Có dự án chưa phân loại; cần đối soát thay vì gán đơn vị mặc định")
-            return {"unit_id": marker[0], "changed": False}
-        if db.execute("SELECT 1 FROM don_vi LIMIT 1").fetchone():
-            raise ValueError("Chỉ chuyển dữ liệu cũ trước khi tạo các đơn vị mới")
         identities = {"chu-quan": 1}
         identities.update({row[0]: row[1] for row in db.execute("SELECT ma,active FROM agents WHERE role='operator'")})
         old_projects = db.execute("SELECT id,owner FROM du_an").fetchall()
@@ -28,10 +21,17 @@ def migrate_legacy(projects, actor):
         for table in ('documents','office_files','office_uploads'):
             if table in tables and db.execute(f"SELECT 1 FROM {table} d LEFT JOIN du_an p ON p.id=d.project_id WHERE p.id IS NULL LIMIT 1").fetchone():
                 raise ValueError("Có tài liệu không gắn dự án hợp lệ; giữ dữ liệu để đối soát")
+        if marker:
+            missing = db.execute("SELECT 1 FROM du_an p LEFT JOIN du_an_units s ON s.project_id=p.id WHERE s.project_id IS NULL LIMIT 1").fetchone()
+            if missing:
+                raise ValueError("Có dự án chưa phân loại; cần đối soát thay vì gán đơn vị mặc định")
+            return {"unit_id": marker[0], "changed": False}
+        if db.execute("SELECT 1 FROM don_vi LIMIT 1").fetchone():
+            raise ValueError("Chỉ chuyển dữ liệu cũ trước khi tạo các đơn vị mới")
         unit_id = 'legacy-thanhhoa'
         db.execute("INSERT INTO don_vi VALUES(?,?,1,?)", (unit_id, "Không gian hiện tại — chưa phân loại", time.time()))
         for person, active in identities.items():
-            db.execute("INSERT INTO don_vi_members VALUES(?,?,?,?,1)", (unit_id, person, 'admin' if person=='chu-quan' else 'member', int(bool(active))))
+            db.execute("INSERT INTO don_vi_members(unit_id,identity,role,active,epoch) VALUES(?,?,?,?,1)", (unit_id, person, 'admin' if person=='chu-quan' else 'member', int(bool(active))))
         db.executemany("INSERT INTO du_an_units VALUES(?,?)", ((pid, unit_id) for pid in project_ids))
         db.executemany("INSERT INTO du_an_unit_grants VALUES(?,?,?,?,1)",
             ((row[0], unit_id, row[1], row[2]) for row in grants))

@@ -98,6 +98,30 @@ class ThuDonVi(unittest.TestCase):
         self.assertEqual(sorted(results),["changed","kept-admin"])
         self.assertEqual(sum(member["role"]=="admin" for member in self.units.members(OWNER,unit["id"])["members"]),1)
 
+    def test_doi_vai_vong_khong_phuc_hoi_scope_cu(self):
+        unit = self.units.create(OWNER,{"name":"Đơn vị thử", "admin":A["id"]})
+        args = {"unit_id":unit["id"],"identity":B["id"]}
+        self.units.set_member(OWNER,{**args,"role":"member"})
+        before = self.units.bind(B,unit["id"])
+        self.units.set_member(OWNER,{**args,"role":"admin"})
+        self.units.set_member(OWNER,{**args,"role":"member"})
+        with self.kho.ket_noi() as db:
+            with self.assertRaises(PermissionError): self.units.require(before,db)
+        self.units.bind(B,unit["id"])
+
+    def test_tham_chieu_worker_phuc_hoi_sau_restart_nhung_khong_sau_thay_quyen(self):
+        unit = self.units.create(OWNER,{"name":"Đơn vị thử", "admin":A["id"]})
+        bound = self.units.bind(A,unit["id"])
+        with self.kho.ket_noi() as db: reference = self.units.reference(bound,db)
+        restarted = DonVi(self.kho)
+        with self.kho.ket_noi() as db:
+            restored = restarted.restore(reference,db)
+            self.assertEqual(restarted.require(restored,db).unit_id,unit["id"])
+        self.units.set_member(OWNER,{"unit_id":unit["id"],"identity":B["id"],"role":"admin"})
+        self.units.set_member(OWNER,{"unit_id":unit["id"],"identity":A["id"],"role":"member"})
+        with self.kho.ket_noi() as db:
+            with self.assertRaises(PermissionError): restarted.restore(reference,db)
+
 
 if __name__ == "__main__":
     unittest.main()

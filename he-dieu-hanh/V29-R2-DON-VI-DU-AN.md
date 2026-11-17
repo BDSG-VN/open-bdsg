@@ -1,5 +1,7 @@
 # V29 R2 — Backend đơn vị, dự án và tệp trên dữ liệu thử
 
+Tiếp nối: [V29 R3 — HTTP và tác vụ theo đơn vị, vẫn thử nghiệm](V29-R3-HTTP-VA-TAC-VU.md).
+
 Ngày 17/11/2026. **Chưa nối vào gateway hoặc UI production.** `UngDung` đang
 dùng luồng một không gian hiện có. Đây là phần xây dựng tiếp theo của V29,
 không phải công bố toàn hệ thống đã cách ly nhiều doanh nghiệp. Không chạy

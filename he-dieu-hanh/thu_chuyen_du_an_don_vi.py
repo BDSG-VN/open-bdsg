@@ -65,5 +65,11 @@ class ThuChuyenDonVi(unittest.TestCase):
         self.assertEqual(len(self.scoped.list(actor)["projects"]),1)
         with self.assertRaises(ValueError): self.scoped.authorize(actor,'late')
 
+    def test_chay_lai_migration_van_chan_orphan_moi(self):
+        migrate_legacy(self.scoped,OWNER)
+        with self.kho.ket_noi() as db:
+            db.execute("INSERT INTO office_files VALUES('orphan','missing','cu.txt','operator-a',1,1,0,0,0)")
+        with self.assertRaises(ValueError): migrate_legacy(self.scoped,OWNER)
+
 
 if __name__ == "__main__": unittest.main()
