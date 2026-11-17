@@ -311,9 +311,13 @@ class ThuDonViHTTP(unittest.TestCase):
         self.value(self.tool("du_an.tao", {"name": "Du an cho thanh vien"}))
         self.assertEqual(self.request("/api/units/members", {"identity": "nguoi-b", "role": "member"}, "nguoi-a", unit)[0], 200)
         self.assertEqual(self.value(self.tool("du_an.danh_sach", who="nguoi-b"))["projects"], [])
-        self.assertEqual(self.request("/api/units/members", who="nguoi-b", unit=unit)[0], 403)
+        denied = self.request("/api/units/members", who="nguoi-b", unit=unit)
+        self.assertEqual(denied[0], 403)
+        self.assertNotIn("code", denied[1], "Từ chối quản trị không làm mất membership")
         self.assertEqual(self.request("/api/units/members", {"identity": "nguoi-b", "role": "revoke"}, "chu-quan", unit)[0], 200)
-        self.assertEqual(self.tool("du_an.danh_sach", who="nguoi-b")[0], 403)
+        revoked = self.tool("du_an.danh_sach", who="nguoi-b")
+        self.assertEqual(revoked[0], 403)
+        self.assertEqual(revoked[1].get("code"), "unit_changed", "Cửa sổ đang mở phải nhận biết phạm vi bị thu hồi")
 
     def test_cau_hinh_ai_qua_http_chi_thuoc_don_vi_va_khong_tra_khoa(self):
         first, second = self.units

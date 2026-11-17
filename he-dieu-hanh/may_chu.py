@@ -336,7 +336,8 @@ def tao_may_chu(app, port=8766):
                         return None
                 return scoped
             except (ValueError, PermissionError):
-                self.send(403, {"error": "Cần chọn đơn vị có tư cách thành viên còn hiệu lực"})
+                self.send(403, {"code": "unit_changed",
+                    "error": "Cần chọn đơn vị có tư cách thành viên còn hiệu lực"})
                 return None
 
         def units_response(self, actor, path, body=None):
