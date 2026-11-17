@@ -30,7 +30,7 @@ hỏng làm khởi tạo thất bại và không tự bị ghi đè; yêu cầu 
 tạo lại tệp bị mất. Đây chưa là nghiệm thu phục hồi engine hoặc toàn máy.
 
 Kiểm cục bộ qua phương thức công khai `SoanThaoOffice`, đo 18/11/2026:
-`thu_phien_office_don_vi.py` có 28 bài đạt về nguồn ký, hai đơn vị, rejoin,
+`thu_phien_office_don_vi.py` có 29 bài đạt về nguồn ký, hai đơn vị, rejoin,
 quyền đổi trong scan/fetch, callback lưu, participant khác mất quyền,
 restart/backup/restore, schema cũ, tệp thế hệ hỏng/bị mất và lệnh lưu bên dưới.
 `thu_office_tich_hop.py` có 13 bài legacy đạt. Tệp Office thật và chữ ký thật;
@@ -102,6 +102,21 @@ Word thật, nhấn Ctrl+S rồi đóng editor. Callback kết thúc phiên tạ
 đọc DOCX trong kho thấy đúng chuỗi kiểm và kết quả ClamAV không phát hiện.
 Đây chưa là kiểm nút force-save của giao diện BDSG, reconnect hoặc editor
 điện thoại. Không dùng harness riêng làm bằng chứng công cụ pilot đã mở.
+
+SDK slide thực còn phát `sdkjs/slide/themes//themes.js`. Engine trả cùng
+tệp như đường một dấu `/`; profile nhận đúng alias literal này trước giải
+mã, cho cả prefix có phiên bản. Các dấu `/` kép khác, slash mã hóa,
+traversal và query đổi key vẫn bị chặn. Có bài hồi quy qua engine_access;
+không chuẩn hóa tùy ý đường cache hoặc mở toàn bộ đường engine.
+
+Cũng trong harness này ngày 18/11/2026, Excel đã nhập công thức bằng bàn
+phím, lưu và đóng: XLSX bản 3 chứa `SUM(10,20)` với giá trị tính 30 và chuỗi
+kiểm ở ô A2. Giao diện tiếng Việt nhận dấu `;` phân tách đối số; lần thử
+trước dùng dấu phẩy được hiểu thành một số thập phân, đã đối chiếu tệp.
+PowerPoint đã tạo hộp văn bản bằng thao tác chuột, nhập chuỗi kiểm, lưu và
+đóng: PPTX bản 2 giữ đúng nội dung. Cả hai đọc lại qua Office có quét thật.
+Đây là các ca cơ bản trên desktop, chưa kiểm mọi tính năng hoặc mở công cụ
+cho người dùng; force-save từ giao diện BDSG và thu hồi/reconnect còn tiếp.
 
 ## HTTP nguồn và callback có chữ ký
 

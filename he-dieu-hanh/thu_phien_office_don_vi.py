@@ -431,6 +431,19 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
         self.app.kho.thu_hoi_agent('nguoi-a')
         self.assertFalse(self.editor.engine_access(actor,'/office-docs/themes.json'))
 
+    def test_engine_slide_theme_literal_alias_does_not_open_other_noncanonical_paths(self):
+        actor={'id':'nguoi-a','role':'operator'}
+        for prefix in ('/office-docs/','/office-docs/10.0.0-3bd8c44c30419ec90e50f480cadc3f8e/'):
+            alias=prefix+'sdkjs/slide/themes//themes.js'
+            self.assertTrue(self.editor.engine_access(actor,alias))
+            self.assertFalse(self.editor.engine_access(None,alias))
+            for path in (alias.replace('//themes.js','/%2fthemes.js'),
+                         alias.replace('//themes.js','///themes.js'),
+                         prefix+'sdkjs//slide/themes/themes.js',
+                         prefix+'cache/files//data/bdsg-'+'f'*32+'/Editor.bin',
+                         alias+'?key=bdsg-'+'f'*32):
+                self.assertFalse(self.editor.engine_access(actor,path))
+
     def test_engine_unknown_routes_and_path_or_query_key_substitution_are_denied(self):
         opened=self.editor.open(self.a,{'id':self.file['id']})
         actor={'id':'nguoi-a','role':'operator','name':'Nguoi A'}

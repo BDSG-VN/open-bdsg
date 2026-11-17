@@ -14,7 +14,12 @@ def phan_loai(path):
     parsed=urlsplit(path)
     if parsed.scheme or parsed.netloc or '#' in path:
         raise ValueError('Cần đường dẫn nội bộ engine')
-    decoded=unquote(parsed.path)
+    # SDK slide thực phát đúng alias này; nginx engine trả cùng tệp mã tĩnh.
+    # Chỉ chuẩn hóa dạng literal đã đối chiếu, trước giải mã để không nhận
+    # thêm slash mã hóa hoặc nới quy tắc đường tài liệu riêng.
+    raw_path=re.sub(r'^(/office-docs/(?:'+VERSION+r'/)?sdkjs/slide/themes/)/themes\.js$',
+                    r'\1themes.js',parsed.path)
+    decoded=unquote(raw_path)
     if ('%' in decoded or '\\' in decoded or '//' in decoded or ';' in decoded
             or any(ord(c)<32 or ord(c)==127 for c in decoded)
             or any(part in ('.','..') for part in decoded.split('/'))
