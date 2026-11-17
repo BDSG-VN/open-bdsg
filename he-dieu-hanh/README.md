@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V29 R5 — nền hạn mức AI theo đơn vị và cổng công cụ trong nhân](V29-R5-HAN-MUC-AI-DON-VI.md).
+
 [V29 R4 — yêu cầu tạo tệp và phiên tải Office theo đơn vị thử nghiệm](V29-R4-YEU-CAU-OFFICE.md).
 
 [V29 R3 — HTTP/tác vụ đơn vị thử nghiệm và chống worker/callback ghi nhầm lượt](V29-R3-HTTP-VA-TAC-VU.md).

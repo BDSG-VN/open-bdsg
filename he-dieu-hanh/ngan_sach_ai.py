@@ -5,9 +5,12 @@ Giữ trước chi phí bảo thủ thay vì hứa quota miễn phí từ nhà c
 """
 
 import time
+import json
+from types import MappingProxyType
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
 
 from mo_hinh_bdsg import LoiMoHinhBDSG
+from don_vi import assert_unscoped_store
 
 DEFAULT_POLICY = {
     "tasks_per_user": 5,
@@ -50,8 +53,12 @@ def validate_policy(data):
 
 
 class NganSachAI:
-    def __init__(self, kho, clock=time.time):
+    def __init__(self, kho, clock=time.time, *, units=None, projects=None, host_policy=None):
         self.kho, self.clock = kho, clock
+        self.units, self.projects = units, projects
+        # Chính sách máy chủ chỉ đến từ cấu hình tin cậy, không từ cấu hình đơn vị.
+        self.host_policy = MappingProxyType(validate_policy(
+            dict(DEFAULT_POLICY if host_policy is None else host_policy)))
         with kho.ket_noi() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS ai_task_credits(
@@ -65,6 +72,12 @@ class NganSachAI:
                     micro_usd INTEGER, created REAL
                 );
                 CREATE INDEX IF NOT EXISTS ai_reservation_day ON ai_reservations(day,owner);
+                CREATE TABLE IF NOT EXISTS ai_task_credit_units(
+                    task_id TEXT NOT NULL, run INTEGER NOT NULL, unit_id TEXT NOT NULL,
+                    PRIMARY KEY(task_id,run));
+                CREATE TABLE IF NOT EXISTS ai_reservation_units(
+                    reservation_id INTEGER PRIMARY KEY, unit_id TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS ai_reservation_unit ON ai_reservation_units(unit_id,reservation_id);
             """)
             if "project_id" not in {
                 row[1] for row in db.execute("PRAGMA table_info(ai_reservations)")
@@ -90,15 +103,48 @@ class NganSachAI:
             raise PermissionError("Cần tài khoản được cấp quyền sử dụng AI")
         return actor["id"]
 
-    def claim_task(self, db, actor, task_id, run, policy):
+    def claim_task(self, db, actor, task_id, run, policy, project_id=""):
         """Gọi bên trong transaction BEGIN IMMEDIATE của thao tác tạo/tiếp tục."""
         owner, day = self._owner(actor), self.day()
-        if db.execute(
-            "SELECT 1 FROM ai_task_credits WHERE task_id=? AND run=?", (task_id, run)
-        ).fetchone():
+        scope = self.units.require(actor, db) if self.units is not None else None
+        if scope is None:
+            assert_unscoped_store(db)
+        elif not db.in_transaction:
+            raise RuntimeError("Cấp hạn mức cần giao dịch ghi của tác vụ")
+        if scope and db.execute("SELECT 1 FROM sqlite_master WHERE name='cong_viec_tasks' AND type='table'").fetchone():
+            task = db.execute("SELECT owner,document FROM cong_viec_tasks WHERE id=?",(task_id,)).fetchone()
+            if task:
+                if not db.execute("SELECT 1 FROM sqlite_master WHERE name='cong_viec_units' AND type='table'").fetchone():
+                    raise PermissionError("Tác vụ chưa có ràng buộc đơn vị")
+                binding = db.execute("SELECT unit_id FROM cong_viec_units WHERE task_id=?",(task_id,)).fetchone()
+                if task[0] != owner or not binding or binding[0] != scope.unit_id:
+                    raise PermissionError("Tác vụ không thuộc phạm vi này")
+                try:
+                    actual_project = json.loads(task[1]).get('project_id','')
+                except (ValueError,TypeError,AttributeError):
+                    raise PermissionError("Tác vụ chưa có ràng buộc hợp lệ") from None
+                if not isinstance(actual_project,str):
+                    raise PermissionError("Tác vụ chưa có ràng buộc dự án hợp lệ")
+                if project_id and actual_project != project_id:
+                    raise PermissionError("Dự án không khớp tác vụ")
+                project_id = actual_project
+        if scope and project_id:
+            if self.projects is None:
+                raise PermissionError("Cần kiểm quyền dự án trong phạm vi đơn vị")
+            self.projects.authorize(actor, project_id, db=db)
+        existing = db.execute("""SELECT c.owner,s.unit_id FROM ai_task_credits c
+            LEFT JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
+            WHERE c.task_id=? AND c.run=?""", (task_id,run)).fetchone()
+        if existing:
+            if existing[0] != owner or existing[1] != (scope.unit_id if scope else None):
+                raise PermissionError("Hạn mức tác vụ không thuộc phạm vi này")
             return
         used = db.execute(
-            "SELECT count(*) FROM ai_task_credits WHERE owner=? AND day=?", (owner, day)
+            """SELECT count(*) FROM ai_task_credits c
+            JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
+            WHERE c.owner=? AND c.day=? AND s.unit_id=?""" if scope else
+            "SELECT count(*) FROM ai_task_credits WHERE owner=? AND day=?",
+            (owner,day,scope.unit_id) if scope else (owner,day)
         ).fetchone()[0]
         if used >= policy["tasks_per_user"]:
             raise LoiMoHinhBDSG(
@@ -107,6 +153,8 @@ class NganSachAI:
         db.execute(
             "INSERT INTO ai_task_credits VALUES (?,?,?,?)", (owner, task_id, run, day)
         )
+        if scope:
+            db.execute("INSERT INTO ai_task_credit_units VALUES(?,?,?)",(task_id,run,scope.unit_id))
 
     @staticmethod
     def _legacy(db, owner, day, project_id=""):
@@ -129,7 +177,13 @@ class NganSachAI:
         prices,
         policy,
         project_id="",
+        run=None,
     ):
+        """Giữ chi phí trước lời gọi; luồng đơn vị phải truyền đúng lượt chạy.
+
+        Ràng buộc epoch/revision của lượt đã lưu ngăn scope vừa cấp lại dùng
+        quyền mới để gửi lời gọi còn sót từ lượt cũ.
+        """
         owner, day = self._owner(actor), self.day()
         if any(
             type(value) is not int or not 0 <= value <= 2000000
@@ -144,6 +198,10 @@ class NganSachAI:
         )
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
+            if self.units is not None:
+                return self._reserve_scoped(db,actor,task_id,model_id,input_tokens,
+                    output_tokens,cost,policy,project_id,run,day)
+            assert_unscoped_store(db)
             legacy = self._legacy(db, owner, day, project_id)
             own = db.execute(
                 "SELECT count(*),coalesce(sum(input_tokens),0),coalesce(sum(output_tokens),0),coalesce(sum(micro_usd),0) FROM ai_reservations WHERE day=? AND owner=?",
@@ -194,9 +252,108 @@ class NganSachAI:
             )
             return cursor.lastrowid
 
+    def _task_project(self, db, actor, scope, task_id, project_id, run):
+        if type(run) is not int or run < 1:
+            raise PermissionError("Cần lượt chạy cụ thể của tác vụ trong đơn vị")
+        tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if not {'cong_viec_tasks','cong_viec_units'} <= tables:
+            raise PermissionError("Không tìm thấy tác vụ trong phạm vi")
+        row = db.execute("""SELECT t.owner,t.document,s.unit_id,t.status,s.epoch,s.revision FROM cong_viec_tasks t
+            JOIN cong_viec_units s ON s.task_id=t.id WHERE t.id=?""",(task_id,)).fetchone()
+        if (not row or row[0] != scope.identity or row[2] != scope.unit_id
+                or row[3] not in ('queued','running')
+                or row[4] != scope.epoch or row[5] != scope.revision):
+            raise PermissionError("Không tìm thấy tác vụ trong phạm vi")
+        try:
+            task = json.loads(row[1])
+            actual_project = task.get('project_id','')
+            actual_run = task['run']
+        except (ValueError,TypeError,KeyError,AttributeError):
+            raise PermissionError("Tác vụ chưa có ràng buộc hợp lệ") from None
+        if not isinstance(actual_project,str) or type(actual_run) is not int or actual_run < 1:
+            raise PermissionError("Tác vụ chưa có ràng buộc lượt chạy hợp lệ")
+        if (task.get('cancelled') or task.get('cancel_requested')
+                or task.get('owner') != scope.identity or task.get('unit_id') != scope.unit_id
+                or run != actual_run
+                or (project_id and project_id != actual_project)):
+            raise PermissionError("Tác vụ không thuộc phạm vi lượt chạy")
+        credit = db.execute("""SELECT 1 FROM ai_task_credits c
+            JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
+            WHERE c.task_id=? AND c.run=? AND c.owner=? AND s.unit_id=?""",
+            (task_id,actual_run,scope.identity,scope.unit_id)).fetchone()
+        if not credit:
+            raise PermissionError("Lượt chạy chưa được cấp hạn mức trong đơn vị")
+        if actual_project:
+            if self.projects is None:
+                raise PermissionError("Cần kiểm quyền dự án trong phạm vi đơn vị")
+            self.projects.authorize(actor,actual_project,db=db)
+        return actual_project
+
+    def _reserve_scoped(self,db,actor,task_id,model_id,input_tokens,output_tokens,
+                        cost,policy,project_id,run,day):
+        scope = self.units.require(actor,db)
+        project_id = self._task_project(db,actor,scope,task_id,project_id,run)
+        own = db.execute("""SELECT count(*),coalesce(sum(r.input_tokens),0),
+            coalesce(sum(r.output_tokens),0),coalesce(sum(r.micro_usd),0)
+            FROM ai_reservations r JOIN ai_reservation_units s ON s.reservation_id=r.id
+            WHERE r.day=? AND r.owner=? AND s.unit_id=?""",
+            (day,scope.identity,scope.unit_id)).fetchone()
+        total = db.execute("""SELECT count(*),coalesce(sum(r.micro_usd),0),
+            coalesce(sum(r.output_tokens),0) FROM ai_reservations r
+            JOIN ai_reservation_units s ON s.reservation_id=r.id
+            WHERE r.day=? AND s.unit_id=?""",(day,scope.unit_id)).fetchone()
+        project = db.execute("""SELECT coalesce(sum(r.output_tokens),0)
+            FROM ai_reservations r JOIN ai_reservation_units s ON s.reservation_id=r.id
+            WHERE r.day=? AND s.unit_id=? AND r.project_id=?""",
+            (day,scope.unit_id,project_id)).fetchone()[0] if project_id else 0
+        host = db.execute("""SELECT count(*),coalesce(sum(micro_usd),0),
+            coalesce(sum(output_tokens),0) FROM ai_reservations WHERE day=?""",(day,)).fetchone()
+        legacy = self._legacy(db,scope.identity,day)
+        # model_calls cũ không có USD: chỉ cộng lượt/token vào trần máy chủ,
+        # không đoán đơn vị sở hữu hoặc tự bịa chi phí lịch sử.
+        limits = self.host_policy
+        if (own[0] >= policy['calls_per_user'] or total[0] >= policy['calls_global']
+                or own[1]+input_tokens > policy['input_tokens_per_user']
+                or own[2]+output_tokens > policy['output_tokens_per_user']
+                or total[2]+output_tokens > policy['output_tokens_global']
+                or (project_id and project+output_tokens > policy['output_tokens_per_project'])
+                or own[3]+cost > money(policy['usd_per_user'])*1000000
+                or total[1]+cost > money(policy['usd_global'])*1000000
+                or host[0]+legacy[2] >= limits['calls_global']
+                or host[2]+legacy[3]+output_tokens > limits['output_tokens_global']
+                or host[1]+cost > money(limits['usd_global'])*1000000):
+            raise LoiMoHinhBDSG("Đã chạm trần lượt, token hoặc chi phí AI trong ngày; chưa gửi yêu cầu tới nhà cung cấp.")
+        cursor = db.execute("""INSERT INTO ai_reservations
+            (owner,day,task_id,model_id,input_tokens,output_tokens,micro_usd,created,project_id)
+            VALUES(?,?,?,?,?,?,?,?,?)""",(scope.identity,day,task_id,model_id,input_tokens,
+                output_tokens,cost,self.clock(),project_id))
+        db.execute("INSERT INTO ai_reservation_units VALUES(?,?)",(cursor.lastrowid,scope.unit_id))
+        return cursor.lastrowid
+
+    def _status_scoped(self,db,actor,scope,policy,day):
+        tasks = db.execute("""SELECT count(*) FROM ai_task_credits c
+            JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
+            WHERE c.owner=? AND c.day=? AND s.unit_id=?""",
+            (scope.identity,day,scope.unit_id)).fetchone()[0]
+        row = db.execute("""SELECT count(*),coalesce(sum(r.input_tokens),0),
+            coalesce(sum(r.output_tokens),0),coalesce(sum(r.micro_usd),0)
+            FROM ai_reservations r JOIN ai_reservation_units s ON s.reservation_id=r.id
+            WHERE r.owner=? AND r.day=? AND s.unit_id=?""",
+            (scope.identity,day,scope.unit_id)).fetchone()
+        return {'timezone':'Asia/Ho_Chi_Minh','resets_at_unix':(day+1)*86400-25200,
+            'tasks_used':tasks,'tasks_remaining':max(0,policy['tasks_per_user']-tasks),
+            'calls_used':row[0],'input_tokens_reserved':row[1],
+            'output_tokens_reserved':row[2],'usd_reserved':str(Decimal(row[3])/1000000),
+            'policy':dict(policy),'accounting':'Giữ trước bảo thủ theo giá chủ quản khai báo; chưa phải hóa đơn nhà cung cấp.'}
+
     def status(self, actor, policy):
         owner, day = self._owner(actor), self.day()
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN IMMEDIATE")
+            scope = self.units.require(actor,db) if self.units is not None else None
+            if scope:
+                return self._status_scoped(db,actor,scope,policy,day)
+            assert_unscoped_store(db)
             legacy = self._legacy(db, owner, day)
             tasks = db.execute(
                 "SELECT count(*) FROM ai_task_credits WHERE owner=? AND day=?",

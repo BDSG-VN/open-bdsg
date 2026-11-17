@@ -165,6 +165,18 @@ class ThuDonViHTTP(unittest.TestCase):
                      "van_phong.luu_soan_thao", "cau_hinh.dau_noi", "nguoi_dung.tao", "nhat_ky.danh_sach"):
             self.assertEqual(self.tool(tool)[0], 403, tool)
 
+    def test_kernel_cung_chan_cong_cu_toan_cong_chua_phan_don_vi(self):
+        self.app.units.set_member(self.root, {"unit_id": self.units[0],
+            "identity": self.root["id"], "role": "member"})
+        for actor in (self.root, {"id": "nguoi-a", "name": "nguoi-a", "role": "operator"}):
+            scoped = self.app.units.bind(actor, self.units[0])
+            for name in ("mo_hinh.danh_sach", "mo_hinh.han_muc", "mo_hinh.cau_hinh",
+                         "nen_tang.ket_noi", "nhat_ky.danh_sach"):
+                result = self.app.core.goi(scoped, name, {})
+                self.assertFalse(result["ok"], (actor["id"], name, result))
+            catalogue = self.app.core.goi(scoped, "nen_tang.danh_sach", {})
+            self.assertTrue(catalogue["ok"], catalogue)
+
     def test_membership_control_and_revocation_rechecked(self):
         unit = self.units[0]
         self.value(self.tool("du_an.tao", {"name": "Du an cho thanh vien"}))

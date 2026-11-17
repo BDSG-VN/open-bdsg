@@ -143,12 +143,17 @@ class UngDung:
                     key: {"type": "string"} for key in ("id", "identity", "role", "unit_id")
                 }, "required": ["id", "identity", "role", "unit_id"], "additionalProperties": False},
             )]))
-            for role in ("operator", "quan-tri"):
+            # Cùng cổng chặn cho HTTP và lời gọi nội bộ qua nhân: một công cụ
+            # chưa chuyển phạm vi không được đọc cấu hình legacy từ scoped actor.
+            scoped_tools = PREVIEW_TOOLS | {"nen_tang.danh_sach"}
+            for role in ("agent", "operator", "quan-tri"):
                 tools = self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh({
                     "id": "preview-policy", "name": "Preview", "role": role}))
+                tools = [tool for tool in tools if tool["ten"] in scoped_tools]
                 self.core.nhan.chinh_sach.khai_vai(role,
                     doc=[tool["ten"] for tool in tools if not tool["ghi"]],
-                    ghi=[tool["ten"] for tool in tools if tool["ghi"]] + ["don_vi.chia_se_du_an"])
+                    ghi=[tool["ten"] for tool in tools if tool["ghi"]]
+                        + (["don_vi.chia_se_du_an"] if role != "agent" else []))
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):
