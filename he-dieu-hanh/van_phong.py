@@ -79,9 +79,53 @@ class VanPhong:
                     name TEXT NOT NULL,sha256 TEXT NOT NULL,file_id TEXT NOT NULL,
                     PRIMARY KEY(owner,request));
             """)
+        if projects.units is not None:
+            with kho.ket_noi() as db:
+                db.executescript("""
+                    CREATE TABLE IF NOT EXISTS office_request_units(
+                        kind TEXT NOT NULL,owner TEXT NOT NULL,unit_id TEXT NOT NULL,
+                        request_key TEXT NOT NULL,internal_key TEXT NOT NULL,
+                        PRIMARY KEY(kind,owner,unit_id,request_key),
+                        UNIQUE(kind,owner,internal_key));
+                    CREATE TABLE IF NOT EXISTS office_upload_units(
+                        upload_id TEXT PRIMARY KEY REFERENCES office_uploads(id) ON DELETE CASCADE,
+                        unit_id TEXT NOT NULL REFERENCES don_vi(id));
+                """)
+
+    def _scope(self, actor, db):
+        units = self.projects.units
+        return units.require(actor, db) if units is not None else None
+
+    def _unit(self, actor, db):
+        scope = self._scope(actor, db)
+        return scope.unit_id if scope is not None else None
+
+    def _request(self, db, actor, kind, external, remember=False):
+        unit = self._unit(actor, db)
+        if unit is None or external is None:
+            return external
+        internal = "unit:" + hashlib.sha256(json.dumps(
+            [kind, actor["id"], unit, external], ensure_ascii=True).encode()).hexdigest()
+        if remember:
+            db.execute("INSERT INTO office_request_units VALUES(?,?,?,?,?)",
+                (kind, actor["id"], unit, external, internal))
+        return internal
+
+    def _pending(self, db, actor, pid):
+        unit = self._unit(actor, db)
+        if unit is not None:
+            return db.execute("""SELECT count(*),coalesce(sum(u.total),0)
+                FROM office_uploads u JOIN office_upload_units s ON s.upload_id=u.id
+                WHERE u.project_id=? AND u.owner=? AND s.unit_id=?
+                AND u.state='pending' AND u.expires>?""",
+                (pid, actor["id"], unit, time.time())).fetchone()
+        return db.execute("""SELECT count(*),coalesce(sum(total),0) FROM office_uploads
+            WHERE project_id=? AND state='pending' AND expires>?""",
+            (pid, time.time())).fetchone()
 
     def status(self, actor, args):
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
             project = self._project(actor, args.get("project_id"), db)
             try:
                 self.projects.authorize(actor, project["id"], write=True, db=db)
@@ -96,10 +140,7 @@ class VanPhong:
                 "JOIN office_files f ON f.id=v.file_id WHERE f.project_id=?",
                 (project["id"],),
             ).fetchone()
-            pending, reserved = db.execute(
-                "SELECT count(*),coalesce(sum(total),0) FROM office_uploads WHERE project_id=? AND state='pending' AND expires>?",
-                (project["id"], time.time()),
-            ).fetchone()
+            pending, reserved = self._pending(db, actor, project["id"])
         return {
             "storage": "bdsg-sqlite",
             "editor_state": self.editor_status()["state"]
@@ -195,7 +236,7 @@ class VanPhong:
     def _metadata(row):
         return {**row, "trashed": bool(row["trashed"]), "scan_state": "chua-quet"}
 
-    def _quota(self, db, pid, size, creating=False):
+    def _quota(self, db, pid, size, creating=False, actor=None):
         files = db.execute(
             "SELECT count(*) FROM office_files WHERE project_id=?", (pid,)
         ).fetchone()[0]
@@ -204,11 +245,7 @@ class VanPhong:
             "JOIN office_files f ON f.id=v.file_id WHERE f.project_id=?",
             (pid,),
         ).fetchone()
-        pending, reserved = db.execute(
-            "SELECT count(*),coalesce(sum(total),0) FROM office_uploads "
-            "WHERE project_id=? AND state='pending' AND expires>?",
-            (pid, time.time()),
-        ).fetchone()
+        pending, reserved = self._pending(db, actor, pid)
         global_bytes = db.execute(
             "SELECT coalesce(sum(size),0) FROM office_versions"
         ).fetchone()[0]
@@ -228,7 +265,7 @@ class VanPhong:
             )
 
     def _version(self, db, row, actor, raw, scan=None):
-        self._quota(db, row["project_id"], len(raw))
+        self._quota(db, row["project_id"], len(raw), actor=actor)
         scan = self.scanner.scan(raw) if scan is None else scan
         if scan.get("sha256") != hashlib.sha256(raw).hexdigest():
             raise ValueError("Dấu kiểm quét không khớp nội dung")
@@ -278,10 +315,19 @@ class VanPhong:
             r"[a-f0-9-]{32,64}", request
         ):
             raise ValueError("Mã yêu cầu tạo tệp không hợp lệ")
+        internal = self._request(db, actor, "create", request)
         previous = db.execute(
             "SELECT * FROM office_creates WHERE owner=? AND request=?",
-            (actor["id"], request),
+            (actor["id"], internal),
         ).fetchone()
+        if previous and self._unit(actor, db) is not None and not db.execute(
+                "SELECT 1 FROM office_request_units WHERE kind='create' AND owner=? AND internal_key=?",
+                (actor["id"], internal)).fetchone():
+            raise ValueError("Yêu cầu cũ chưa phân loại đơn vị")
+        if not previous and self._unit(actor, db) is not None and db.execute(
+                "SELECT 1 FROM office_creates WHERE owner=? AND request=?",
+                (actor["id"], request)).fetchone():
+            raise ValueError("Yêu cầu cũ chưa phân loại đơn vị")
         if previous:
             if (previous["project_id"], previous["name"], previous["sha256"]) != (
                 pid,
@@ -298,7 +344,9 @@ class VanPhong:
             raise ValueError("Tệp vượt giới hạn")
         digest = hashlib.sha256(raw).hexdigest()
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
             self._project(actor, pid, db, True)
+            scope = self._scope(actor, db)
             previous = self._created(db, actor, pid, name, digest, request)
             if previous:
                 return previous
@@ -306,6 +354,8 @@ class VanPhong:
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             self._project(actor, pid, db, True)
+            if self._scope(actor, db) != scope:
+                raise PermissionError("Phạm vi thay đổi trong lúc quét")
             previous = self._created(db, actor, pid, name, digest, request)
             if previous:
                 return previous
@@ -313,12 +363,12 @@ class VanPhong:
             if request is not None:
                 db.execute(
                     "INSERT INTO office_creates VALUES (?,?,?,?,?,?)",
-                    (actor["id"], request, pid, name, digest, file["id"]),
+                    (actor["id"], self._request(db, actor, "create", request, True), pid, name, digest, file["id"]),
                 )
             return file
 
     def _create_file(self, db, actor, pid, name, raw, scan=None):
-        self._quota(db, pid, len(raw), creating=True)
+        self._quota(db, pid, len(raw), creating=True, actor=actor)
         identifier, now = secrets.token_hex(12), time.time()
         row = {
             "id": identifier,
@@ -367,6 +417,11 @@ class VanPhong:
         ).fetchone()
         if not row or row["owner"] != actor["id"] or row["expires"] <= time.time():
             raise ValueError("Phiên tải không tồn tại hoặc đã hết hạn")
+        unit = self._unit(actor, db)
+        if unit is not None and not db.execute(
+                "SELECT 1 FROM office_upload_units WHERE upload_id=? AND unit_id=?",
+                (identifier, unit)).fetchone():
+            raise ValueError("Phiên tải không tồn tại trong đơn vị")
         self._project(actor, row["project_id"], db, write)
         return dict(row)
 
@@ -386,10 +441,15 @@ class VanPhong:
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             self._project(actor, pid, db, True)
+            if self.projects.units is not None:
+                db.execute("""DELETE FROM office_request_units WHERE kind='upload' AND NOT EXISTS(
+                    SELECT 1 FROM office_uploads u WHERE u.owner=office_request_units.owner
+                    AND u.request_key=office_request_units.internal_key AND u.expires>?)""", (time.time(),))
             db.execute("DELETE FROM office_uploads WHERE expires<=?", (time.time(),))
+            internal = self._request(db, actor, "upload", key)
             old = db.execute(
                 "SELECT id FROM office_uploads WHERE owner=? AND request_key=?",
-                (actor["id"], key),
+                (actor["id"], internal),
             ).fetchone()
             if old:
                 row = self._upload(actor, old["id"], db, True)
@@ -401,15 +461,22 @@ class VanPhong:
                 ):
                     raise LoiXungDotVanPhong("Mã yêu cầu đã gắn với tệp khác")
                 return self._upload_public(row)
-            if (
-                db.execute(
-                    "SELECT count(*) FROM office_uploads WHERE owner=? AND state='pending'",
-                    (actor["id"],),
-                ).fetchone()[0]
-                >= 2
-            ):
+            unit = self._unit(actor, db)
+            if unit is not None and db.execute(
+                    "SELECT 1 FROM office_uploads WHERE owner=? AND request_key=?",
+                    (actor["id"], key)).fetchone():
+                raise ValueError("Yêu cầu cũ chưa phân loại đơn vị")
+            if unit is None:
+                pending = db.execute("SELECT count(*) FROM office_uploads WHERE owner=? AND state='pending'",
+                    (actor["id"],)).fetchone()[0]
+            else:
+                pending = db.execute("""SELECT count(*) FROM office_uploads u
+                    JOIN office_upload_units s ON s.upload_id=u.id
+                    WHERE u.owner=? AND s.unit_id=? AND u.state='pending' AND u.expires>?""",
+                    (actor["id"], unit, time.time())).fetchone()[0]
+            if pending >= 2:
                 raise LoiHanMucVanPhong("Chỉ giữ hai phiên tải đồng thời")
-            self._quota(db, pid, total, creating=True)
+            self._quota(db, pid, total, creating=True, actor=actor)
             identifier = secrets.token_hex(12)
             db.execute(
                 "INSERT INTO office_uploads VALUES (?,?,?,?,?,?,0,?,zeroblob(?),'pending',NULL,?)",
@@ -417,7 +484,7 @@ class VanPhong:
                     identifier,
                     actor["id"],
                     pid,
-                    key,
+                    internal,
                     name,
                     total,
                     digest,
@@ -425,20 +492,28 @@ class VanPhong:
                     time.time() + self.UPLOAD_TTL,
                 ),
             )
+            if unit is not None:
+                db.execute("INSERT INTO office_upload_units VALUES(?,?)", (identifier, unit))
+                self._request(db, actor, "upload", key, True)
             self._audit(db, actor, "office-bat-dau-tai", identifier)
             return self._upload_public(self._upload(actor, identifier, db))
 
     def upload_status(self, actor, args):
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
             return self._upload_public(self._upload(actor, args.get("id"), db))
 
     def uploads(self, actor, args):
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
             self._project(actor, args.get("project_id"), db)
+            unit = self._unit(actor, db)
             rows = db.execute(
                 "SELECT id,project_id,name,total,received,sha256,state,file_id,expires FROM office_uploads "
-                "WHERE owner=? AND project_id=? AND expires>? ORDER BY expires DESC LIMIT 102",
-                (actor["id"], args.get("project_id"), time.time()),
+                "WHERE owner=? AND project_id=? AND expires>? " +
+                ("AND id IN (SELECT upload_id FROM office_upload_units WHERE unit_id=?) " if unit is not None else "") +
+                "ORDER BY expires DESC LIMIT 102",
+                (actor["id"], args.get("project_id"), time.time()) + ((unit,) if unit is not None else ()),
             ).fetchall()
             return {"uploads": [self._upload_public(dict(row)) for row in rows]}
 
@@ -501,7 +576,9 @@ class VanPhong:
         # giao dịch commit. Phiên đã nhận đủ không cho thay nội dung phần cũ.
         scan = None
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
             candidate = self._upload(actor, args.get("id"), db, True)
+            scope = self._scope(actor, db)
             if candidate["state"] == "pending":
                 if candidate["received"] != candidate["total"]:
                     raise ValueError("Chưa đủ nội dung tệp")
@@ -517,6 +594,8 @@ class VanPhong:
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             row = self._upload(actor, args.get("id"), db, True)
+            if self._scope(actor, db) != scope:
+                raise PermissionError("Phạm vi thay đổi trong lúc quét")
             if row["state"] == "complete":
                 checked = db.execute(
                     "SELECT result FROM office_checks WHERE file_id=? AND version=1",
@@ -578,6 +657,9 @@ class VanPhong:
                     "completed": True,
                     "file_id": row["file_id"],
                 }
+            if self.projects.units is not None:
+                db.execute("DELETE FROM office_request_units WHERE kind='upload' AND owner=? AND internal_key=?",
+                    (actor["id"], row["request_key"]))
             db.execute("DELETE FROM office_uploads WHERE id=?", (row["id"],))
             self._audit(db, actor, "office-huy-tai", row["id"])
             return {"cancelled": True, "completed": False}

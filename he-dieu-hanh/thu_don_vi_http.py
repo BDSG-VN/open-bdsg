@@ -1,5 +1,6 @@
 """Cổng thử đơn vị: HTTP thật, đăng nhập cookie thật, chỉ dữ liệu tổng hợp."""
 import base64
+import hashlib
 import http.client
 import json
 import tempfile
@@ -118,6 +119,37 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertEqual(self.tool("du_an.tao", {"name": "Qua gioi han", "context": "x" * 70000})[0], 400)
         self.assertEqual(self.request("/api/units/members", {
             "identity": "nguoi-b", "role": "member", "unit_id": self.units[1]}, "nguoi-a", self.units[0])[0], 400)
+
+    def test_yeu_cau_va_phien_tai_office_tach_theo_don_vi_qua_http(self):
+        first, second = self.units
+        project = self.value(self.tool("du_an.tao", {"name": "Du an chia se de thu Office"}))
+        self.value(self.tool("don_vi.chia_se_du_an", {
+            "id": project["id"], "identity": "nguoi-a", "unit_id": second, "role": "editor"}))
+        raw = b"noi dung tong hop"
+        content = base64.b64encode(raw).decode()
+        args = {"project_id": project["id"], "name": "thu.txt",
+                "content_base64": content, "request_key": "a" * 32}
+        files = [self.value(self.tool("van_phong.tao", args, unit=unit))
+                 for unit in (first, second)]
+        self.assertNotEqual(files[0]["id"], files[1]["id"])
+        for unit, file in zip((first, second), files):
+            self.assertEqual(self.value(self.tool("van_phong.tao", args, unit=unit))["id"], file["id"])
+        begin = {"project_id": project["id"], "name": "thu.txt", "request_key": "b" * 32,
+                 "total": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+        upload = self.value(self.tool("van_phong.bat_dau_tai", begin, unit=first))
+        self.assertEqual(self.value(self.tool("van_phong.phien_tai", {
+            "project_id": project["id"]}, unit=second)), {"uploads": []})
+        for tool in ("trang_thai_tai", "ket_thuc_tai", "huy_tai"):
+            self.assertFalse(self.tool("van_phong." + tool, {"id": upload["id"]}, unit=second)[1]["ok"])
+        part = {"destination": "office-part", "id": upload["id"], "offset": 0, "content_base64": content}
+        self.assertFalse(self.request("/api/upload", part, "nguoi-a", second)[1]["ok"])
+        self.value(self.request("/api/upload", part, "nguoi-a", first))
+        own = self.value(self.tool("van_phong.bat_dau_tai", begin, unit=second))
+        self.assertNotEqual(own["id"], upload["id"])
+        result = self.value(self.tool("van_phong.ket_thuc_tai", {"id": upload["id"]}, unit=first))
+        self.assertTrue(result["completed"])
+        self.assertEqual(self.value(self.tool("van_phong.doc", {
+            "id": result["file"]["id"]}, unit=second))["content_base64"], content)
 
     def test_unported_routes_tools_and_mcp_are_denied(self):
         for path in ("/api/requests", "/api/activity", "/api/agents",
