@@ -288,10 +288,13 @@ AI hoặc công cụ nền tảng ngoài; giao diện profile đầy đủ còn 
 
 Ngày 18/11/2026: 11 bài HTTP và ba bài HTTPS cục bộ đạt, fixture HTTPS đã đi
 qua GET authorize thật. Kiểm Chrome headless riêng, desktop1440/mobile390:
-12 nghiệm thu gồm approve đổi code thật, deny không code, mạng lỗi/thử lại,
-loading/thu hồi membership, đổi tài khoản và expiry xóa biểu mẫu; 20 ảnh,
+14 nghiệm thu gồm approve đổi code thật, deny không code, mạng lỗi/thử lại,
+loading/thu hồi membership, đổi tài khoản và expiry xóa biểu mẫu; 22 ảnh,
 không lỗi JavaScript hoặc tràn ngang. Browser pin leaf tạm đúng fixture;
 kiểm HTTPS riêng vẫn xác minh CA/hostname. Không dùng phiên Chrome người dùng.
+Review tìm lỗi401 khi sai mật khẩu làm hủy yêu cầu. Đã tách đăng nhập sai
+khỏi mất phiên đang duyệt; giữ nonce/form, xóa password để nhập lại. Cả hai
+kích thước đều kiểm sai mật khẩu rồi đăng nhập đúng và đổi code thành công.
 
 Còn metadata/discovery, client SDK tự thực hiện OAuth, quản lý client/grant,
 profile AI/MCP nâng cao, review/CI và phát hành/hậu kiểm. Chưa nhận toàn R11

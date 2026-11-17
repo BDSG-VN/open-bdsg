@@ -9,6 +9,20 @@ related_targets: [khong-gian/oauth-consent.js, khong-gian/oauth-consent.css]
 Mode: Operate. Phần mở rộng luồng Tài khoản trong thế giới iOS BDSG đã được
 chủ quản chọn. Code-led, không thay PRODUCT.md/DESIGN.md hoặc tài sản nhận diện.
 
+PIN: Chủ quản chốt “Chuyển toàn bộ giao diện theo phong cách iOS” ngày
+17/11/2026, ghi tại PRODUCT.md và bề mặt webos-v27.md. Đây là phần bổ sung
+đã có mục đích/phạm vi rõ trong Tài khoản; không mở vòng chọn thế giới mới.
+
+OWN-WORLD: Kế thừa chữ hệ thống, hành động xanh, nền xám và nhóm trắng của
+Tài khoản BDSG. Không thêm font, palette, minh họa hoặc tài sản Apple.
+
+STORY: Ứng dụng gửi yêu cầu → đăng nhập BDSG → chọn đơn vị → xem client/
+phạm vi → tự chọn công cụ/dự án/thời hạn → cho phép hoặc từ chối → quay về
+callback đã đăng ký. Context thay đổi chấm dứt biểu mẫu và cần bắt đầu lại.
+
+FORM: Code-led, một cột đọc theo thứ tự quyết định. Không có comp được duyệt
+hoặc seed mới cho phần mở rộng này; pin/thế giới đã chốt ở webos-v27.
+
 THESIS: Người dùng nhìn đúng tài khoản/đơn vị/client rồi tự chọn công cụ và
 dự án trước khi cấp quyền có thời hạn. Không chọn sẵn hoặc ngầm cấp tất cả.
 

@@ -25,7 +25,8 @@
       ...(body === undefined ? {} : {body:JSON.stringify(body)})});
     const data = await response.json();
     if (!response.ok) {
-      if ([401,409].includes(response.status) || data.error === 'context_changed') stop('Tài khoản hoặc quyền đã thay đổi. Hãy bắt đầu kết nối lại từ ứng dụng.');
+      // Sai mật khẩu trước bind vẫn cho sửa; mất phiên đang duyệt phải bỏ context cũ.
+      if ((response.status === 401 && path !== '/api/login') || response.status === 409 || data.error === 'context_changed') stop('Tài khoản hoặc quyền đã thay đổi. Hãy bắt đầu kết nối lại từ ứng dụng.');
       const error = new Error(data.error || 'Chưa hoàn tất yêu cầu.'); error.status = response.status; throw error;
     }
     return data;
