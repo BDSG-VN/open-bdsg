@@ -18,6 +18,9 @@ class HanhDongDonVi:
                 digest TEXT NOT NULL,status TEXT NOT NULL,created REAL NOT NULL,
                 expires REAL NOT NULL,result TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS unit_actions_scope ON unit_actions(unit_id,owner,created);
+                CREATE TABLE IF NOT EXISTS unit_action_cancelled_runs(
+                    task_id TEXT NOT NULL REFERENCES cong_viec_tasks(id),run INTEGER NOT NULL,
+                    owner TEXT NOT NULL,PRIMARY KEY(task_id,run));
                 UPDATE unit_actions SET status='unknown' WHERE status='executing';''')
 
     @staticmethod
@@ -75,9 +78,11 @@ class HanhDongDonVi:
         reference = payload['owner_scope']
         original = self.units.bind(active_actor(self.kho, reference['identity']), reference['unit_id'])
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
             scope = self.units.require(original, db)
             if self._reference(scope) != reference:
                 raise PermissionError('Tư cách người đề xuất đã thay đổi')
+            self._not_cancelled(db, payload)
         task = self.tasks.detail(original, payload['task_id'])
         if payload['project_id'] and self.tasks.projects.authorize(original, payload['project_id'])['archived']:
             raise PermissionError('Dự án đã lưu trữ')
@@ -91,6 +96,23 @@ class HanhDongDonVi:
         if config['revision'] != payload['connector_revision']:
             raise PermissionError('Cấu hình đầu nối khác bản được đề xuất')
         return original
+
+    @staticmethod
+    def _not_cancelled(db, payload):
+        if db.execute('SELECT 1 FROM unit_action_cancelled_runs WHERE task_id=? AND run=?',
+                      (payload['task_id'], payload['run'])).fetchone():
+            raise PermissionError('Lượt tác vụ đã hủy quyền đề xuất ghi')
+
+    @staticmethod
+    def _settled(db, unit_id, arguments, exclude=''):
+        # Chặn theo nền tảng/công cụ vì upstream không cấp idempotency chung;
+        # đổi arguments/task không được dùng để lách yêu cầu đối soát.
+        if db.execute("""SELECT 1 FROM unit_actions WHERE unit_id=? AND id<>?
+                AND status IN ('executing','unknown')
+                AND json_extract(payload,'$.arguments.platform_id')=?
+                AND json_extract(payload,'$.arguments.tool')=? LIMIT 1""",
+                (unit_id, exclude, arguments['platform_id'], arguments['tool'])).fetchone():
+            raise PermissionError('Công cụ đang thực thi hoặc có kết quả cần quản trị đối soát')
 
     def propose(self, actor, args):
         if not isinstance(args, dict) or set(args) != {'task_id', 'tool', 'arguments'}:
@@ -124,6 +146,8 @@ class HanhDongDonVi:
             db.execute('BEGIN IMMEDIATE')
             if self._reference(self.units.require(actor, db)) != reference:
                 raise PermissionError('Phạm vi đã thay đổi')
+            self._not_cancelled(db, payload)
+            self._settled(db, scope.unit_id, arguments)
             db.execute("UPDATE unit_actions SET status='expired' WHERE unit_id=? AND owner=? AND status='awaiting' AND expires<=?",
                        (scope.unit_id, scope.identity, now))
             pending = db.execute("SELECT count(*) FROM unit_actions WHERE unit_id=? AND owner=? AND status='awaiting'",
@@ -156,6 +180,9 @@ class HanhDongDonVi:
             self._get(db, actor, action['id'], admin=True)
             if self._reference(self.units.require(actor, db)) != approver:
                 raise PermissionError('Tư cách người duyệt đã thay đổi')
+            if args['approve']:
+                self._not_cancelled(db, payload)
+                self._settled(db, action['unit_id'], payload['arguments'], action['id'])
             changed = db.execute("""UPDATE unit_actions SET status=? WHERE id=? AND digest=?
                 AND status='awaiting' AND (?=0 OR expires>?)""",
                 (state, action['id'], action['digest'], int(args['approve']), self.clock())).rowcount
@@ -206,8 +233,28 @@ class HanhDongDonVi:
         """Callback tin cậy từ tác vụ, kể cả khi lượt đã hoàn thành trước lúc hủy."""
         task_id, run = reference.rsplit(':', 1)
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('INSERT OR IGNORE INTO unit_action_cancelled_runs VALUES(?,?,?)', (task_id, int(run), owner))
             db.execute('''UPDATE unit_actions SET
                 result=?,status=CASE WHEN status='awaiting' THEN 'cancelled' ELSE 'unknown' END
                 WHERE owner=? AND task_id=? AND json_extract(payload,'$.run')=?
                 AND status IN ('awaiting','executing')''',
                 (self._encode({'message': 'Đã hủy; cần đối soát nếu yêu cầu đã gửi'}), owner, task_id, int(run)))
+
+    def reconcile(self, actor, args):
+        if (not isinstance(args, dict) or set(args) != {'id', 'digest', 'outcome', 'note'}
+                or args['outcome'] not in ('applied', 'not-applied')
+                or not isinstance(args['note'], str) or not 10 <= len(args['note'].strip()) <= 1000):
+            raise ValueError('Cần kết quả đối soát và ghi chú 10–1000 ký tự, không chứa chứng thư')
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = self._get(db, actor, args['id'], admin=True)
+            if row['digest'] != args['digest'] or row['status'] != 'unknown':
+                raise ValueError('Chỉ đối soát đúng nội dung chưa rõ kết quả')
+            result = {'reconciliation': {'outcome': args['outcome'], 'note': args['note'].strip(),
+                                         'by': actor['id'], 'at': self.clock()},
+                      'message': 'Xác nhận do quản trị nhập; hệ thống chưa tự kiểm upstream'}
+            db.execute("UPDATE unit_actions SET status=?,result=? WHERE id=? AND status='unknown'",
+                       ('reconciled-'+args['outcome'], self._encode(result), row['id']))
+            self.units._audit(db, actor['id'], 'doi-soat-ghi-don-vi-'+args['outcome'], row['id'])
+        return self.get(actor, args['id'])

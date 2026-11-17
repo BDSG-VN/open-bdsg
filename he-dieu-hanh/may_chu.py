@@ -49,7 +49,7 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
-    "ket_noi.ghi", "hanh_dong.danh_sach", "hanh_dong.de_xuat", "hanh_dong.duyet",
+    "ket_noi.ghi", "hanh_dong.danh_sach", "hanh_dong.de_xuat", "hanh_dong.duyet", "hanh_dong.doi_soat",
     "nen_tang.ket_noi", "ket_noi.doc", "cau_hinh.dau_noi", "cau_hinh.luu_dau_noi",
     "cau_hinh.kiem_tra_dau_noi", "cau_hinh.ngat_dau_noi",
     "mo_dun.danh_sach", "nhan_su.danh_sach",
@@ -187,7 +187,7 @@ class UngDung:
                     ghi=[tool["ten"] for tool in tools if tool["ghi"]]
                         + (["don_vi.chia_se_du_an"] if role != "agent" else [])
                         + (["mo_hinh.luu", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi",
-                            "cau_hinh.ngat_dau_noi", "ket_noi.ghi", "hanh_dong.duyet"] if role == "operator" else []))
+                            "cau_hinh.ngat_dau_noi", "ket_noi.ghi", "hanh_dong.duyet", "hanh_dong.doi_soat"] if role == "operator" else []))
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):

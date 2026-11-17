@@ -839,7 +839,11 @@ class DieuPhoi:
                     {"id": text, "digest": text, "approve": boolean},
                     ["id", "digest", "approve"],
                 ),
-            ],
+            ] + ([
+                ("doi_soat", lambda a: app.actions.reconcile(actor(), a), True,
+                 {"id": text, "digest": text, "outcome": text, "note": text},
+                 ["id", "digest", "outcome", "note"]),
+            ] if app.unit_preview else []),
             "phoi_hop": [
                 (
                     "danh_sach",
@@ -918,7 +922,7 @@ class DieuPhoi:
                     if (
                         role != "quan-tri"
                         and namespace == "hanh_dong"
-                        and name == "duyet"
+                        and name in ("duyet", "doi_soat")
                     ):
                         continue
                     if role != "quan-tri" and namespace in ("nguoi_dung", "tich_hop_vn", "thiet_bi"):

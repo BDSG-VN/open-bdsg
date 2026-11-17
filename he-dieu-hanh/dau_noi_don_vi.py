@@ -211,7 +211,7 @@ class DauNoiDonVi:
         return value
 
     @staticmethod
-    def _write_digest(platform_id, tool, arguments):
+    def _canonical_write_payload(platform_id, tool, arguments):
         return json.dumps([platform_id, tool, arguments], sort_keys=True, ensure_ascii=False, allow_nan=False)
 
     @staticmethod
@@ -236,7 +236,7 @@ class DauNoiDonVi:
         if config['revision'] != revision:
             raise PermissionError('Cấu hình khác bản được duyệt')
         permit = {'actor': actor['id'], 'scope': scope, 'revision': revision,
-                  'payload': self._write_digest(platform_id, tool, arguments),
+                  'payload': self._canonical_write_payload(platform_id, tool, arguments),
                   'guard': guard, 'used': False}
         token = self._write_permit.set(permit)
         try:
@@ -251,7 +251,7 @@ class DauNoiDonVi:
             raise ValueError("Tham số công cụ phải là object giới hạn 48 KiB")
         permit = self._write_permit.get() if ghi else None
         if ghi and (permit is None or permit['used'] or permit['actor'] != actor.get('id')
-                or permit['payload'] != self._write_digest(platform_id, tool, arguments)):
+                or permit['payload'] != self._canonical_write_payload(platform_id, tool, arguments)):
             raise PermissionError('Công cụ ghi cần phê duyệt đúng nội dung, chỉ thực thi một lần')
         scope, config = self._capture(actor, platform_id, admin=ghi, tool=None if ghi else tool)
         if ghi:

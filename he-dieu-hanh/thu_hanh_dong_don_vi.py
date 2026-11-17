@@ -260,6 +260,9 @@ class ThuHanhDongDonVi(unittest.TestCase):
         self.assertEqual(self.app.actions.get(self.member, action['id'])['status'], 'cancelled')
         self.assertFalse(self.decision(action)['ok'])
         self.assertEqual(self.writes(), [])
+        denied = self.tool(self.member, 'hanh_dong.de_xuat', {
+            'task_id': action['task_id'], 'tool': 'ket_noi.ghi', 'arguments': action['payload']['arguments']})
+        self.assertFalse(denied['ok'])
 
     def test_mcp_bao_is_error_khong_duoc_nhan_la_hoan_thanh_nghiep_vu(self):
         action = self.proposal()
@@ -329,6 +332,28 @@ class ThuHanhDongDonVi(unittest.TestCase):
             finally:
                 restored.tasks.close()
                 restored.core.audit.close()
+
+    def test_unknown_chan_de_xuat_va_action_da_cho_den_khi_admin_doi_soat(self):
+        first, queued = self.proposal(), self.proposal()
+        def fail(): raise OSError('synthetic-no-confirmation')
+        self.transport.after_send = fail
+        self.assertEqual(self.decision(first)['ket_qua']['status'], 'unknown')
+        self.transport.after_send = lambda: None
+        self.assertFalse(self.decision(queued)['ok'])
+        duplicate = {'task_id': first['task_id'], 'tool': 'ket_noi.ghi',
+                     'arguments': first['payload']['arguments']}
+        self.assertFalse(self.tool(self.member, 'hanh_dong.de_xuat', duplicate)['ok'])
+        args = {'id': first['id'], 'digest': first['digest'], 'outcome': 'not-applied',
+                'note': 'Da doi soat nguon tong hop, chua thuc hien.'}
+        self.assertFalse(self.tool(self.member, 'hanh_dong.doi_soat', args)['ok'])
+        self.assertFalse(self.tool(self.admin, 'hanh_dong.doi_soat', {**args, 'digest': 'wrong'})['ok'])
+        self.assertEqual(len(self.writes()), 1)
+        result = self.tool(self.admin, 'hanh_dong.doi_soat', args)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['ket_qua']['status'], 'reconciled-not-applied')
+        self.assertEqual(len(self.writes()), 1)
+        self.assertEqual(self.decision(queued)['ket_qua']['status'], 'completed')
+        self.assertEqual(len(self.writes()), 2)
 
 
 if __name__ == '__main__':

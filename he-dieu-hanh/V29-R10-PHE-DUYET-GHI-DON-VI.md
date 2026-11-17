@@ -32,7 +32,18 @@ Không bảo đảm exactly-once ở upstream hoặc rút lại được yêu c�
 Ngắt đầu nối không xóa chứng thư trong snapshot cũ.
 
 Action ở bảng unit_actions riêng, list/get lọc unit và quyền dự án. Bảng này
-được thêm vào tập đối chiếu identity/scope của phục hồi gateway.
+cùng dấu hủy bền unit_action_cancelled_runs được đối chiếu identity/scope
+khi phục hồi gateway. Dấu hủy được kiểm lại trong giao dịch tạo action để
+chặn cả dự thảo đến muộn sau khi hủy lượt đã hoàn thành.
+
+Một công cụ của một nền tảng/đơn vị đang executing hoặc unknown chặn đề xuất
+mới và duyệt các dự thảo khác đã chờ. Khóa này cố ý theo công cụ, không chỉ
+arguments/task: upstream chưa có hợp đồng idempotency chung, đổi tham số
+không được dùng để bỏ qua đối soát. Các công cụ/đơn vị khác không bị chặn.
+Admin có quyền dự án xác nhận đúng ID/digest qua hanh_dong.doi_soat, ghi kết
+quả applied/not-applied cùng ghi chú kiểm chứng. Thao tác này không gọi mạng
+và không tự gửi lại; đây là xác nhận do người quản trị nhập, chưa là hệ thống
+tự kiểm upstream. Muốn thử lại cần đề xuất/duyệt riêng sau đối soát.
 
 ## Cổng còn lại trước khi phát hành R10
 
