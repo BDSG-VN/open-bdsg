@@ -1,7 +1,7 @@
 # V29 R13 — yêu cầu kinh doanh theo đơn vị
 
-Ngày 18/11/2026: phần backend đang phát triển trên dữ liệu thử; chưa phát hành
-R13 lên máy chủ và chưa mở giao diện yêu cầu trong chế độ đơn vị.
+Ngày 18/11/2026: backend và giao diện đang nghiệm thu trên dữ liệu thử;
+chưa phát hành R13 lên máy chủ hoặc chuyển production sang chế độ đơn vị.
 
 Ba công cụ `kinh_doanh.danh_sach`, `kinh_doanh.tao_yeu_cau`,
 `kinh_doanh.doi_chang` đi qua nhân và kiểm phạm vi đơn vị còn hiệu lực.
@@ -28,3 +28,23 @@ Kiểm thử công khai: `thu_kinh_doanh_don_vi.py` gọi nhân thật trên SQL
 bao gồm chia sẻ/thu hồi, epoch, cổng ghi và sao lưu–phục hồi.
 `thu_don_vi_http.py` kiểm cookie, chọn đơn vị, Origin và chặn alias cũ.
 Kết quả kiểm này không chứng minh giao diện hay tích hợp với nền tảng ngoài.
+
+## Giao diện đơn vị thử nghiệm
+
+Trang Yêu cầu nhận danh sách cùng `can_edit`, `project_name`, `archived` và
+`project_options` từ máy chủ. Các thông tin này được kiểm trong cùng giao
+dịch đọc; không là token ghi và không thay lần kiểm quyền khi tạo/đổi chặng.
+Danh sách chọn dự án có tối đa 100 dự án được phép ghi, chưa có phân trang
+(giới hạn mã ngày 18/11/2026). Không trả metadata dự án chưa được cấp quyền.
+
+Biểu mẫu nằm trong trang, cho chọn cá nhân hoặc dự án. Bốn chặng nằm cạnh
+nhau trên máy tính và xếp dọc trên điện thoại. Lưu trữ/viewer là chỉ đọc;
+không suy quyền từ người tạo hoặc vai quản trị trong JavaScript. Giao diện
+đọc lại theo chu kỳ, giữ node/focus khi dữ liệu không đổi. Lỗi đọc gỡ danh
+sách cũ; mất phản hồi ghi khóa thao tác tới khi người dùng làm mới và kiểm
+tra kết quả. Không gửi lại tự động. Đổi scope/tài khoản hoặc ẩn ứng dụng gỡ
+nội dung/bản nháp và bỏ các callback của scope cũ.
+
+Không mở tổng quan/nhật ký hoặc alias toàn cổng. Legacy vẫn dùng giao diện
+cũ. Nghiệm thu trình duyệt và trạng thái phát hành được ghi trong báo cáo
+riêng; kiểm backend không tự thay nghiệm thu toàn bộ giao diện.

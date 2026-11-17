@@ -25,7 +25,7 @@ class ThuDongGoi(unittest.TestCase):
         self.assertIn('/ios.css', (self.ra / 'index.html').read_text(encoding='utf-8'))
         self.assertTrue((self.ra / 'workspace.html').is_file())
         self.assertTrue((self.ra / 'trinh-duyet.html').is_file())
-        for name in ('quyen-ket-noi.js', 'quyen-ket-noi.css', 'hop-thu-ui.js', 'hop-thu-ui.css'):
+        for name in ('quyen-ket-noi.js', 'quyen-ket-noi.css', 'hop-thu-ui.js', 'hop-thu-ui.css', 'yeu-cau-ui.js', 'yeu-cau-ui.css'):
             self.assertTrue((self.ra/name).is_file())
             self.assertIn('/'+name,(self.ra/'workspace.html').read_text(encoding='utf-8'))
         self.assertNotIn('canonical', (self.ra / 'workspace.html').read_text(encoding='utf-8'))

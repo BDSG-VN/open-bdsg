@@ -68,6 +68,33 @@ class ThuKinhDoanhDonVi(unittest.TestCase):
         self.assertFalse(self.call(c, 'kinh_doanh.doi_chang', {'id':second['id'], 'stage':'tu-van'}).get('ok'))
         self.assertEqual(self.value(self.actor('nguoi-a'), 'kinh_doanh.danh_sach')['requests'], [])
 
+    def test_interface_capabilities_follow_live_project_rights(self):
+        b, c = self.actor('nguoi-b'), self.actor('nguoi-c', self.units[1])
+        project = self.value(b, 'du_an.tao', {'name':'Du an cho giao dien'})['id']
+        created = self.create(b, project_id=project)
+        share = {'id':project, 'identity':'nguoi-c', 'unit_id':self.units[1]}
+        self.value(b, 'don_vi.chia_se_du_an', {**share, 'role':'viewer'})
+        listed = self.value(c, 'kinh_doanh.danh_sach')
+        self.assertFalse(listed['requests'][0]['can_edit'])
+        self.assertEqual(listed['requests'][0]['project_name'], 'Du an cho giao dien')
+        self.assertEqual(listed['project_options'], [])
+        self.value(b, 'don_vi.chia_se_du_an', {**share, 'role':'editor'})
+        listed = self.value(c, 'kinh_doanh.danh_sach')
+        self.assertTrue(listed['requests'][0]['can_edit'])
+        self.assertEqual(listed['project_options'], [{'id':project,'name':'Du an cho giao dien'}])
+        self.value(b, 'du_an.luu_tru', {'id':project})
+        listed = self.value(c, 'kinh_doanh.danh_sach')
+        self.assertFalse(listed['requests'][0]['can_edit'])
+        self.assertTrue(listed['requests'][0]['archived'])
+        self.assertEqual(listed['project_options'], [])
+        self.assertFalse(self.call(c, 'kinh_doanh.doi_chang', {'id':created['id'], 'stage':'van-hanh'}).get('ok'))
+        personal = self.create(c)
+        listed = self.value(c, 'kinh_doanh.danh_sach')
+        row = next(r for r in listed['requests'] if r['id']==personal['id'])
+        self.assertTrue(row['can_edit'])
+        self.assertIsNone(row['project_name'])
+        self.assertFalse(row['archived'])
+
     def test_membership_rejoin_hides_personal_requests_and_revoked_project_grant(self):
         b, a = self.actor('nguoi-b'), self.actor('nguoi-a')
         old = self.create(b)

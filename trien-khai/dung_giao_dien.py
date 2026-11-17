@@ -55,7 +55,7 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("portal.css", doc_tep("khong-gian/giao-dien.css"))
     for ten in ('quyen-ket-noi.js', 'quyen-ket-noi.css'):
         ghi(ten, doc_tep('khong-gian/'+ten))
-    for ten in ('hop-thu-ui.js', 'hop-thu-ui.css'):
+    for ten in ('hop-thu-ui.js', 'hop-thu-ui.css', 'yeu-cau-ui.js', 'yeu-cau-ui.css'):
         ghi(ten, doc_tep('khong-gian/'+ten))
     ghi("portal.js", doc_tep("khong-gian/ung-dung.js"))
     ghi("cong-viec.css", doc_tep("khong-gian/cong-viec.css"))

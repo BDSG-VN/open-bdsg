@@ -312,6 +312,7 @@ function locked(title, description) {
     `<section class="locked"><div class="lock-icon">${icon("lock")}</div><h2>Công việc riêng cần một danh tính.</h2><p>Đăng nhập để quản lý yêu cầu, trao đổi với các hộp thư agent và theo dõi hoạt động trong phạm vi quyền của bạn.</p><button class="button primary" data-login>Đăng nhập không gian ${icon("arrow")}</button></section>`;
 }
 function requestsPage() {
+  if(state.user&&window.BDSGUnit?.snapshot().mode==='units') return window.BDSGRequests?.open();
   if (!state.user)
     return locked(
       "Từ nhu cầu đến kết quả.",
@@ -416,6 +417,7 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  window.BDSGRequests?.leave();
   window.BDSGMail?.leave();
   window.BDSGConnections?.reset();
   window.BDSGSessions?.leave();
@@ -768,6 +770,7 @@ $("#profile").addEventListener("click", async () => {
   }
 });
 function clearUnitState() {
+  window.BDSGRequests?.reset();
   window.BDSGMail?.reset();
   for (const controller of activeUnitRequests) controller.abort();
   activeUnitRequests.clear();

@@ -50,14 +50,21 @@ class KinhDoanh:
                 rows = []
                 for row in candidates:
                     try:
-                        self._authorize(actor, scope, row, db)
+                        project = self._authorize(actor, scope, row, db)
                     except ValueError:
                         continue
-                    rows.append({key: row[key] for key in
-                        ('id','owner','project_id','title','sector','description','stage','created')})
+                    can_edit = True
+                    try:
+                        self._authorize(actor, scope, row, db, write=True)
+                    except ValueError:
+                        can_edit = False
+                    rows.append({**{key: row[key] for key in
+                        ('id','owner','project_id','title','sector','description','stage','created')},
+                        'can_edit':can_edit, 'project_name':project['name'] if project else None,
+                        'archived':bool(project and project['archived'])})
                     if len(rows) == 200:
                         break
-                return {'requests': rows}
+                return {'requests': rows, 'project_options': self._project_options(actor, scope, db)}
             if operation == 'tao_yeu_cau':
                 title, sector, description = self._fields(args)
                 project_id = args.get('project_id')
@@ -95,8 +102,25 @@ class KinhDoanh:
             project = self._project(actor, row['project_id'], db, write=write)
             if project['unit_id'] != row['unit_id']:
                 raise ValueError('Không tìm thấy yêu cầu trong phạm vi quyền')
+            return project
         elif (row['unit_id'], row['owner'], row['owner_epoch']) != (scope.unit_id, scope.identity, scope.epoch):
             raise ValueError('Không tìm thấy yêu cầu trong phạm vi quyền')
+
+    def _project_options(self, actor, scope, db):
+        candidates = db.execute('''SELECT s.project_id FROM du_an_units s WHERE
+            s.unit_id=? OR EXISTS(SELECT 1 FROM du_an_unit_grants g
+                WHERE g.project_id=s.project_id AND g.unit_id=? AND g.identity=? AND g.epoch=?)
+            ORDER BY s.project_id''', (scope.unit_id,scope.unit_id,scope.identity,scope.epoch))
+        options = []
+        for row in candidates:
+            try:
+                project = self._project(actor, row['project_id'], db, write=True)
+            except ValueError:
+                continue
+            options.append({'id':project['id'], 'name':project['name']})
+            if len(options) == 100:
+                break
+        return options
 
     @staticmethod
     def _fields(args):
