@@ -4,11 +4,11 @@
     'du_an.danh_sach':'Xem dự án','cong_viec.danh_sach':'Xem danh sách công việc','cong_viec.chi_tiet':'Xem chi tiết công việc',
     'cong_viec.tao':'Tạo công việc','cong_viec.tiep_tuc':'Tiếp tục công việc','cong_viec.dung':'Dừng công việc'};
   const taskTools = new Set(['cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung']);
-  let host = null, revision = 0, tab = 'grants', rows = [], form = null, projects = [], modules = [], secret = '', busy = false, projectNames = new Map();
+  let host = null, revision = 0, tab = 'grants', rows = [], form = null, projects = [], modules = [], secret = '', busy = false, loaded = false, projectNames = new Map();
   const unit = () => window.BDSGUnit;
   const when = value => new Date(value*1000).toLocaleString('vi-VN');
   function clearSecret() { secret = ''; host?.querySelector('#connection-once')?.remove(); }
-  function reset() { revision++; clearSecret(); if (host?.isConnected) host.replaceChildren(); host = null; rows = []; projects = []; modules = []; projectNames.clear(); form = null; busy = false; }
+  function reset() { revision++; clearSecret(); if (host?.isConnected) host.replaceChildren(); host = null; rows = []; projects = []; modules = []; projectNames.clear(); form = null; busy = false; loaded = false; }
   function capture() { return {revision,actor:state.user?.id,scope:unit().capture()}; }
   function current(token) { return host?.isConnected && token.revision === revision && token.actor === state.user?.id && state.view === 'account' && unit().current(token.scope); }
   const choice = (name,value,title,detail='') => `<label class="connection-choice"><input type="checkbox" name="${esc(name)}" value="${esc(value)}"><span>${esc(title)}${detail ? `<small>${esc(detail)}</small>` : ''}</span></label>`;
@@ -24,7 +24,7 @@
       ${secret?`<section class="connection-secret" id="connection-once"><h3>Khóa chỉ được trả một lần</h3><p>Lưu khóa ở nơi riêng. Đóng phần này hoặc chuyển ứng dụng sẽ xóa khóa khỏi màn hình; danh sách không xem lại được khóa.</p><label for="connection-key">Khóa kết nối vừa cấp</label><input id="connection-key" type="password" readonly autocomplete="off" value="${esc(secret)}"><div class="connection-actions"><button type="button" class="button" id="connection-copy">Sao chép khóa</button><button type="button" class="button secondary" id="connection-hide">Đã lưu, đóng khóa</button></div></section>`:''}
       ${form?formHTML(clients):''}
       <ul class="connection-list">${rows.map(rowHTML).join('')}</ul>
-      ${!rows.length&&!busy?'<p class="sessions-note">Chưa có mục nào trong phạm vi đang xem.</p>':''}`;
+      ${loaded&&!rows.length&&!busy&&!error&&(clients||selected)?'<p class="sessions-note">Chưa có mục nào trong phạm vi đang xem.</p>':''}`;
     host.querySelectorAll('[data-connection-tab]').forEach(button=>button.onclick=()=>load(button.dataset.connectionTab));
     host.querySelector('#connection-refresh').onclick=()=>load(tab);
     host.querySelector('#connection-new')?.addEventListener('click',()=>openForm());
@@ -71,7 +71,7 @@
     if(!allow)host.querySelectorAll('#connection-modules input').forEach(input=>input.checked=false);
   }
   async function load(next=tab) {
-    revision++; clearSecret(); tab=next; form=null;projects=[];modules=[];rows=[];busy=true;
+    revision++; clearSecret(); tab=next; form=null;projects=[];modules=[];rows=[];busy=true;loaded=false;
     const token=capture();render('Đang đọc quyền kết nối…');
     try {
       if(tab==='grants'&&!unit().snapshot().selected){busy=false;render();return;}
@@ -79,7 +79,7 @@
         tab==='grants'?tool('du_an.danh_sach').then(result=>result.projects).catch(()=>[]):Promise.resolve([])]);
       if(!current(token))return;
       projectNames=new Map(visible.map(row=>[row.id,row.name]));
-      const items=tab==='clients'?result.clients:result.grants; if(!Array.isArray(items))throw Error('Invalid list');rows=items;
+      const items=tab==='clients'?result.clients:result.grants; if(!Array.isArray(items))throw Error('Invalid list');rows=items;loaded=true;
       busy=false;render();
     }catch(_){if(current(token)){busy=false;render('Chưa đọc được danh sách. Kiểm tra tài khoản và kết nối rồi làm mới.',true);}}
   }
