@@ -1,8 +1,9 @@
 # V29 R11 — ủy quyền MCP đầu vào, đang phát triển
 
 Ngày 17/11/2026, tiếp [R10](V29-R10-PHE-DUYET-GHI-DON-VI.md). Đây là chặng
-nền grant/credential và gọi trong tiến trình. Chưa bật HTTP MCP theo đơn
-vị, OAuth, giao diện hoặc chuyển dữ liệu production; chưa hoàn tất R11.
+nền grant/credential, worker và HTTP MCP trong chế độ đơn vị thử nghiệm.
+Chưa có OAuth, giao diện quản lý hoặc chuyển dữ liệu production; chưa hoàn
+tất R11 và chưa triển khai thay đổi này lên website.
 
 ## Danh tính và phạm vi
 
@@ -134,6 +135,40 @@ không hồi sinh dự thảo cũ. Không gọi endpoint nghiệp vụ thật/AP
 python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_mo_dun_don_vi.py' -v
 ```
 
+## R11c — HTTP và client SDK, bước đầu chưa OAuth
+
+Ngày 17/11/2026: `/mcp` trong chế độ đơn vị thử nghiệm xác thực mới ở mỗi
+yêu cầu bằng manual bearer của module grant. Không nhận cookie/token legacy,
+query credential hoặc chọn scope từ `X-BDSG-Unit`. Không cấp hoặc giữ quyền
+bằng Session-ID; không có state bắt tay chứa actor. Không cung cấp SSE GET,
+nhận GET/DELETE/OPTIONS/HEAD/PUT/PATCH với 405 sau kiểm nguồn/xác thực.
+
+POST JSON kiểm Origin nếu có, header trùng, Content-Type, Accept/quality,
+Content-Length, version, giới hạn 64 KiB, JSON trùng khóa/không hữu hạn và
+JSON-RPC envelope/ID/tham số. Phân biệt lỗi transport, lỗi giao thức và công
+cụ `isError`. Notification hợp lệ trả 202 với body rỗng; notification không
+thực thi công cụ. Cancellation RPC là gợi ý, dừng tác vụ nghiệp vụ cần công
+cụ đã cấp. Không mở CORS hoặc metadata OAuth giả.
+
+Version ghim [Streamable HTTP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports),
+không khẳng định mới nhất. Thiếu header mặc định 2025-03-26 theo fallback
+transport; initialize phản hồi version 2025-06-18 và capabilities tools.
+Tham chiếu [lifecycle/version negotiation](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle).
+
+Ngày 17/11/2026: 11 bài wire HTTP đạt và hai bài [Python SDK 2.3.0](https://github.com/modelcontextprotocol/python-sdk/tree/v2.3.0)
+đạt trên socket thật: initialize, list/call, tạo/chạy tác vụ, thu hồi khi
+client đang kết nối nhận HTTP 401. SDK dùng `mode="legacy"` để kiểm handshake
+era của version ghim, không phải thử protocol 2026 hoặc chế độ auto.
+Dependency chỉ dùng kiểm nghiệm ở `requirements-mcp-test.txt`, không cần
+cài SDK vào runtime gateway. CI cài đúng pin; môi trường không cài SDK bỏ
+qua hai bài này, không dùng skip đó để nhận là đã thử SDK.
+
+```sh
+python3 -m pip install --only-binary=:all: -r requirements-mcp-test.txt
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_http_don_vi.py' -v
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_client_sdk.py' -v
+```
+
 Manual Bearer chỉ là một chế độ credential, chưa là OAuth. HTTP MCP dự kiến
 pin [Streamable HTTP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports),
 kiểm Origin/JSON-RPC/header và notification. Luồng client chuẩn sẽ cần
@@ -141,6 +176,6 @@ kiểm Origin/JSON-RPC/header và notification. Luồng client chuẩn sẽ cầ
 metadata discovery, resource audience và PKCE; không nhận ChatGPT/Claude đã
 kết nối khi mới có nền grant này. Đây là version pin, không khẳng định mới nhất.
 
-Còn transport HTTP/client SDK, OAuth/consent UI, nghiệm thu ghép/release và
-hậu kiểm. Chưa dùng kiểm backend trong tiến trình để nhận HTTP/client thật
-đã hoạt động hoặc toàn R11/lộ trình hệ sinh thái đã hoàn tất.
+Còn OAuth/PKCE/consent, giao diện quản lý và nghiệm thu phát hành/hậu kiểm.
+Manual bearer/SDK tổng hợp chưa chứng minh ChatGPT hoặc Claude đã kết nối
+thật. Chưa nhận toàn R11/lộ trình hệ sinh thái đã hoàn tất.

@@ -317,11 +317,11 @@ class ThuDonViHTTP(unittest.TestCase):
         for path in ("/api/requests", "/api/activity", "/api/agents",
                      "/api/connections", "/api/google/callback",
                      "/api/auth/google", "/api/office-source", "/api/office-engine-auth", "/mcp"):
-            self.assertEqual(self.request(path, who="chu-quan", unit=self.units[0])[0], 403, path)
+            self.assertEqual(self.request(path, who="chu-quan", unit=self.units[0])[0], 401 if path == '/mcp' else 403, path)
         for path in ("/mcp", "/api/office-callback", "/api/google/start", "/api/model-config", "/api/customer-support"):
-            self.assertEqual(self.request(path, {}, "chu-quan", self.units[0])[0], 403, path)
+            self.assertEqual(self.request(path, {}, "chu-quan", self.units[0])[0], 401 if path == '/mcp' else 403, path)
         self.assertEqual(self.request("/mcp", {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-                                     unit=self.units[0], headers={"Authorization": "Bearer " + self.bearer})[0], 403)
+                                     unit=self.units[0], headers={"Authorization": "Bearer " + self.bearer})[0], 401)
         for tool in ("runtime.python", "mo_hinh.trang_thai",
                      "van_phong.google_nhap", "van_phong.tao_office", "van_phong.mo_soan_thao",
                      "van_phong.luu_soan_thao", "cau_hinh.tat_mo_hinh", "nguoi_dung.tao", "nhat_ky.danh_sach"):

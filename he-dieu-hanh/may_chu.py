@@ -35,6 +35,7 @@ from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
 from hanh_dong_don_vi import HanhDongDonVi
 from mcp_uy_quyen_don_vi import UyQuyenMCPDonVi
+from mcp_http_don_vi import MCPHTTPDonVi
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -193,6 +194,7 @@ class UngDung:
                                          origin=self.origin, connectors=self.connectors)
                             if unit_preview else None)
         self.core.delegated_calls = self.inbound_mcp
+        self.inbound_http = MCPHTTPDonVi(self.inbound_mcp, origin=self.origin) if unit_preview else None
         self.tasks.inbound_mcp = self.inbound_mcp
         if self.unit_ai is not None:
             self.unit_ai.run_authorizer = self.inbound_mcp.restore_task
@@ -289,7 +291,8 @@ def tao_may_chu(app, port=8766):
             for k, v in (headers or {}).items():
                 self.send_header(k, v)
             self.end_headers()
-            self.wfile.write(data)
+            if self.command != 'HEAD':
+                self.wfile.write(data)
 
         def origin_ok(self, required=False):
             origin = self.headers.get("Origin")
@@ -444,8 +447,26 @@ def tao_may_chu(app, port=8766):
                 raise ValueError("Nội dung phải là đối tượng JSON")
             return obj
 
+        def scoped_mcp(self, method):
+            if not app.unit_preview or urlsplit(self.path).path != '/mcp':
+                return False
+            self.connection.settimeout(12)
+            try:
+                status, payload, headers = app.inbound_http.handle(method, self.path, self.headers,
+                    self.rfile.read, draining=app.operations.draining.is_set())
+            except (TimeoutError, OSError):
+                self.send(408, {'error': 'Không nhận đủ yêu cầu MCP trong thời hạn'})
+                return True
+            except Exception:
+                self.send(500, {'error': 'Không hoàn tất MCP; kiểm tra vận hành, không tự gọi lại công cụ ghi'})
+                return True
+            self.send(status, payload, headers=headers)
+            return True
+
         def do_GET(self):
             self.connection.settimeout(12)
+            if self.scoped_mcp('GET'):
+                return
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             path = urlsplit(self.path).path
@@ -641,6 +662,8 @@ def tao_may_chu(app, port=8766):
 
         def do_POST(self):
             self.connection.settimeout(12)
+            if self.scoped_mcp('POST'):
+                return
             path = urlsplit(self.path).path
             if not self.preview_path(path, "POST"):
                 return
@@ -831,7 +854,17 @@ def tao_may_chu(app, port=8766):
                 )
 
         def do_OPTIONS(self):
+            if self.scoped_mcp('OPTIONS'):
+                return
             self.send(405, {"error": "Không mở CORS"}, headers={"Allow": "GET, POST"})
+
+        def do_DELETE(self):
+            if not self.scoped_mcp(self.command):
+                self.send(405, {'error': 'Phương thức không được hỗ trợ'})
+
+        do_HEAD = do_DELETE
+        do_PUT = do_DELETE
+        do_PATCH = do_DELETE
 
     server = MayChuCoGioiHan(("127.0.0.1", port), XuLy)
     return server
