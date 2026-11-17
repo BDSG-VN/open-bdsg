@@ -88,4 +88,3 @@ Mọi công cụ nghiệp vụ tiếp tục qua `nhan/` với danh tính xác th
 - Kiểm quyền cho cả được phép/bị từ chối; không lưu bí mật ở browser, HTML hay nhật ký; chạy kiểm tra phù hợp theo `AGENTS.md`.
 
 Chưa có số đo hoặc kết quả nghiệm thu cho các đề xuất trong tài liệu này. Mỗi bản triển khai cần ghi riêng phần đã có, phần chưa có và bằng chứng kiểm tra theo ngày.
-
