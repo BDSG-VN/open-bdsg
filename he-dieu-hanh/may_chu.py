@@ -36,6 +36,7 @@ from hanh_dong import HanhDong, active_actor
 from hanh_dong_don_vi import HanhDongDonVi
 from mcp_uy_quyen_don_vi import UyQuyenMCPDonVi
 from mcp_http_don_vi import MCPHTTPDonVi
+from oauth_mcp_don_vi import OAuthMCPDonVi
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -194,6 +195,7 @@ class UngDung:
                                          origin=self.origin, connectors=self.connectors)
                             if unit_preview else None)
         self.core.delegated_calls = self.inbound_mcp
+        self.oauth_mcp = OAuthMCPDonVi(self.kho, self.inbound_mcp, self.web_sessions, origin=self.origin) if unit_preview else None
         self.inbound_http = MCPHTTPDonVi(self.inbound_mcp, origin=self.origin) if unit_preview else None
         self.tasks.inbound_mcp = self.inbound_mcp
         if self.unit_ai is not None:

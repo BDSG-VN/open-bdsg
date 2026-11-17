@@ -80,6 +80,12 @@ class PhienWeb:
                 or not 1 <= len(current_token) <= 512 or not _number(now)):
             raise PermissionError("Cần phiên web còn hiệu lực")
         digest = bam(current_token)
+        identity = self._live_digest(db, actor, digest, now)
+        _metadata(db, digest)
+        return digest, identity
+
+    @staticmethod
+    def _live_digest(db, actor, digest, now):
         row = db.execute("SELECT ma FROM phien WHERE hash=? AND expires>?", (digest, now)).fetchone()
         if not row or row[0] != actor.get("id"):
             raise PermissionError("Cần phiên web còn hiệu lực")
@@ -90,8 +96,19 @@ class PhienWeb:
                 "SELECT 1 FROM agents WHERE ma=? AND active=1 AND role='operator'", (row[0],)).fetchone()
         if not valid:
             raise PermissionError("Cần phiên web còn hiệu lực")
-        _metadata(db, digest)
-        return digest, row[0]
+        return row[0]
+
+    def authorization_reference(self, actor, current_token, db):
+        """Tham chiếu consent riêng; không phải chứng thư để đăng nhập web."""
+        digest, identity = self._current(db, actor, current_token, self.clock())
+        return {'hash': digest, 'identity': identity}
+
+    def require_authorization(self, actor, reference, db):
+        if (not isinstance(reference, dict) or set(reference) != {'hash', 'identity'}
+                or not isinstance(reference['hash'], str) or not DIGEST.fullmatch(reference['hash'])
+                or not isinstance(actor, dict) or reference['identity'] != actor.get('id')):
+            raise PermissionError('Phiên duyệt OAuth không hợp lệ')
+        self._live_digest(db, actor, reference['hash'], self.clock())
 
     @staticmethod
     def _identifier(identifier):

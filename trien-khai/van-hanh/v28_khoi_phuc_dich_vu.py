@@ -31,7 +31,7 @@ IDENTITY_TABLES = ("chu", "agents", "web_users", "phien", "phien_web", "google_l
                    "don_vi", "don_vi_members", "don_vi_migrations", "du_an_units", "du_an_unit_grants", "cong_viec_units",
                    "office_request_units", "office_upload_units", "ai_task_credit_units", "ai_reservation_units",
                    "ai_unit_configs", "ai_unit_proxy", "unit_connectors", "unit_actions", "unit_action_cancelled_runs",
-                   "unit_mcp_grants", "unit_mcp_task_runs")
+                   "unit_mcp_grants", "unit_mcp_task_runs", "unit_oauth_clients", "unit_oauth_requests", "unit_oauth_codes")
 COUNTS = {"files": "office_files", "versions": "office_versions", "projects": "du_an", "tasks": "cong_viec_tasks"}
 FORBIDDEN = tuple(Path(p) for p in ("/var/lib/bdsg-thanhhoa", "/etc/bdsg-thanhhoa", "/srv/bdsg-thanhhoa/open-bdsg"))
 

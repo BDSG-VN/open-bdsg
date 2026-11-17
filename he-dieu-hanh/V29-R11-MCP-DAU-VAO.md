@@ -2,8 +2,9 @@
 
 Ngày 17/11/2026, tiếp [R10](V29-R10-PHE-DUYET-GHI-DON-VI.md). Đây là chặng
 nền grant/credential, worker và HTTP MCP trong chế độ đơn vị thử nghiệm.
-Chưa có OAuth, giao diện quản lý hoặc chuyển dữ liệu production; chưa hoàn
-tất R11 và chưa triển khai thay đổi này lên website.
+OAuth có nền backend đang kiểm, chưa có luồng HTTP/consent/giao diện quản lý
+hoàn chỉnh hoặc chuyển dữ liệu production; chưa hoàn tất R11 và chưa triển
+khai thay đổi này lên website.
 
 ## Danh tính và phạm vi
 
@@ -176,6 +177,45 @@ kiểm Origin/JSON-RPC/header và notification. Luồng client chuẩn sẽ cầ
 metadata discovery, resource audience và PKCE; không nhận ChatGPT/Claude đã
 kết nối khi mới có nền grant này. Đây là version pin, không khẳng định mới nhất.
 
-Còn OAuth/PKCE/consent, giao diện quản lý và nghiệm thu phát hành/hậu kiểm.
+## R11c — nền authorization code S256, chưa nối HTTP/UI
+
+Ngày 17/11/2026: backend đăng ký public client do chủ quản hệ thống duyệt,
+redirect allowlist khớp tuyệt đối, resource cố định, scope theo công cụ đọc/
+tác vụ đã chuyển. Yêu cầu gắn đúng phiên web/danh tính/đơn vị; đổi phiên,
+account hoặc membership không được tiếp tục consent cũ. Consent giữ snapshot
+quyền dự án và đầu nối; token exchange không tự nhận quyền mới cấp sau đó.
+
+Authorization code chỉ lưu hash, dùng một lần với PKCE S256. Đổi mã và tạo
+grant dùng cùng giao dịch; lỗi sau INSERT không để lại token hoặc tiêu thụ
+mã nửa chừng. Replay đúng client/redirect/resource/verifier thu hồi token
+đã cấp, sai verifier không được dùng để thu hồi token của người khác. Khóa
+OAuth vẫn đi qua nhân/guard nguồn như manual bearer; client bị ngắt chặn cả
+code đang chờ và token đã cấp. Không có refresh, confidential-client secret,
+DCR công khai hoặc endpoint metadata giả trong bước này.
+
+Ngày 17/11/2026: request chờ tối đa 600 giây, code tối đa 300 giây và không
+vượt hạn request. Giới hạn 128 request còn hạn/client, 1.024 toàn máy, 10.000
+bản ghi lịch sử; dọn OAuth state đã hết hơn 24 giờ. Callback giữ nguyên query
+đã đăng ký, chỉ thêm code/error, state và issuer. Snapshot restore đổi epoch
+chặn cả code/token và đăng ký client cũ; cần chủ quản đăng ký lại client.
+Restart bình thường giữ epoch và code chưa hết hạn, không tự replay.
+
+Ngày 17/11/2026: 23 bài backend/SQLite thật đạt, gồm PKCE, redirect/resource/
+scope, bind phiên/unit, consent/deny, logout, đổi quyền dự án, code replay,
+hai exchange song song, rollback, raw credential không trong snapshot/
+metadata/audit, restart/restore, hạn pending, state rỗng, root token không
+quản lý client/consent và worker từ token OAuth. Chưa gọi HTTP authorize/token,
+chưa kiểm SDK OAuth hoặc màn hình người dùng.
+
+```sh
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_oauth_mcp_don_vi.py' -v
+```
+
+Tham chiếu [MCP authorization ghim](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization),
+[PKCE RFC7636](https://www.rfc-editor.org/rfc/rfc7636),
+[protected resource metadata RFC9728](https://www.rfc-editor.org/rfc/rfc9728).
+Chưa dùng nền code S256 này để nhận là đã hoàn tất OAuth 2.1.
+
+Còn metadata/discovery, HTTP OAuth/PKCE/consent, giao diện quản lý và nghiệm thu phát hành/hậu kiểm.
 Manual bearer/SDK tổng hợp chưa chứng minh ChatGPT hoặc Claude đã kết nối
 thật. Chưa nhận toàn R11/lộ trình hệ sinh thái đã hoàn tất.

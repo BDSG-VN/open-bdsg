@@ -191,11 +191,18 @@ class ThuMCPTacVuDonVi(unittest.TestCase):
         requests = self.configure_ai()
         issued = self.issue(allow_ai=True)
         original = self.app.unit_ai.factory
+        received = threading.Event()
+        self.addCleanup(received.set)
         def revoke_before_reserve(alias, key):
+            # Chốt receipt tạo tác vụ trước khi ép thu hồi ở bước reserve;
+            # nếu không, guard response tạo cũng có thể từ chối đúng quyền.
+            if not received.wait(3): raise RuntimeError('Test receipt timeout')
             self.service.revoke(self.actor, issued['id'])
             return original(alias, key)
         self.app.unit_ai.factory = revoke_before_reserve
-        task = self.finished(self.create(self.service.authenticate(issued['credential'])))
+        identifier = self.create(self.service.authenticate(issued['credential']))
+        received.set()
+        task = self.finished(identifier)
         self.assertEqual(task['status'], 'failed')
         self.assertEqual(requests, [])
         self.assertEqual(task['artifacts'], [])

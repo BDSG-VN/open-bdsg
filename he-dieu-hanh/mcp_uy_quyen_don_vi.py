@@ -39,6 +39,7 @@ class UyQuyenMCPDonVi:
         self.resource = origin.rstrip('/')+'/mcp'
         self.kho, self.units, self.core, self.projects = kho, units, core, projects
         self.connectors = connectors
+        self.oauth_clients = None
         self.clock, self._issuer = clock, object()
         with kho.ket_noi() as db:
             # Giao dịch cũng tuần tự hóa tạo epoch giữa các instance cùng kho.
@@ -90,7 +91,8 @@ class UyQuyenMCPDonVi:
         result = {key: document[key] for key in (
             'id', 'name', 'client_id', 'owner', 'unit_id', 'tools', 'revision', 'created', 'expires', 'enabled')}
         result.update(project_count=len(document['project_ids']), expired=document['expires'] <= self.clock(),
-                      issuer_current=document['issuer_epoch'] == self._epoch, credential_type='manual_bearer')
+                      issuer_current=document['issuer_epoch'] == self._epoch,
+                      credential_type=document.get('credential_type', 'manual_bearer'))
         if own:
             result['project_ids'] = list(document['project_ids'])
             profile = document.get('task_profile')
@@ -98,7 +100,7 @@ class UyQuyenMCPDonVi:
                                        if key != 'connector_revisions'} if profile else None)
         return result
 
-    def create(self, actor, data):
+    def _candidate(self, actor, data, db):
         required = {'name', 'client_id', 'tools', 'project_ids', 'expires_in'}
         if not isinstance(data, dict) or not required <= set(data) or set(data)-required-{'task_profile'}:
             raise ValueError('Cần nhãn, client, công cụ, dự án và hạn dùng cụ thể')
@@ -126,45 +128,85 @@ class UyQuyenMCPDonVi:
             raise ValueError('Cần phạm vi dự án cụ thể; chuỗi rỗng chỉ cho việc độc lập')
         if type(duration) is not int or not 900 <= duration <= 86400:
             raise ValueError('Hạn credential cần từ 15 phút đến 24 giờ')
-        identifier, revision = secrets.token_hex(12), secrets.token_hex(16)
-        credential = 'bdsg_u_'+secrets.token_urlsafe(32)
-        now = self.clock()
+        scope = self._web_scope(actor, db)
+        project_refs = self._project_scope(actor, project_ids, db)
+        if profile is not None:
+            reads, drafts = profile.get('module_reads', {}), profile.get('module_drafts', {})
+            if (reads or drafts) and (not profile['allow_ai'] or self.connectors is None):
+                raise PermissionError('Công cụ mô-đun cần AI và bộ kiểm đầu nối')
+            revisions = (self.connectors.delegation_reference(actor, reads, drafts, db)
+                         if self.connectors is not None else {})
+            if not isinstance(reads, dict) or not isinstance(drafts, dict):
+                raise ValueError('Phạm vi công cụ mô-đun không hợp lệ')
+            profile = {'allow_ai': profile['allow_ai'], 'module_reads': reads,
+                       'module_drafts': drafts, 'connector_revisions': revisions}
+        declarations = {item['ten'] for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))}
+        if not set(tools) <= declarations:
+            raise PermissionError('Không được ủy quyền công cụ mình chưa có')
+        return {'name': name.strip(), 'client_id': client, 'tools': list(tools),
+                'project_ids': list(project_ids), 'project_refs': project_refs,
+                'owner_scope': self.units.reference(actor, db), 'issuer_epoch': self._epoch,
+                'resource': self.resource, 'task_profile': profile, 'expires_in': duration}
+
+    def consent_snapshot(self, actor, data, db):
+        """Chụp chính sách tại consent; không tạo credential hoặc sửa nguồn."""
+        return self._candidate(actor, data, db)
+
+    @property
+    def issuer_epoch(self):
+        return self._epoch
+
+    def create(self, actor, data):
         with self.kho.ket_noi() as db:
             db.execute('BEGIN IMMEDIATE')
-            scope = self._web_scope(actor, db)
-            project_refs = self._project_scope(actor, project_ids, db)
-            if profile is not None:
-                reads, drafts = profile.get('module_reads', {}), profile.get('module_drafts', {})
-                if (reads or drafts) and (not profile['allow_ai'] or self.connectors is None):
-                    raise PermissionError('Công cụ mô-đun cần AI và bộ kiểm đầu nối')
-                revisions = (self.connectors.delegation_reference(actor, reads, drafts, db)
-                             if self.connectors is not None else {})
-                if not isinstance(reads, dict) or not isinstance(drafts, dict):
-                    raise ValueError('Phạm vi công cụ mô-đun không hợp lệ')
-                profile = {'allow_ai': profile['allow_ai'], 'module_reads': reads,
-                           'module_drafts': drafts, 'connector_revisions': revisions}
-            declarations = {item['ten'] for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))}
-            if not set(tools) <= declarations:
-                raise PermissionError('Không được ủy quyền công cụ mình chưa có')
-            count = db.execute('''SELECT count(*) FROM unit_mcp_grants WHERE unit_id=? AND owner=?
-                AND json_extract(document,'$.enabled')=1 AND json_extract(document,'$.expires')>?
-                AND json_extract(document,'$.issuer_epoch')=?''',
-                (scope.unit_id, scope.identity, now, self._epoch)).fetchone()[0]
-            total = db.execute('SELECT count(*) FROM unit_mcp_grants WHERE unit_id=? AND owner=?',
-                               (scope.unit_id, scope.identity)).fetchone()[0]
-            if count >= 64 or total >= 512:
-                raise ValueError('Đã đạt giới hạn credential; cần thu hồi hoặc xử lý lưu trữ theo chính sách')
-            document = {'id': identifier, 'revision': revision, 'name': name.strip(), 'client_id': client,
-                        'unit_id': scope.unit_id, 'owner': scope.identity,
-                        'owner_scope': self.units.reference(actor, db), 'tools': list(tools),
-                        'project_ids': list(project_ids), 'project_refs': project_refs, 'resource': self.resource,
-                        'task_profile': dict(profile) if profile is not None else None,
-                        'issuer_epoch': self._epoch, 'created': now, 'expires': now+duration, 'enabled': True}
-            db.execute('INSERT INTO unit_mcp_grants VALUES(?,?,?,?,?,?)',
-                       (identifier, scope.unit_id, scope.identity, hashlib.sha256(credential.encode()).hexdigest(),
-                        revision, json.dumps(document, ensure_ascii=False)))
-            self.units._audit(db, scope.identity, 'cap-uy-quyen-mcp-don-vi', identifier)
+            return self._issue(actor, data, db)
+
+    def issue_oauth(self, actor, data, snapshot, client_revision, db):
+        """Backend tiêu thụ code và cấp grant cùng giao dịch của bên gọi."""
+        if (self.oauth_clients is None or not isinstance(snapshot, dict)
+                or not isinstance(client_revision, str) or not re.fullmatch(r'[a-f0-9]{32}', client_revision)):
+            raise PermissionError('Thiếu bộ kiểm client OAuth')
+        return self._issue(actor, data, db, snapshot=snapshot, client_revision=client_revision)
+
+    def _issue(self, actor, data, db, *, snapshot=None, client_revision=None):
+        candidate = self._candidate(actor, data, db)
+        if snapshot is not None and snapshot != candidate:
+            raise PermissionError('Quyền đã thay đổi sau khi duyệt')
+        scope = self.units.require(actor, db)
+        now = self.clock()
+        count = db.execute("""SELECT count(*) FROM unit_mcp_grants WHERE unit_id=? AND owner=?
+            AND json_extract(document,'$.enabled')=1 AND json_extract(document,'$.expires')>?
+            AND json_extract(document,'$.issuer_epoch')=?""",
+            (scope.unit_id, scope.identity, now, self._epoch)).fetchone()[0]
+        total = db.execute('SELECT count(*) FROM unit_mcp_grants WHERE unit_id=? AND owner=?',
+                           (scope.unit_id, scope.identity)).fetchone()[0]
+        if count >= 64 or total >= 512:
+            raise ValueError('Đã đạt giới hạn credential; cần thu hồi hoặc xử lý lưu trữ theo chính sách')
+        identifier, revision = secrets.token_hex(12), secrets.token_hex(16)
+        credential = 'bdsg_u_'+secrets.token_urlsafe(32)
+        document = {key: value for key, value in candidate.items() if key != 'expires_in'}
+        document.update(id=identifier, revision=revision, unit_id=scope.unit_id, owner=scope.identity,
+                        created=now, expires=now+candidate['expires_in'], enabled=True,
+                        credential_type='oauth_access_token' if client_revision is not None else 'manual_bearer')
+        if client_revision is not None:
+            document['oauth_client_revision'] = client_revision
+            self.oauth_clients(document, db)
+        db.execute('INSERT INTO unit_mcp_grants VALUES(?,?,?,?,?,?)',
+                   (identifier, scope.unit_id, scope.identity, hashlib.sha256(credential.encode()).hexdigest(),
+                    revision, json.dumps(document, ensure_ascii=False)))
+        self.units._audit(db, scope.identity, 'cap-uy-quyen-mcp-don-vi', identifier)
         return {**self._public(document, own=True), 'credential': credential}
+
+    def revoke_oauth(self, identifier, client_id, db):
+        """Thu hồi khi code bị dùng lại; caller đã kiểm client và PKCE."""
+        row = db.execute('SELECT document FROM unit_mcp_grants WHERE id=?', (identifier,)).fetchone()
+        document = json.loads(row[0]) if row else None
+        if not document or document.get('credential_type') != 'oauth_access_token' or document['client_id'] != client_id:
+            raise PermissionError('Grant không thuộc code OAuth')
+        document.update(enabled=False, revision=secrets.token_hex(16))
+        db.execute('UPDATE unit_mcp_grants SET revision=?,document=? WHERE id=?',
+                   (document['revision'], json.dumps(document, ensure_ascii=False), identifier))
+        self.units._audit(db, document['owner'], 'thu-hoi-oauth-code-replay', identifier)
 
     def list(self, actor):
         with self.kho.ket_noi() as db:
@@ -207,6 +249,10 @@ class UyQuyenMCPDonVi:
                 raise PermissionError()
             if self._project_scope(actor, document['project_ids'], db) != document.get('project_refs'):
                 raise PermissionError('Thế hệ quyền dự án đã thay đổi')
+            if document.get('credential_type') == 'oauth_access_token':
+                if self.oauth_clients is None:
+                    raise PermissionError('Thiếu bộ kiểm client OAuth')
+                self.oauth_clients(document, db)
             profile = document.get('task_profile') or {}
             if profile.get('module_reads') or profile.get('module_drafts'):
                 if (self.connectors is None or self.connectors.delegation_reference(actor,
