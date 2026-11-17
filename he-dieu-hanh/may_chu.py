@@ -646,8 +646,9 @@ def tao_may_chu(app, port=8766):
                 try:
                     # Giữ giá trị rỗng để phát hiện query lặp, không bỏ chúng
                     # trước khi đối chiếu hợp đồng nguồn đã ký.
-                    query = parse_qs(urlsplit(self.path).query, keep_blank_values=True,
-                                     max_num_fields=100)
+                    source_query = urlsplit(self.path).query
+                    query = (parse_qs(source_query, keep_blank_values=True, max_num_fields=100)
+                             if app.unit_preview else parse_qs(source_query))
                     raw = app.office_editor.source(query, self.headers.get("Authorization", ""))
                     self.send_response(200)
                     self.send_header("Content-Type", "application/octet-stream")

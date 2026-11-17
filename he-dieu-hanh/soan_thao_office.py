@@ -522,11 +522,24 @@ class SoanThaoOffice:
         return True
 
     def callback(self, body, authorization):
+        if not isinstance(body,dict):
+            raise ValueError('Callback Office phải là đối tượng')
         token = body.get("token") or authorization.removeprefix("Bearer ")
         payload = verify(token, self.secret, "callback")
         key, status = payload.get("key"), payload.get("status")
-        if type(status) is not int:
-            raise ValueError("Thiếu trạng thái callback")
+        if type(status) is not int or status not in (1,2,3,4,6,7):
+            raise ValueError("Trạng thái callback chưa hỗ trợ")
+        # Chữ ký xác thực nguồn gửi, không thay kiểm kiểu trước SQL và IO.
+        if not isinstance(key,str) or not key or len(key)>128:
+            raise ValueError('Mã phiên callback không hợp lệ')
+        if status==2:
+            users=payload.get('users')
+            if (not isinstance(users,list) or not users
+                    or any(not isinstance(user,str) or not user or len(user)>128 for user in users)):
+                raise ValueError('Người lưu callback không hợp lệ')
+        if status in (2,6) and (not isinstance(payload.get('url'),str)
+                or not payload['url'] or len(payload['url'])>8192):
+            raise ValueError('Nguồn kết quả callback không hợp lệ')
         request = payload.get("userdata", "") if status in (6,7) else ""
         if not isinstance(request, str) or len(request) > 128:
             raise ValueError("Mã callback không hợp lệ")

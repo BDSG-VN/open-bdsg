@@ -70,7 +70,7 @@ ghi tệp. Header đơn vị tường minh vẫn phải khớp; không lấy vai
 làm quyền đọc tài liệu. Đường chưa có hợp đồng, thay key qua query,
 traversal hoặc mã hóa nhiều lớp bị từ chối.
 
-`thu_don_vi_http.py` có 23 bài đạt ngày 18/11/2026, gồm bài đi qua
+`thu_don_vi_http.py` có 24 bài đạt ngày 18/11/2026, gồm bài đi qua
 HTTP/cookie thật cho endpoint xác thực engine: key hợp lệ được phép;
 khách, chủ quản không tham gia, người khác và đơn vị sai bị từ chối.
 Công cụ mở editor vẫn đóng trong bản thử. Đây chưa là
@@ -87,13 +87,16 @@ tham chiếu phiên phía máy chủ và kiểm quyền; cookie chủ quản kh�
 Nguồn chỉ nhận đúng một key và một cap, không nhận tham số thêm/lặp/rỗng;
 kết quả tải có `Cache-Control: no-store`. Không nhận nguồn chỉ vì có cap.
 
-Ba bài HTTP mới kiểm chữ ký thiếu/sai/hết hạn/sai thao tác/sai URL, query
+Bốn bài HTTP mới kiểm chữ ký thiếu/sai/hết hạn/sai thao tác/sai URL, query
 mơ hồ, thu hồi/rejoin, payload ký khác JSON chưa ký, callback đóng lặp và
 callback lưu vào kho đúng một lần. Transport tải kết quả DocServer và scanner
 là tổng hợp; HTTP gateway/SQLite/chữ ký/tệp Office là thật. Đã đối chiếu
 nội dung tệp sau commit. Callback mới sau rejoin bị chặn trước tải kết quả.
 Biên nhận callback đã commit chỉ được ack mà không fetch hoặc ghi lại,
 kể cả quyền sau đó thay đổi; ack này không cấp quyền đọc tệp hoặc mở phiên.
+Payload có chữ ký nhưng sai kiểu key/users/URL/trạng thái/userdata được
+trả lỗi trước truy vấn hoặc tải kết quả; không ngắt kết nối ngoài giao thức.
+Đã tái lập lỗi ngắt kết nối trước khi bổ sung kiểm kiểu và kiểm lại sau sửa.
 
 Đọc artifact service-worker của engine đang cài ngày 18/11/2026 cho thấy
 nó có cache động tài liệu và trả cache trước khi gọi mạng. Profile thử

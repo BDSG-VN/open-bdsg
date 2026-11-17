@@ -176,6 +176,23 @@ class ThuDonViHTTP(unittest.TestCase):
         current=self.app.units.bind({'id':'nguoi-a','role':'operator'},self.units[0])
         self.assertEqual(self.app.office.read(current,{'id':file['id']})['version'],2)
 
+    def test_office_signed_callback_http_rejects_malformed_claims_without_changing_file(self):
+        from thu_office_tich_hop import SECRET
+        actor,file,opened=self.office_session()
+        base={'key':opened['key'],'status':2,'users':['nguoi-a'],
+              'url':'http://127.0.0.1:8088/cache/files/'+opened['key']+'/output.docx'}
+        invalid=[{**base,'key':[]},{**base,'key':{}},
+                 {**base,'users':[{}]},{**base,'users':[1]},
+                 {**base,'url':[]},{**base,'url':{}},
+                 {**base,'status':True},{**base,'status':2**100},
+                 {**base,'status':6,'userdata':[]}]
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                token=sign({'payload':payload,'operation':'callback','exp':time.time()+60},SECRET)
+                self.assertEqual(self.request('/api/office-callback',{'token':token})[:2],(200,{'error':1}))
+        self.assertEqual(self.app.office_editor.progress(actor,{'key':opened['key']})['state'],'active')
+        self.assertEqual(self.app.office.read(actor,{'id':file['id']})['version'],1)
+
     def test_office_engine_auth_cookie_restores_key_scope_and_rejects_substitution(self):
         actor,file,opened=self.office_session()
         path='/office-docs/doc/'+opened['key']+'/c/websocket'
