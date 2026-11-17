@@ -25,10 +25,12 @@ def phan_loai(path):
     if relative.rsplit('/',1)[-1]=='document_editor_service_worker.js':
         raise ValueError('Cache trình duyệt chưa có vòng đời theo quyền')
     static=(relative.startswith(('web-apps/','sdkjs/','sdkjs-plugins/','fonts/','dictionaries/'))
-            or relative=='meta/formats')
+            or relative in ('meta/formats','plugins.json','themes.json'))
     # Service worker hiện cache cả dữ liệu tài liệu trước khi hỏi gateway.
     # Chưa cho đăng ký tới khi có vòng đời cache theo danh tính/thu hồi quyền.
-    match=re.fullmatch(r'(?:cache/files/('+KEY+r')(?:_[A-Za-z0-9.-]+)?/.*|doc/('+KEY+r')/.*)',relative)
+    # Engine 10 tải Editor.bin dưới cache/files/data/key; vẫn gắn quyền
+    # vào key phía máy chủ, không coi cả thư mục data là tài nguyên chung.
+    match=re.fullmatch(r'(?:cache/files/(?:data/)?('+KEY+r')(?:_[A-Za-z0-9.-]+)?/.*|doc/('+KEY+r')/.*)',relative)
     if not static and not match:
         raise ValueError('Route engine chưa có hợp đồng quyền')
     key=(match.group(1) or match.group(2)) if match else None

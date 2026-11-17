@@ -394,6 +394,20 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
         self.assertFalse(self.editor.engine_access(self.b,path))
         self.assertFalse(self.editor.engine_access(self.root,path))
 
+    def test_engine_data_cache_path_keeps_document_key_and_participant_checks(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        cookie={'id':'nguoi-a','role':'operator'}
+        path='/office-docs/cache/files/data/'+opened['key']+'/Editor.bin/Editor.bin'
+        self.assertTrue(self.editor.engine_access(cookie,path))
+        self.assertTrue(self.editor.engine_access(cookie,path+'?shardkey='+opened['key']+'&expires=1&md5=synthetic'))
+        for actor in (None,self.root,self.b):
+            self.assertFalse(self.editor.engine_access(actor,path))
+        for bad in (path.replace(opened['key'],'bdsg-'+'f'*32),
+                    path+'?shardkey=bdsg-'+'f'*32,
+                    path.replace('/data/','/data/data/'),
+                    path.replace('/data/','/%252e%252e/')):
+            self.assertFalse(self.editor.engine_access(cookie,bad))
+
     def test_engine_static_code_is_common_but_requires_live_web_identity(self):
         cookie_actor={'id':'nguoi-a','role':'operator','name':'Nguoi A'}
         for path in ('/office-docs/web-apps/apps/api/documents/api.js',
@@ -405,6 +419,17 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
                 self.assertFalse(self.editor.engine_access(other,path),path)
         self.app.kho.thu_hoi_agent('nguoi-a')
         self.assertFalse(self.editor.engine_access(cookie_actor,'/office-docs/sdkjs/app.js'))
+
+    def test_engine_metadata_catalogues_require_live_identity_and_exact_route(self):
+        actor={'id':'nguoi-a','role':'operator'}
+        for name in ('plugins.json','themes.json'):
+            path='/office-docs/10.0.0-3bd8c44c30419ec90e50f480cadc3f8e/'+name
+            self.assertTrue(self.editor.engine_access(actor,path))
+            self.assertFalse(self.editor.engine_access(None,path))
+            self.assertFalse(self.editor.engine_access(actor,path+'/install'))
+            self.assertFalse(self.editor.engine_access(actor,path+'?key=bdsg-'+'f'*32))
+        self.app.kho.thu_hoi_agent('nguoi-a')
+        self.assertFalse(self.editor.engine_access(actor,'/office-docs/themes.json'))
 
     def test_engine_unknown_routes_and_path_or_query_key_substitution_are_denied(self):
         opened=self.editor.open(self.a,{'id':self.file['id']})

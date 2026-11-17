@@ -30,7 +30,7 @@ hỏng làm khởi tạo thất bại và không tự bị ghi đè; yêu cầu 
 tạo lại tệp bị mất. Đây chưa là nghiệm thu phục hồi engine hoặc toàn máy.
 
 Kiểm cục bộ qua phương thức công khai `SoanThaoOffice`, đo 18/11/2026:
-`thu_phien_office_don_vi.py` có 26 bài đạt về nguồn ký, hai đơn vị, rejoin,
+`thu_phien_office_don_vi.py` có 28 bài đạt về nguồn ký, hai đơn vị, rejoin,
 quyền đổi trong scan/fetch, callback lưu, participant khác mất quyền,
 restart/backup/restore, schema cũ, tệp thế hệ hỏng/bị mất và lệnh lưu bên dưới.
 `thu_office_tich_hop.py` có 13 bài legacy đạt. Tệp Office thật và chữ ký thật;
@@ -82,6 +82,26 @@ khách, chủ quản không tham gia, người khác và đơn vị sai bị t�
 Công cụ mở editor vẫn đóng trong bản thử. Đây chưa là
 nghiệm thu proxy nginx, cache/service-worker hay WebSocket của engine thật,
 và chưa triển khai R14 lên máy chủ.
+
+Ngày 18/11/2026, browser stage thực đã tái lập Word báo lỗi tải vì engine
+yêu cầu `cache/files/data/<key>/Editor.bin/Editor.bin` còn profile chỉ nhận
+key ngay sau `cache/files/`. Profile nhận thêm đúng một đoạn `data/`, vẫn
+kiểm key/participant/đơn vị và query. Sau sửa, Word báo documentReady thật;
+không thay bằng tắt xác thực cache. Hai bài mới kiểm đường cache thực và
+danh mục giao diện, gồm các trường hợp không có quyền và đổi key.
+
+`plugins.json` và `themes.json` được nhận đúng tên như tài nguyên giao diện
+chung, vẫn yêu cầu danh tính còn hiệu lực; không nhận đường con quản trị.
+Đã đối chiếu [handler chính chủ](https://github.com/ONLYOFFICE/server/blob/master/DocService/sources/server.js)
+và phản hồi engine thử đang cài ngày 18/11/2026. Quyền đọc metadata giao diện
+không cấp quyền tải nội dung tài liệu. Browser dùng cấu hình mới khi mở lại:
+key cũ có thể đã đóng bởi callback4, không được coi cookie còn sống là đủ.
+
+Trong harness riêng ngày 18/11/2026, đã dùng chuột/bàn phím nhập nội dung
+Word thật, nhấn Ctrl+S rồi đóng editor. Callback kết thúc phiên tạo bản 2;
+đọc DOCX trong kho thấy đúng chuỗi kiểm và kết quả ClamAV không phát hiện.
+Đây chưa là kiểm nút force-save của giao diện BDSG, reconnect hoặc editor
+điện thoại. Không dùng harness riêng làm bằng chứng công cụ pilot đã mở.
 
 ## HTTP nguồn và callback có chữ ký
 

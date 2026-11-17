@@ -198,6 +198,14 @@ class ThuDonViHTTP(unittest.TestCase):
         path='/office-docs/doc/'+opened['key']+'/c/websocket'
         headers={'X-BDSG-Engine-Path':path}
         self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',headers=headers)[0],200)
+        cache='/office-docs/cache/files/data/'+opened['key']+'/Editor.bin/Editor.bin'
+        self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',
+                         headers={'X-BDSG-Engine-Path':cache})[0],200)
+        self.assertEqual(self.request('/api/office-engine-auth',who='chu-quan',
+                         headers={'X-BDSG-Engine-Path':cache})[0],403)
+        for who,status in (('nguoi-a',200),(None,403)):
+            self.assertEqual(self.request('/api/office-engine-auth',who=who,
+                             headers={'X-BDSG-Engine-Path':'/office-docs/plugins.json'})[0],status)
         for who in (None,'chu-quan','nguoi-b'):
             self.assertEqual(self.request('/api/office-engine-auth',who=who,headers=headers)[0],403)
         self.assertEqual(self.request('/api/office-engine-auth',who='nguoi-a',unit=self.units[1],headers=headers)[0],403)
