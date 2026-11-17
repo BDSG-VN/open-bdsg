@@ -64,9 +64,10 @@ python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_uy_quyen_don_vi.py' -v
 
 Ngày 17/11/2026: thêm cấp rõ `cong_viec.tao`, `cong_viec.tiep_tuc`,
 `cong_viec.dung`. Có công cụ tác vụ phải có `task_profile: {"allow_ai": false}`
-hoặc `true`; không mặc định cho dùng AI. Profile này chỉ chạy quy trình danh
-mục hoặc AI trên ngữ cảnh dự án đã cấp. Chưa cấp đọc MCP bên ngoài, lập dự
-thảo, tài liệu đính kèm, Python, trình duyệt hoặc điều phối từ token.
+hoặc `true`; không mặc định cho dùng AI. Profile cơ bản chạy quy trình danh
+mục hoặc AI trên ngữ cảnh dự án đã cấp. Phần mở rộng đọc/dự thảo dưới đây cần
+thêm công cụ cụ thể; chưa cấp tài liệu đính kèm, Python, trình duyệt hoặc
+điều phối từ token.
 
 Nguồn grant ID/revision/issuer epoch lưu riêng theo task/run trong cùng
 giao dịch tạo lượt, không lấy từ JSON client. Worker phục hồi marker riêng
@@ -88,6 +89,47 @@ dừng bằng token và bằng web sau khi token đã thu hồi.
 python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_tac_vu_don_vi.py' -v
 ```
 
+## R11b — đầu nối đọc và dự thảo giữ cùng nguồn
+
+Profile có thể cấp `module_reads` và `module_drafts` riêng theo nền tảng/tên
+công cụ, chỉ khi `allow_ai` bật. Ví dụ cấu trúc (không có chứng thư):
+
+```json
+{
+  "allow_ai": true,
+  "module_reads": {"bdsg_crm": ["crm.list"]},
+  "module_drafts": {"bdsg_crm": ["crm.delete"]}
+}
+```
+
+Đầu nối phải đã xác minh và có quyền đọc/ghi tương ứng; cấp profile không
+tự tạo quyền của chủ thể. Thế hệ cấu hình được chụp trong giao dịch cấp
+grant và kiểm lại khi dùng. Đổi cấu hình không tự mở rộng hoặc hồi sinh
+grant cũ. Tác vụ chụp giao của công cụ được chọn với profile, không nhận
+toàn bộ công cụ của đầu nối. Client chỉ gọi tạo/tiếp tục/dừng; không được
+gọi trực tiếp đọc MCP, đề xuất, duyệt, đối soát hoặc cấu hình bằng token.
+Các công cụ đọc/dự thảo chỉ mở bên trong worker có marker task/run do máy
+chủ tạo, đi qua nhân và guard trước/sau lời gọi.
+
+Dự thảo giữ grant ID/revision trong payload đã chốt digest; credential và
+issuer epoch không đưa vào payload. Nguồn đầy đủ nằm ở bản ghi task/run.
+Kiểm nguồn cùng giao dịch INSERT và claim, rồi trước mỗi gửi/sau kết quả.
+Web không tự lập dự thảo thay nguồn của tác vụ token. Admin có quyền đơn
+vị/dự án mới được duyệt; agent không có quyền duyệt hoặc ghi trực tiếp.
+Thu hồi/hết hạn trước claim giữ dự thảo chưa gửi. Nếu đã claim mà nguồn
+mất hiệu lực thì kết quả là `unknown`, phải đối soát; không tự retry hoặc
+nhận là đã rút lại yêu cầu đã gửi.
+
+Ngày 17/11/2026: 17 bài AI/MCP/dự thảo qua gateway/nhân/SQLite thật đạt với
+transport tổng hợp: hai đơn vị cùng identity chạy xen kẽ, tách chứng thư,
+member/admin, giao công cụ, phân biệt đọc/ghi, thu hồi trước INSERT/claim/
+send và sau send/đọc, hết hạn, xoay đầu nối, snapshot restore và token mới
+không hồi sinh dự thảo cũ. Không gọi endpoint nghiệp vụ thật/API trả phí.
+
+```sh
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_mcp_mo_dun_don_vi.py' -v
+```
+
 Manual Bearer chỉ là một chế độ credential, chưa là OAuth. HTTP MCP dự kiến
 pin [Streamable HTTP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports),
 kiểm Origin/JSON-RPC/header và notification. Luồng client chuẩn sẽ cần
@@ -95,8 +137,6 @@ kiểm Origin/JSON-RPC/header và notification. Luồng client chuẩn sẽ cầ
 metadata discovery, resource audience và PKCE; không nhận ChatGPT/Claude đã
 kết nối khi mới có nền grant này. Đây là version pin, không khẳng định mới nhất.
 
-Còn hoàn thiện MCP đọc/draft với nguồn ủy quyền bền theo run,
-transport HTTP/client SDK, OAuth/consent UI, review/CI/release và hậu kiểm.
-Profile tác vụ danh mục/AI hiện tại chưa là toàn R11b hoặc đích cuối R11;
-đọc MCP/draft cần phạm vi công cụ đầu nối được cấp rõ và chốt nguồn ở bước
-phê duyệt/gửi. Chưa dùng kiểm backend này để nhận HTTP/client thật đã hoạt động.
+Còn transport HTTP/client SDK, OAuth/consent UI, nghiệm thu ghép/release và
+hậu kiểm. Chưa dùng kiểm backend trong tiến trình để nhận HTTP/client thật
+đã hoạt động hoặc toàn R11/lộ trình hệ sinh thái đã hoàn tất.

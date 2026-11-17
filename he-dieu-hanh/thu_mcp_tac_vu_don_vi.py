@@ -70,9 +70,11 @@ class ThuMCPTacVuDonVi(unittest.TestCase):
                     'tools': ['cong_viec.tao'], 'project_ids': [self.project], 'expires_in': 900,
                     'task_profile': profile})
         actor = self.service.authenticate(self.issue()['credential'])
-        for key, value in (('allow_module_reads', True), ('allow_action_drafts', True),
-                           ('document_ids', ['synthetic-file']), ('mcp_delegated', False)):
-            with self.subTest(key=key), self.assertRaises(ValueError):
+        for key, value, error in (('allow_module_reads', True, PermissionError),
+                                  ('allow_action_drafts', True, PermissionError),
+                                  ('document_ids', ['synthetic-file'], ValueError),
+                                  ('mcp_delegated', False, ValueError)):
+            with self.subTest(key=key), self.assertRaises(error):
                 self.service.call(actor, 'cong_viec.tao', {'prompt': 'Thu ngoai profile tac vu', key: value})
         with self.assertRaises(PermissionError):
             self.service.call(actor, 'cong_viec.tao', {'prompt': 'Thu du an ngoai grant', 'project_id': self.other_project})

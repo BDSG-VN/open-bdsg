@@ -84,6 +84,7 @@ class HanhDongDonVi:
             if self._reference(scope) != reference:
                 raise PermissionError('Tư cách người đề xuất đã thay đổi')
             self._not_cancelled(db, payload)
+            self._check_source(db, payload)
         task = self.tasks.detail(original, payload['task_id'])
         if payload['project_id'] and self.tasks.projects.authorize(original, payload['project_id'])['archived']:
             raise PermissionError('Dự án đã lưu trữ')
@@ -97,6 +98,23 @@ class HanhDongDonVi:
         if config['revision'] != payload['connector_revision']:
             raise PermissionError('Cấu hình đầu nối khác bản được đề xuất')
         return original
+
+    def _source(self, db, actor, task, arguments):
+        authority = self.tasks.inbound_mcp
+        if authority is None:
+            if task.get('mcp_delegated'):
+                raise PermissionError('Thiếu bộ kiểm nguồn dự thảo')
+            return None
+        return authority.draft_source(actor, task, arguments, db)
+
+    def _check_source(self, db, payload):
+        row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?', (payload['task_id'],)).fetchone()
+        task = json.loads(row[0]) if row else {}
+        if task.get('run') != payload['run']:
+            raise PermissionError('Dự thảo không thuộc lượt hiện hành')
+        owner = self.units.restore(payload['owner_scope'], db)
+        if self._source(db, owner, task, payload['arguments']) != payload.get('mcp_source'):
+            raise PermissionError('Nguồn dự thảo đã thay đổi')
 
     @staticmethod
     def _not_cancelled(db, payload):
@@ -129,6 +147,9 @@ class HanhDongDonVi:
             db.execute('BEGIN')
             scope = self.units.require(actor, db)
             reference = self._reference(scope)
+            source = self._source(db, actor, task, arguments)
+            if source and task_context is None:
+                raise PermissionError('Dự thảo có nguồn MCP cần ngữ cảnh worker tin cậy')
         if task['owner'] != actor['id'] or arguments['platform_id'] not in task['module_ids']:
             raise PermissionError('Ngoài mô-đun của tác vụ do mình giao')
         config = self.connectors.prepare_write(actor, arguments['platform_id'], arguments['tool'])
@@ -136,6 +157,8 @@ class HanhDongDonVi:
         payload = {'tool': 'ket_noi.ghi', 'arguments': arguments, 'task_id': task['id'],
                    'run': task['run'], 'project_id': task.get('project_id', ''),
                    'owner_scope': reference, 'connector_revision': config['revision'], 'expires': now+900}
+        if source is not None:
+            payload['mcp_source'] = source
         # Đọc lại qua JSON để caller không đổi dict đã được chụp/duyệt.
         encoded = self._encode(payload)
         if len(encoded.encode()) > 16000:
@@ -148,6 +171,7 @@ class HanhDongDonVi:
             if self._reference(self.units.require(actor, db)) != reference:
                 raise PermissionError('Phạm vi đã thay đổi')
             self._not_cancelled(db, payload)
+            self._check_source(db, payload)
             self._settled(db, scope.unit_id, arguments)
             if task_context is not None:
                 if not isinstance(task_context, tuple) or len(task_context) != 3 or self.ai is None:
@@ -197,6 +221,7 @@ class HanhDongDonVi:
                 raise PermissionError('Tư cách người duyệt đã thay đổi')
             if args['approve']:
                 self._not_cancelled(db, payload)
+                self._check_source(db, payload)
                 self._settled(db, action['unit_id'], payload['arguments'], action['id'])
             changed = db.execute("""UPDATE unit_actions SET status=? WHERE id=? AND digest=?
                 AND status='awaiting' AND (?=0 OR expires>?)""",
@@ -216,6 +241,7 @@ class HanhDongDonVi:
                         or current['status'] != 'executing' or current['digest'] != action['digest']
                         or current['expires'] <= self.clock()):
                     raise PermissionError('Phê duyệt không còn hiệu lực')
+                self._check_source(db, payload)
 
         result = {'message': 'Cần đối soát nền tảng; không tự gọi lại công cụ ghi'}
         state = 'unknown'

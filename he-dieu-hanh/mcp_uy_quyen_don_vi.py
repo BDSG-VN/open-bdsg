@@ -1,4 +1,4 @@
-"""Grant MCP theo danh tính/đơn vị; nền đọc, chưa bật HTTP hoặc OAuth."""
+"""Grant MCP và nguồn tác vụ theo đơn vị; chưa bật HTTP hoặc OAuth."""
 import hashlib
 import json
 import os
@@ -31,13 +31,14 @@ class _UyQuyen:
 
 
 class UyQuyenMCPDonVi:
-    def __init__(self, kho, units, core, projects, *, origin, clock=time.time):
+    def __init__(self, kho, units, core, projects, *, origin, clock=time.time, connectors=None):
         parsed = urlsplit(origin)
         if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password
                 or parsed.path not in ('', '/') or parsed.query or parsed.fragment):
             raise ValueError('Cần origin HTTPS cố định cho MCP')
         self.resource = origin.rstrip('/')+'/mcp'
         self.kho, self.units, self.core, self.projects = kho, units, core, projects
+        self.connectors = connectors
         self.clock, self._issuer = clock, object()
         with kho.ket_noi() as db:
             # Giao dịch cũng tuần tự hóa tạo epoch giữa các instance cùng kho.
@@ -92,7 +93,9 @@ class UyQuyenMCPDonVi:
                       issuer_current=document['issuer_epoch'] == self._epoch, credential_type='manual_bearer')
         if own:
             result['project_ids'] = list(document['project_ids'])
-            result['task_profile'] = document.get('task_profile')
+            profile = document.get('task_profile')
+            result['task_profile'] = ({key: value for key, value in profile.items()
+                                       if key != 'connector_revisions'} if profile else None)
         return result
 
     def create(self, actor, data):
@@ -110,7 +113,9 @@ class UyQuyenMCPDonVi:
             raise ValueError('Chỉ cấp công cụ đã chuyển theo đơn vị, không wildcard')
         profile = data.get('task_profile')
         if TASK_TOOLS.intersection(tools):
-            if not isinstance(profile, dict) or set(profile) != {'allow_ai'} or type(profile['allow_ai']) is not bool:
+            if (not isinstance(profile, dict) or 'allow_ai' not in profile
+                    or set(profile)-{'allow_ai', 'module_reads', 'module_drafts'}
+                    or type(profile['allow_ai']) is not bool):
                 raise ValueError('Tác vụ cần cấp rõ profile danh mục và quyền gọi AI')
         elif profile is not None:
             raise ValueError('Profile tác vụ cần công cụ tác vụ được cấp rõ')
@@ -128,6 +133,16 @@ class UyQuyenMCPDonVi:
             db.execute('BEGIN IMMEDIATE')
             scope = self._web_scope(actor, db)
             project_refs = self._project_scope(actor, project_ids, db)
+            if profile is not None:
+                reads, drafts = profile.get('module_reads', {}), profile.get('module_drafts', {})
+                if (reads or drafts) and (not profile['allow_ai'] or self.connectors is None):
+                    raise PermissionError('Công cụ mô-đun cần AI và bộ kiểm đầu nối')
+                revisions = (self.connectors.delegation_reference(actor, reads, drafts, db)
+                             if self.connectors is not None else {})
+                if not isinstance(reads, dict) or not isinstance(drafts, dict):
+                    raise ValueError('Phạm vi công cụ mô-đun không hợp lệ')
+                profile = {'allow_ai': profile['allow_ai'], 'module_reads': reads,
+                           'module_drafts': drafts, 'connector_revisions': revisions}
             declarations = {item['ten'] for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))}
             if not set(tools) <= declarations:
                 raise PermissionError('Không được ủy quyền công cụ mình chưa có')
@@ -192,6 +207,12 @@ class UyQuyenMCPDonVi:
                 raise PermissionError()
             if self._project_scope(actor, document['project_ids'], db) != document.get('project_refs'):
                 raise PermissionError('Thế hệ quyền dự án đã thay đổi')
+            profile = document.get('task_profile') or {}
+            if profile.get('module_reads') or profile.get('module_drafts'):
+                if (self.connectors is None or self.connectors.delegation_reference(actor,
+                        profile.get('module_reads', {}), profile.get('module_drafts', {}), db)
+                        != profile.get('connector_revisions')):
+                    raise PermissionError('Phạm vi đầu nối đã thay đổi')
             return document
         except (ValueError, PermissionError, KeyError):
             raise LoiChungThuMCP('Credential MCP đã hết hạn, bị thu hồi hoặc mất phạm vi') from None
@@ -253,11 +274,25 @@ class UyQuyenMCPDonVi:
         profile = document.get('task_profile')
         if not profile or task.get('project_id', '') not in document['project_ids']:
             raise PermissionError('Tác vụ ngoài profile hoặc dự án được cấp')
-        if any(task.get(key) for key in ('allow_python', 'allow_delegation', 'browser_hosts',
-                'documents', 'allow_module_reads', 'allow_action_drafts')):
+        if any(task.get(key) for key in ('allow_python', 'allow_delegation', 'browser_hosts', 'documents')):
             raise PermissionError('Profile tác vụ chưa cấp công cụ ngoài danh mục')
         if task.get('mode') == 'mo-hinh-api' and not profile['allow_ai']:
             raise PermissionError('Profile tác vụ chưa cấp quyền gọi AI')
+        selected = {}
+        for flag, field, key in (('allow_module_reads', 'allowed_module_tools', 'module_reads'),
+                                 ('allow_action_drafts', 'allowed_module_write_tools', 'module_drafts')):
+            narrowed = {platform: [tool for tool in tools if tool in profile.get(key, {}).get(platform, [])]
+                        for platform, tools in task.get(field, {}).items()}
+            narrowed = {platform: tools for platform, tools in narrowed.items() if tools}
+            if task.get(flag) and not narrowed:
+                raise PermissionError('Profile chưa cấp công cụ mô-đun được chọn')
+            task[field] = narrowed
+            for platform in narrowed:
+                revision = task.get('module_connector_revisions', {}).get(platform)
+                if revision != profile.get('connector_revisions', {}).get(platform):
+                    raise PermissionError('Đầu nối khác thế hệ đã cấp cho client')
+                selected[platform] = revision
+        task['module_connector_revisions'] = selected
         db.execute('INSERT INTO unit_mcp_task_runs VALUES(?,?,?)',
                    (task['id'], task['run'], json.dumps(reference)))
         task['mcp_delegated'] = True
@@ -280,6 +315,21 @@ class UyQuyenMCPDonVi:
             restored['mcp_delegation'].revision, self._issuer, task['id'], task['run'])
         return restored
 
+    def draft_source(self, actor, task, arguments, db):
+        """Ràng buộc dự thảo với nguồn sống; dùng cả khi claim/sắp gửi."""
+        restored = self.restore_task(actor, task, db)
+        if not task.get('mcp_delegated'):
+            return None
+        document = self._require(restored, db)
+        platform, tool = arguments['platform_id'], arguments['tool']
+        if (not task.get('allow_action_drafts')
+                or tool not in task.get('allowed_module_write_tools', {}).get(platform, [])
+                or tool not in document['task_profile'].get('module_drafts', {}).get(platform, [])
+                or task.get('module_connector_revisions', {}).get(platform)
+                    != document['task_profile'].get('connector_revisions', {}).get(platform)):
+            raise PermissionError('Dự thảo ngoài phạm vi nguồn tác vụ')
+        return {key: document[key] for key in ('id', 'revision')}
+
     def tools(self, actor):
         with self.kho.ket_noi() as db:
             db.execute('BEGIN')
@@ -297,18 +347,45 @@ class UyQuyenMCPDonVi:
         if marker.task_id:
             row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?', (marker.task_id,)).fetchone()
             task = json.loads(row[0]) if row else {}
-            if (task.get('run') != marker.run or task.get('status') != 'running' or task.get('cancel_requested')
-                    or name not in EXECUTION_TOOLS or arguments != {}):
+            if task.get('run') != marker.run or task.get('status') != 'running' or task.get('cancel_requested'):
                 raise PermissionError('Công cụ ngoài profile lượt chạy')
             self.restore_task(actor, task, db)
-            return
+            if name in EXECUTION_TOOLS and arguments == {}:
+                return
+            if name == 'hanh_dong.de_xuat':
+                if (not isinstance(arguments, dict) or set(arguments) != {'task_id', 'tool', 'arguments'}
+                        or arguments['task_id'] != marker.task_id or arguments['tool'] != 'ket_noi.ghi'):
+                    raise ValueError('Tham số dự thảo ngoài lượt chạy')
+                call = arguments['arguments']
+                if (not isinstance(call, dict) or set(call) != {'platform_id', 'tool', 'arguments'}
+                        or not isinstance(call['platform_id'], str) or not isinstance(call['tool'], str)
+                        or not isinstance(call['arguments'], dict)):
+                    raise ValueError('Dự thảo cần công cụ cụ thể')
+                self.draft_source(actor, task, call, db)
+                return
+            if name == 'ket_noi.doc':
+                if (not isinstance(arguments, dict) or set(arguments) != {'platform_id', 'tool', 'arguments'}
+                        or not isinstance(arguments['platform_id'], str) or not isinstance(arguments['tool'], str)
+                        or not isinstance(arguments['arguments'], dict)):
+                    raise ValueError('Tham số đọc mô-đun không hợp lệ')
+                platform, tool = arguments['platform_id'], arguments['tool']
+                if (task.get('allow_module_reads')
+                        and tool in task.get('allowed_module_tools', {}).get(platform, [])
+                        and tool in document['task_profile'].get('module_reads', {}).get(platform, [])):
+                    return
+            raise PermissionError('Công cụ ngoài profile lượt chạy')
         if name not in document['tools'] or name not in READ_TOOLS | TASK_TOOLS:
             raise PermissionError('Công cụ ngoài phạm vi ủy quyền')
         if name == 'cong_viec.tao':
-            if not isinstance(arguments, dict) or set(arguments)-{'prompt', 'project_id', 'module_ids', 'template', 'model_selection'}:
+            if not isinstance(arguments, dict) or set(arguments)-{'prompt', 'project_id', 'module_ids',
+                    'template', 'model_selection', 'allow_module_reads', 'allow_action_drafts'}:
                 raise ValueError('Tham số tạo tác vụ ngoài profile')
             if arguments.get('project_id', '') not in document['project_ids']:
                 raise PermissionError('Dự án ngoài grant')
+            profile = document.get('task_profile') or {}
+            if any(arguments.get(flag) and not profile.get(key) for flag, key in (
+                    ('allow_module_reads', 'module_reads'), ('allow_action_drafts', 'module_drafts'))):
+                raise PermissionError('Chưa cấp công cụ mô-đun trong profile')
             return
         if name in ('cong_viec.tiep_tuc', 'cong_viec.dung'):
             expected = {'id', 'text'} if name == 'cong_viec.tiep_tuc' else {'id'}

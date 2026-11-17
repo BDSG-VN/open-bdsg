@@ -189,7 +189,8 @@ class UngDung:
                         + (["don_vi.chia_se_du_an"] if role != "agent" else [])
                         + (["mo_hinh.luu", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi",
                             "cau_hinh.ngat_dau_noi", "ket_noi.ghi", "hanh_dong.duyet", "hanh_dong.doi_soat"] if role == "operator" else []))
-        self.inbound_mcp = (UyQuyenMCPDonVi(self.kho, self.units, self.core, self.projects, origin=self.origin)
+        self.inbound_mcp = (UyQuyenMCPDonVi(self.kho, self.units, self.core, self.projects,
+                                         origin=self.origin, connectors=self.connectors)
                             if unit_preview else None)
         self.core.delegated_calls = self.inbound_mcp
         self.tasks.inbound_mcp = self.inbound_mcp

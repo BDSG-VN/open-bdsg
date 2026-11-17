@@ -69,6 +69,32 @@ class DauNoiDonVi:
                     "write_tools": []})
             return result
 
+    def delegation_reference(self, actor, reads, drafts, db):
+        """Chụp/kiểm quyền công cụ cùng giao dịch grant, không trả chứng thư."""
+        scope = self._scope(actor, db)
+        for mapping in (reads, drafts):
+            if (not isinstance(mapping, dict) or len(mapping) > len(self.ids)
+                    or any(platform not in self.ids for platform in mapping)):
+                raise ValueError('Phạm vi đầu nối cần nền tảng cụ thể')
+            for names in mapping.values():
+                if (not isinstance(names, list) or not names or len(names) > 50
+                        or any(not isinstance(name, str) or not re.fullmatch(
+                            r'[A-Za-z0-9_.:/-]{1,128}', name) for name in names)
+                        or len(set(names)) != len(names)):
+                    raise ValueError('Phạm vi cần tên công cụ cụ thể, không wildcard')
+        result = {}
+        for platform in reads.keys() | drafts.keys():
+            config = self._read(db, scope.unit_id, platform)
+            if not config or not config['enabled'] or config['state'] != 'da-xac-minh':
+                raise PermissionError('Đầu nối chưa được cấp hoặc xác minh')
+            if reads.get(platform) and (scope.role not in config['read_roles']
+                    or not set(reads[platform]) <= set(config['read_tools']) & set(config['discovered_tools'])):
+                raise PermissionError('Công cụ đọc ngoài quyền của thành viên')
+            for tool in drafts.get(platform, []):
+                self._write_grant(config, tool)
+            result[platform] = config['revision']
+        return result
+
     def _candidate(self, data, previous):
         if not isinstance(data, dict) or set(data) - {
                 "platform_id", "url", "token", "read_tools", "read_roles", "write_tools", "allow_writes"}:
