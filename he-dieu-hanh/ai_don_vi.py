@@ -167,6 +167,13 @@ class AITheoDonVi:
             db.execute('BEGIN'); scope=self._scope(actor,db)
             return _AIPhamVi(self,self.units.reference(actor,db),self._read(db,scope.unit_id)['revision'])
 
+    def require_config_revision(self, actor, revision, db):
+        """Kiểm cấu hình trong giao dịch dự thảo, không probe mạng khi giữ writer."""
+        scope = self._scope(actor, db)
+        data = self._read(db, scope.unit_id)
+        if data['revision'] != revision or not data['enabled'] or not data['models']:
+            raise PermissionError('Cấu hình AI của lượt đề xuất đã thay đổi')
+
 
 class _AIPhamVi:
     def __init__(self,service,reference,revision):

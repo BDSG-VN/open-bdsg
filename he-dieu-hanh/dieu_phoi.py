@@ -196,6 +196,7 @@ class DieuPhoi:
         self.catalogue = catalogue
         self.actor = contextvars.ContextVar("bdsg_actor", default=None)
         self.connection_guard = contextvars.ContextVar('bdsg_connection_guard', default=None)
+        self.draft_context = contextvars.ContextVar('bdsg_draft_context', default=None)
         self.lock = threading.RLock()
         self.verify_actor = None
         self.connections = CongMCP(connections, catalogue)
@@ -827,7 +828,8 @@ class DieuPhoi:
                 ("danh_sach", lambda a: app.actions.list(actor()), False, {}, []),
                 (
                     "de_xuat",
-                    lambda a: app.actions.propose(actor(), a),
+                    lambda a: app.actions.propose(actor(), a, task_context=self.draft_context.get())
+                        if app.unit_preview else app.actions.propose(actor(), a),
                     True,
                     {"task_id": text, "tool": text, "arguments": obj},
                     ["task_id", "tool", "arguments"],
@@ -907,7 +909,8 @@ class DieuPhoi:
                             func,
                             ghi=write,
                             mo_ta=(
-                                "Lập dự thảo, chưa thực hiện. Thao tác trình duyệt dùng tool=trinh_duyet.hanh_dong; arguments gồm task_id, action (fill/select/click/key), node và nonce từ quan sát mới nhất, text nếu cần. Chỉ dữ liệu nghiệp vụ thông thường; không gửi mật khẩu, OTP hoặc thanh toán. Chủ quản duyệt riêng."
+                                ("Chỉ lập dự thảo ghi MCP, chưa thực hiện. task_id là tác vụ hiện tại, tool=ket_noi.ghi; arguments gồm platform_id, tool và arguments nghiệp vụ. Chỉ dùng proposal_tools đã cấp trong ngữ cảnh. Quản trị có quyền duyệt riêng; không tuyên bố đã ghi nghiệp vụ."
+                                 if app.unit_preview else "Lập dự thảo, chưa thực hiện. Thao tác trình duyệt dùng tool=trinh_duyet.hanh_dong; arguments gồm task_id, action (fill/select/click/key), node và nonce từ quan sát mới nhất, text nếu cần. Chỉ dữ liệu nghiệp vụ thông thường; không gửi mật khẩu, OTP hoặc thanh toán. Chủ quản duyệt riêng.")
                                 if namespace == "hanh_dong" and name == "de_xuat"
                                 else namespace + "." + name
                             ),
@@ -993,7 +996,7 @@ class DieuPhoi:
                                         guard=guard, expected_revision=revision)
         return self.connection_call(actor, platform, tool, arguments, ghi)
 
-    def goi(self, actor, name, args, *, tool_guard=None, expected_revision=None):
+    def goi(self, actor, name, args, *, tool_guard=None, expected_revision=None, draft_context=None):
         if self.verify_actor and not self.verify_actor(actor):
             return {
                 "ok": False,
@@ -1002,6 +1005,7 @@ class DieuPhoi:
             }
         token = self.actor.set(actor)
         guard_token = self.connection_guard.set((tool_guard, expected_revision) if tool_guard is not None else None)
+        draft_token = self.draft_context.set(draft_context)
         try:
             result = self.nhan.goi(self.danh_tinh(actor), name, args).thanh_dict()
             if self.verify_actor and not self.verify_actor(actor):
@@ -1012,6 +1016,7 @@ class DieuPhoi:
                 }
             return result
         finally:
+            self.draft_context.reset(draft_token)
             self.connection_guard.reset(guard_token)
             self.actor.reset(token)
 

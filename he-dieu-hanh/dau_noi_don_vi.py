@@ -64,6 +64,8 @@ class DauNoiDonVi:
                 allowed = config["enabled"] and config["state"] == "da-xac-minh" and scope.role in config["read_roles"]
                 result.append({key: config[key] for key in ("platform_id", "state", "checked_at", "revision")} | {
                     "read_tools": [name for name in config["read_tools"] if name in config["discovered_tools"]] if allowed else [],
+                    "proposal_tools": [name for name in config.get("write_tools", []) if name in config["discovered_tools"]]
+                        if config["enabled"] and config["state"] == "da-xac-minh" and config.get("allow_writes") else [],
                     "write_tools": []})
             return result
 

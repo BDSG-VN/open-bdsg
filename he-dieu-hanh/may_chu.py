@@ -67,7 +67,7 @@ PREVIEW_TOOLS = frozenset({
 
 
 PREVIEW_APPS = ("account", "work", "tasks", "projects", "office", "ai-settings",
-                "browser", "modules", "staff", "integrations")
+                "browser", "modules", "staff", "integrations", "studio")
 
 
 class UngDung:
@@ -151,7 +151,7 @@ class UngDung:
             self.tasks.scoped_connectors = self.connectors
             self.core.connection_call = self.connectors.call
             self.core.connection_summary = self.connectors.summary
-            self.actions = HanhDongDonVi(self.kho, self.core, self.tasks, self.units, self.connectors)
+            self.actions = HanhDongDonVi(self.kho, self.core, self.tasks, self.units, self.connectors, ai=self.unit_ai)
             def cancel_scoped_action(owner, reference):
                 revoke_browser(owner, reference)
                 self.actions.cancel_task(owner, reference)

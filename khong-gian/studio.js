@@ -37,6 +37,7 @@
     return `<article class="studio-card"><div class="studio-section-heading"><h3>${target ? "Thao tác trình duyệt" : esc(a.payload.tool)}</h3><span class="mini-tag">${esc(a.status)}</span></div><p>Người giao: ${esc(a.owner)} · Hết hạn ${esc(stamp(a.expires))}</p>${target ? `<p><strong>${esc(target.label || target.tag)}</strong> · ${esc(a.payload.arguments.action)}</p><p>Trang: ${esc(target.url)}<br>Đích biểu mẫu: ${esc(target.form_action || target.href || "Trang hiện tại")}</p>` : ""}<pre>${esc(JSON.stringify(a.payload.arguments, null, 2))}</pre><code>${esc(a.digest)}</code>${a.status === "unknown" ? '<p class="form-error">Chưa rõ tác động bên ngoài. Cần đối chiếu nền tảng trước khi đề xuất lại.</p>' : ""}${target && live ? `<button class="button" data-studio-preview="${esc(a.id)}">Xem màn hình trước khi duyệt</button><div data-studio-preview-result="${esc(a.id)}" aria-live="polite"></div>` : ""}${pending && state.user.role === "quan-tri" ? `<div class="studio-actions">${live ? `<button class="button primary" data-studio-approve="${esc(a.id)}" data-digest="${esc(a.digest)}">Duyệt và thực hiện</button>` : ""}<button class="button" data-studio-reject="${esc(a.id)}" data-digest="${esc(a.digest)}">Từ chối</button></div>` : ""}</article>`;
   }
   async function open() {
+    if (window.BDSGUnit?.snapshot().mode === "units") return window.BDSGUnitActions?.open();
     const token = ++revision;
     main.innerHTML = `<section class="bdsg-work-page studio-page"><div class="bdsg-work-page-heading"><div><h1>Xưởng công việc Thanh Hoá.</h1><p>Tài liệu, công cụ và những quyết định cần bạn ở cùng một nơi.</p></div><a class="button primary" href="#work">${icon("plus")}Giao việc mới</a></div>${
       state.user
@@ -157,6 +158,7 @@
       `<section class="studio-card"><h3>${esc(value.title)}</h3><p>${esc(value.url)} · Còn ${value.expires_in} giây</p><div class="studio-actions"><button class="button" data-studio-browser="observe">Cập nhật màn hình</button><button class="button" data-studio-browser="close">Đóng và xóa phiên</button></div>${value.screenshot ? `<img class="studio-browser-image" alt="Màn hình trình duyệt công việc" src="data:image/jpeg;base64,${value.screenshot}">` : ""}<details><summary>Nội dung trang</summary><pre>${esc(value.text)}</pre></details><form id="studio-browser-control" class="studio-form"><h3>Bạn đang tiếp quản</h3><label>Thành phần<select name="node">${value.nodes.map((n) => `<option value="${n.id}">${n.id}: ${esc(n.tag)} ${esc(n.type)} — ${esc(n.label || n.href || "Không nhãn")}</option>`).join("")}</select></label><label>Thao tác<select name="action"><option value="click">Bấm thành phần</option><option value="fill">Nhập văn bản/mật khẩu</option><option value="select">Chọn giá trị</option><option value="key">Nhấn Enter/Tab/Escape</option></select></label><label>Nội dung nhập (không lưu lại trong giao diện)<input name="text" type="password" autocomplete="off" maxlength="4000"></label><p class="studio-note">Thao tác này tác động trực tiếp lên trang đang mở. Kiểm màn hình và đích nhận trước khi bấm gửi, mua, xóa hoặc cấp quyền.</p><button class="button primary" type="submit" value="manual">Thực hiện thao tác đã chọn</button><button class="button" type="submit" value="propose">Lưu đề xuất để chủ quản duyệt</button><p class="studio-note">Đề xuất lưu nội dung đã nhập trong sổ hành động. Chỉ dùng dữ liệu nghiệp vụ thông thường; mật khẩu, mã xác minh và thanh toán cần tự tiếp quản, không đưa vào đề xuất.</p></form></section>`;
   }
   document.addEventListener("click", async (e) => {
+    if (window.BDSGUnit?.snapshot().mode === "units") return;
     if (e.target.closest("[data-studio-login]")) return auth(open);
     const nav = e.target.closest("[data-studio-tab]");
     if (nav) {
@@ -219,6 +221,7 @@
     }
   });
   document.addEventListener("change", (e) => {
+    if (window.BDSGUnit?.snapshot().mode === "units") return;
     if (e.target.id === "studio-project") {
       revision++;
       activeProject = e.target.value;
@@ -226,6 +229,7 @@
     }
   });
   document.addEventListener("submit", async (e) => {
+    if (window.BDSGUnit?.snapshot().mode === "units") return;
     const id = e.target.getAttribute("id") || "";
     if (!id.startsWith("studio-")) return;
     e.preventDefault();
@@ -313,6 +317,7 @@
   window.BDSGStudio = {
     open,
     reset() {
+      window.BDSGUnitActions?.reset();
       revision++;
       projects = [];
       tasks = [];

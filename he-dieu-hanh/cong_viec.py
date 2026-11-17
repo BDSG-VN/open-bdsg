@@ -25,15 +25,27 @@ class _StaleRun(RuntimeError):
 
 class _NhanTacVu:
     """Giữ guard ngoài JSON/ngữ cảnh mô hình, vẫn định tuyến qua nhân thật."""
-    def __init__(self, core, connectors, guard, tools, revisions):
+    def __init__(self, core, connectors, guard, tools, revisions, *, write_tools=None, task_context=None):
         self.core, self.scoped_connectors, self.guard = core, connectors, guard
         self.tools, self.revisions = tools, revisions
+        self.write_tools, self.task_context = write_tools or {}, task_context
 
     def __getattr__(self, name):
         return getattr(self.core, name)
 
     def goi(self, actor, name, args):
         self.guard()
+        if name == 'hanh_dong.de_xuat':
+            call = args.get('arguments', {})
+            if (not self.task_context or args.get('task_id') != self.task_context[0]
+                    or args.get('tool') != 'ket_noi.ghi' or not isinstance(call, dict)
+                    or call.get('tool') not in self.write_tools.get(call.get('platform_id'), [])):
+                raise PermissionError('Dự thảo ngoài công cụ được cấp cho tác vụ')
+            result = self.core.goi(actor, name, args, draft_context=self.task_context)
+            self.guard()
+            if not result.get('ok'):
+                raise PermissionError('Chưa lưu dự thảo trong phạm vi tác vụ hiện hành')
+            return result
         if name == 'ket_noi.doc':
             platform = args.get('platform_id')
             if args.get('tool') not in self.tools.get(platform, []) or platform not in self.revisions:
@@ -422,7 +434,7 @@ class CongViec:
         if not isinstance(args, dict):
             raise ValueError("Thông tin tác vụ không hợp lệ")
         if self.units is not None and ((self.scoped_ai is None and model.configured) or any(args.get(key) for key in (
-                'allow_python','allow_action_drafts','allow_delegation','browser_hosts'))):
+                'allow_python','allow_delegation','browser_hosts'))):
             raise PermissionError('Chưa có cấu hình công cụ và mô hình riêng theo đơn vị')
         prompt = _text(args.get("prompt"), 10)
         project_id = args.get("project_id", "")
@@ -485,7 +497,19 @@ class CongViec:
         if not isinstance(allow_reads, bool):
             raise ValueError("Quyền đọc mô-đun phải là giá trị bật hoặc tắt")
         allowed_tools = {}
+        allowed_write_tools = {}
         connector_revisions = {}
+        scoped_connections = (self.scoped_connectors.summary(actor)
+            if self.units is not None and self.scoped_connectors is not None and (allow_reads or allow_drafts) else [])
+        if self.units is not None and allow_drafts:
+            if not model.configured or not ids or self.scoped_ai is None:
+                raise ValueError('Cần AI đơn vị và mô-đun có công cụ ghi được cấp để lập dự thảo')
+            for connection in scoped_connections:
+                if connection['platform_id'] in ids and connection.get('proposal_tools'):
+                    allowed_write_tools[connection['platform_id']] = list(connection['proposal_tools'])
+                    connector_revisions[connection['platform_id']] = connection['revision']
+            if not allowed_write_tools:
+                raise ValueError('Mô-đun đã chọn chưa có công cụ ghi được cấp để đề xuất')
         if allow_reads:
             if self.units is not None and (self.scoped_ai is None or self.scoped_connectors is None):
                 raise PermissionError('Chưa có đầu nối và AI riêng theo đơn vị')
@@ -498,7 +522,7 @@ class CongViec:
                     "Cần chọn mô-đun cụ thể và cấu hình mô hình trước khi cho đọc dữ liệu"
                 )
             if self.units is not None:
-                for connection in self.scoped_connectors.summary(actor):
+                for connection in scoped_connections:
                     platform = connection['platform_id']
                     if platform in ids and connection['read_tools']:
                         allowed_tools[platform] = list(connection['read_tools'])
@@ -531,6 +555,7 @@ class CongViec:
             "allow_delegation": allow_delegation,
             "allow_module_reads": allow_reads,
             "allowed_module_tools": allowed_tools,
+            "allowed_module_write_tools": allowed_write_tools,
             "module_connector_revisions": connector_revisions,
             "run": 1,
             "steps": [],
@@ -1001,6 +1026,7 @@ class CongViec:
                     "allow_reads": task.get("allow_module_reads", False),
                     "selected_ids": task["module_ids"],
                     "read_tools": task.get("allowed_module_tools", {}),
+                    "proposal_tools": task.get("allowed_module_write_tools", {}),
                     "connector_revisions": task.get("module_connector_revisions", {}),
                 }
 
@@ -1065,7 +1091,9 @@ class CongViec:
                                 raise PermissionError('Mô hình của lượt chạy không còn hiệu lực')
                     task_core = _NhanTacVu(self.core, self.scoped_connectors,
                         self._bind_execution(guard_tools), task.get('allowed_module_tools', {}),
-                        task.get('module_connector_revisions', {}))
+                        task.get('module_connector_revisions', {}),
+                        write_tools=task.get('allowed_module_write_tools', {}),
+                        task_context=(task['id'], task['run'], model.revision) if task.get('allow_action_drafts') else None)
 
                 if task["template"] == "nhan-su-chuyen-mon":
                     content = self.workforce.run(

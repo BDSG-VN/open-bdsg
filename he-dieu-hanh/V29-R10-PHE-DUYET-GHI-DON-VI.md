@@ -45,10 +45,28 @@ quả applied/not-applied cùng ghi chú kiểm chứng. Thao tác này không g
 và không tự gửi lại; đây là xác nhận do người quản trị nhập, chưa là hệ thống
 tự kiểm upstream. Muốn thử lại cần đề xuất/duyệt riêng sau đối soát.
 
+## Giao diện và agent — đang nghiệm thu
+
+Kết nối có trường công cụ ghi và ô cấp quyền riêng, kiểm không trùng danh sách
+đọc. Xưởng việc đơn vị chỉ mở Phê duyệt: chọn tác vụ/mô-đun/tool đã cấp, nhập
+arguments và xem payload bất biến. Admin có quyền dự án duyệt/từ chối, xử lý
+unknown bằng đối soát tường minh. Giao diện dùng membership hiện hành; request
+giữ epoch/operation/scope, phản hồi cũ không vẽ sang doanh nghiệp khác.
+
+Giao việc có opt-in cho agent lập dự thảo, mặc định tắt. Cần AI đơn vị và
+công cụ ghi của mô-đun đã chọn. Task chụp write tool/revision; followup không
+mở rộng. Model chỉ được de_xuat, không có ghi/duyệt/đối soát. Task proxy truyền
+task/run/AI revision ngoài JSON; service kiểm lại generation, grant và cấu hình
+AI trong cùng giao dịch tạo dự thảo. Không giữ khóa worker khi có writer DB.
+
+Ngày 17/11/2026: bảy bài agent qua MoHinhLiteLLM thật/HTTP opener tổng hợp
+đạt; gồm opt-in, member, không token, từ chối tool/duyệt/đối soát, connector/AI
+đổi sau provider và followup giữ grant cũ. Không gọi API trả phí.
+
 ## Cổng còn lại trước khi phát hành R10
 
-Giao diện cấu hình write_tools, dự thảo/xem/duyệt/từ chối theo vai, kiểm browser
-điện thoại/máy tính và luồng agent đề xuất còn tiếp. Chưa mở browser action,
+Kiểm browser điện thoại/máy tính, rà soát giao diện và agent mới đang thực
+hiện; chưa nhận đủ nghiệm thu. Chưa mở browser action,
 kinh doanh legacy hoặc inbound MCP theo đơn vị. Rà soát độc lập, CI Linux,
 backup/restore action, snapshot/rollback và hậu kiểm chưa được coi là đạt khi
 chưa có bằng chứng tương ứng. Không dùng endpoint thật hoặc API tính phí để thử.

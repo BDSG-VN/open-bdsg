@@ -185,11 +185,18 @@
       window.BDSGProjects?.clearSelected();
     }
     draft.allow_module_reads = false;
+    if (unitMode()) draft.allow_action_drafts = false;
   }
   function scopePicker() {
     return `<div class="bdsg-project-scope ${unitMode() ? "bdsg-unit-read-scope" : ""}"><label>Dự án công việc<select id="bdsg-task-project"><option value="">Công việc độc lập</option>${projects.map((p) => `<option value="${esc(p.id)}" ${draft.project_id === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><a href="#projects">Quản lý dự án →</a><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-reads" disabled><span>Cho phép agent đọc MCP từ những mô-đun đã chọn. Nội dung đọc được có thể gửi tới nhà cung cấp AI đã cấu hình.</span></label><small id="bdsg-read-note"></small></div>`;
   }
   function refreshConsent() {
+    const drafts = $("#bdsg-allow-drafts");
+    if (unitMode() && drafts) {
+      drafts.disabled = !(state.user && latestModel.configured && moduleCache.some(module => draft.module_ids.includes(module.id) && module.mcp?.proposal_tools?.length));
+      if (drafts.disabled) draft.allow_action_drafts = false;
+      drafts.checked = draft.allow_action_drafts;
+    }
     const box = $("#bdsg-allow-reads"),
       note = $("#bdsg-read-note");
     if (!box) return;
@@ -211,7 +218,7 @@
       : "Chỉ cấp cho tác vụ này; không cấp công cụ ghi. Quyền được kiểm lại trước mỗi lần gọi.";
   }
   function executionPicker() {
-    if (unitMode()) return '<div class="bdsg-project-scope"><div id="bdsg-task-documents"></div><p>AI dùng cấu hình và hạn mức của đơn vị đang chọn. Chỉ đọc MCP khi bạn cấp riêng cho tác vụ. Python, công cụ ghi và điều phối tác vụ con chưa mở theo đơn vị.</p></div>';
+    if (unitMode()) return `<div class="bdsg-project-scope bdsg-unit-read-scope"><div id="bdsg-task-documents"></div><p>AI dùng cấu hình và hạn mức của doanh nghiệp đang chọn. Đọc MCP cần quyền riêng; Python và điều phối tác vụ con chưa mở.</p><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-drafts" ${draft.allow_action_drafts ? "checked" : ""} disabled><span>Cho agent lập dự thảo ghi bằng công cụ của mô-đun đã chọn. Dự thảo chưa thay đổi dữ liệu; quản trị doanh nghiệp có quyền dự án phải duyệt riêng.</span></label><small>Cần AI và công cụ ghi đã được xác minh. Mặc định tắt; agent không có quyền duyệt, đối soát hoặc tự gửi công cụ ghi.</small><a href="#studio">Mở phê duyệt công việc</a></div>`;
     return `<div class="bdsg-project-scope"><div id="bdsg-task-documents"></div><details><summary>Công cụ và quyền cho công việc</summary><div class="bdsg-execution-options"><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-python" ${draft.allow_python ? "checked" : ""}><span>Cho phép xử lý dữ liệu bằng Python trong vùng riêng, tạo tệp kết quả. Không có mạng hoặc quyền vào máy chủ.</span></label><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-drafts" ${draft.allow_action_drafts ? "checked" : ""}><span>Cho agent chuẩn bị dự thảo hành động. Chủ quản vẫn cần duyệt nội dung trước khi thực hiện.</span></label><label>Tên miền cho trình duyệt (tùy chọn)<input id="bdsg-browser-hosts" maxlength="1000" value="${esc(draft.browser_hosts.join(", "))}" placeholder="Ví dụ: example.com, crm.bdsg.vn"></label><small>Chỉ HTTPS, đúng tên miền đã nhập. Agent chỉ đọc và mở liên kết; bạn tiếp quản thao tác biểu mẫu. Phiên tự đóng sau 15 phút. Nội dung được đọc có thể gửi tới nhà cung cấp AI đã chọn.</small>${state.user?.role === "quan-tri" ? `<label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-delegation" ${draft.allow_delegation ? "checked" : ""}><span>Cho phép điều phối tối đa ba tác vụ con cho agent vận hành đang được cấp quyền dự án.</span></label>` : ""}<a href="#studio">Mở xưởng công việc →</a></div></details></div>`;
   }
   async function refreshDocuments() {

@@ -8,9 +8,10 @@ from hanh_dong import active_actor
 
 
 class HanhDongDonVi:
-    def __init__(self, kho, core, tasks, units, connectors, *, clock=time.time):
+    def __init__(self, kho, core, tasks, units, connectors, *, clock=time.time, ai=None):
         self.kho, self.core, self.tasks = kho, core, tasks
         self.units, self.connectors, self.clock = units, connectors, clock
+        self.ai = ai
         with kho.ket_noi() as db:
             db.executescript('''CREATE TABLE IF NOT EXISTS unit_actions(
                 id TEXT PRIMARY KEY,unit_id TEXT NOT NULL REFERENCES don_vi(id),
@@ -114,7 +115,7 @@ class HanhDongDonVi:
                 (unit_id, exclude, arguments['platform_id'], arguments['tool'])).fetchone():
             raise PermissionError('Công cụ đang thực thi hoặc có kết quả cần quản trị đối soát')
 
-    def propose(self, actor, args):
+    def propose(self, actor, args, *, task_context=None):
         if not isinstance(args, dict) or set(args) != {'task_id', 'tool', 'arguments'}:
             raise ValueError('Dự thảo không hợp lệ')
         arguments = args['arguments']
@@ -148,6 +149,20 @@ class HanhDongDonVi:
                 raise PermissionError('Phạm vi đã thay đổi')
             self._not_cancelled(db, payload)
             self._settled(db, scope.unit_id, arguments)
+            if task_context is not None:
+                if not isinstance(task_context, tuple) or len(task_context) != 3 or self.ai is None:
+                    raise PermissionError('Thiếu ngữ cảnh AI tin cậy cho dự thảo')
+                self.ai.require_config_revision(actor, task_context[2], db)
+                # Đọc generation/grant trong giao dịch INSERT, không giữ khóa worker
+                # lúc đang nắm writer SQLite hoặc tin vào task_id do model gửi.
+                row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?', (task['id'],)).fetchone()
+                current = json.loads(row[0]) if row else {}
+                if (task_context[:2] != (task['id'], payload['run']) or current.get('run') != payload['run']
+                        or current.get('status') != 'running' or current.get('cancel_requested')
+                        or not current.get('allow_action_drafts')
+                        or arguments['tool'] not in current.get('allowed_module_write_tools', {}).get(arguments['platform_id'], [])
+                        or current.get('module_connector_revisions', {}).get(arguments['platform_id']) != config['revision']):
+                    raise PermissionError('Dự thảo của agent ngoài phạm vi hoặc lượt đã giao')
             db.execute("UPDATE unit_actions SET status='expired' WHERE unit_id=? AND owner=? AND status='awaiting' AND expires<=?",
                        (scope.unit_id, scope.identity, now))
             pending = db.execute("SELECT count(*) FROM unit_actions WHERE unit_id=? AND owner=? AND status='awaiting'",
