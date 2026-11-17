@@ -85,14 +85,17 @@ class Kho:
             ).hex()
             if not user or not hmac.compare_digest(digest, user["hash"]):
                 return None, "sai-thong-tin"
-            token = secrets.token_urlsafe(36)
-            c.execute("DELETE FROM phien WHERE expires<?", (now,))
-            c.execute(
-                "INSERT INTO phien VALUES (?,?,?)",
-                (bam(token), username, now + 8 * 3600),
-            )
+            token = self.cap_phien(c, username, now)
             c.execute("DELETE FROM thu_dang_nhap WHERE ip=?", (ip,))
             return token, "ok"
+
+    @staticmethod
+    def cap_phien(db, identity, now):
+        # Hai luồng xác thực dùng cùng chính sách phiên trong giao dịch đang giữ.
+        token = secrets.token_urlsafe(36)
+        db.execute('DELETE FROM phien WHERE expires<?', (now,))
+        db.execute('INSERT INTO phien VALUES (?,?,?)', (bam(token), identity, now+8*3600))
+        return token
 
     def tu_phien(self, token):
         with self.ket_noi() as c:

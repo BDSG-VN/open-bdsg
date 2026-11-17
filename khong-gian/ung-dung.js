@@ -438,7 +438,11 @@ function auth(callback) {
   }
   afterLogin = callback;
   $("#login-error").textContent = "";
+  $("#google-login-error").hidden = true;
   $("#login-dialog").showModal();
+  api('/api/auth/google')
+    .then(data => { $('#google-login-option').hidden = !data.available; })
+    .catch(() => { $('#google-login-option').hidden = true; });
 }
 function newRequest(sector) {
   auth(() => {
@@ -479,7 +483,7 @@ async function refresh() {
   state.user = me.user;
   $("#nav-count").textContent = state.products.length;
   $("#profile-name").textContent = state.user
-    ? "Chủ quản Thanh Hoá"
+    ? state.user.name || 'Người dùng BDSG'
     : "Không gian công khai";
   $("#profile-role").textContent = state.user
     ? "Đăng xuất không gian"
@@ -603,6 +607,40 @@ document.addEventListener("submit", async (e) => {
     button.disabled = false;
   }
 });
+$('#google-login-button').addEventListener('click', async () => {
+  const button = $('#google-login-button');
+  const text = button.querySelector('span');
+  const error = $('#google-login-error');
+  const passwordButton = $('#login-form button[type=submit]');
+  button.disabled = true;
+  passwordButton.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  text.textContent = 'Đang mở Google…';
+  error.hidden = true;
+  try {
+    const data = await api('/api/auth/google/start', {method:'POST', body:'{}'});
+    const target = new URL(data.url);
+    if (target.origin !== 'https://accounts.google.com' || target.pathname !== '/o/oauth2/v2/auth') {
+      throw new Error('Chưa mở được Google. Vui lòng thử lại.');
+    }
+    location.assign(target.href);
+  } catch (failure) {
+    error.textContent = failure.message;
+    error.hidden = false;
+    error.focus();
+    button.disabled = false;
+    passwordButton.disabled = false;
+    button.removeAttribute('aria-busy');
+    text.textContent = 'Tiếp tục với Google';
+  }
+});
+window.addEventListener('pageshow', () => {
+  const button = $('#google-login-button');
+  button.disabled = false;
+  button.removeAttribute('aria-busy');
+  button.querySelector('span').textContent = 'Tiếp tục với Google';
+  $('#login-form button[type=submit]').disabled = false;
+});
 $("#login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const button = e.target.querySelector("[type=submit]");
@@ -719,7 +757,20 @@ setInterval(async () => {
     }
   } catch (_) {}
 }, 10000);
-refresh().catch((e) => {
+refresh().then(() => {
+  const result = new URLSearchParams(location.search).get('login');
+  if (!['google-success', 'google-failed'].includes(result)) return;
+  history.replaceState(null, '', location.pathname + location.hash);
+  if (result === 'google-success' && state.user) {
+    toast('Đã đăng nhập bằng Google');
+  } else {
+    auth();
+    const error = $('#google-login-error');
+    error.textContent = 'Chưa đăng nhập được bằng Google. Hãy thử lại và chọn tài khoản đã được mời.';
+    error.hidden = false;
+    error.focus();
+  }
+}).catch((e) => {
   main.innerHTML = `<section class="error-state"><h1>Chưa mở được không gian</h1><p>${esc(e.message)}</p><button class="button" id="retry">Thử lại</button></section>`;
   $("#retry").onclick = () => location.reload();
 });

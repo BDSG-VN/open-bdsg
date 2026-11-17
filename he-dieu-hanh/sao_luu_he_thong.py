@@ -27,6 +27,7 @@ SECRET_FILES = (
     "gateway.env",
     "google-client.json",
     "google-vault.key",
+    "google-login.json",
     "office.env",
     "integrations-vault.key",
 )

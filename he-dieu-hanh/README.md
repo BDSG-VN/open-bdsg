@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V24 — đăng nhập Google theo lời mời](V24-DANG-NHAP-GOOGLE.md).
+
 [V23 — Trung tâm AI và LiteLLM](V23-TRUNG-TAM-AI.md).
 
 [V22 — nhân sự Agent từ 36 nguồn kỹ năng quốc tế](../nhan-su/README.md).

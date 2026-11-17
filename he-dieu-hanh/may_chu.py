@@ -26,6 +26,7 @@ from tai_lieu import TaiLieu
 from van_phong import VanPhong
 from soan_thao_office import SoanThaoOffice
 from google_office import GoogleOffice, LoiKetNoiGoogle
+from dang_nhap_google import DangNhapGoogle, LoiDangNhapGoogle
 from runtime_tac_vu import RuntimeTacVu
 from trinh_duyet import TrinhDuyet, revoke_browser
 from hanh_dong import HanhDong, active_actor
@@ -66,6 +67,7 @@ class UngDung:
         self.office = VanPhong(self.kho, self.projects)
         self.office_editor = SoanThaoOffice(self.office, self.origin)
         self.google_office = GoogleOffice(self.office, self.origin)
+        self.google_login = DangNhapGoogle(self.kho, self.origin)
         self.vn_integrations = TichHopVietNam(self.kho)
         self.vn_sync = DongBoVietNam(self.vn_integrations)
         self.office.editor_status = self.office_editor.status
@@ -157,7 +159,8 @@ def tao_may_chu(app, port=8766):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             if cookie:
-                self.send_header("Set-Cookie", cookie)
+                for item in cookie if isinstance(cookie, list) else [cookie]:
+                    self.send_header("Set-Cookie", item)
             for k, v in (headers or {}).items():
                 self.send_header(k, v)
             self.end_headers()
@@ -206,6 +209,8 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             path = urlsplit(self.path).path
+            if path == '/api/auth/google':
+                return self.send(200, app.google_login.status())
             if path == "/api/ready":
                 state = app.operations.readiness()
                 return self.send(200 if state["status"] == "ready" else 503,
@@ -220,6 +225,18 @@ def tao_may_chu(app, port=8766):
             if app.operations.draining.is_set() and path != "/api/suc-khoe":
                 return self.send(503, {"error": "Đang dừng dịch vụ; thử lại sau"}, headers={"Retry-After": "5"})
             if path == "/api/google/callback":
+                query = parse_qs(urlsplit(self.path).query)
+                if any(value.startswith('login.') for value in query.get('state', [])):
+                    cookies = ['bdsg_google_login=; Path=/api/google/callback; Secure; HttpOnly; SameSite=Lax; Max-Age=0']
+                    target = '/?login=google-failed#work'
+                    try:
+                        cookie = SimpleCookie(self.headers.get('Cookie', ''))
+                        token = app.google_login.callback(query, cookie['bdsg_google_login'].value if 'bdsg_google_login' in cookie else '')
+                        cookies.append('bdsg_session=' + token + '; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=28800')
+                        target = '/?login=google-success#work'
+                    except (CookieError, ValueError, PermissionError, OSError):
+                        pass
+                    return self.send(303, cookie=cookies, headers={'Location':target,'Referrer-Policy':'no-referrer'})
                 try:
                     cookie = SimpleCookie(self.headers.get("Cookie", ""))
                     app.google_office.callback(parse_qs(urlsplit(self.path).query),
@@ -344,7 +361,7 @@ def tao_may_chu(app, port=8766):
             if not self.origin_ok(required=path != "/mcp"):
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
             actor = self.actor(path == "/mcp")
-            if path not in ("/api/login", "/api/customer-support") and not actor:
+            if path not in ("/api/login", "/api/customer-support", '/api/auth/google/start') and not actor:
                 return self.send(
                     401,
                     {"error": "Cần xác thực"},
@@ -359,6 +376,17 @@ def tao_may_chu(app, port=8766):
                     400, {"error": "Nội dung yêu cầu không hợp lệ hoặc quá lớn"}
                 )
             try:
+                if path == '/api/auth/google/start':
+                    if actor:
+                        return self.send(409, {'error':'Bạn đã đăng nhập; hãy đăng xuất trước khi đổi tài khoản'})
+                    if body != {}:
+                        return self.send(400, {'error':'Yêu cầu đăng nhập không hợp lệ'})
+                    try:
+                        ip = self.headers.get('X-BDSG-Client-IP', self.client_address[0])
+                        url, binding = app.google_login.start(ip)
+                        return self.send(200, {'url':url}, cookie='bdsg_google_login='+binding+'; Path=/api/google/callback; Secure; HttpOnly; SameSite=Lax; Max-Age=600')
+                    except LoiDangNhapGoogle as error:
+                        return self.send(409, {'error':str(error)})
                 if path == "/api/google/picker":
                     if actor["role"] not in ("operator", "quan-tri"):
                         return self.send(403, {"error": "Cần quyền vận hành"})

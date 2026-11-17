@@ -51,6 +51,13 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 main { padding-top: 24px; min-height: calc(100vh - 120px); }
 .button { border-radius: 8px; font-size: 13px; min-height: 38px; }
 .dialog-heading { justify-content: flex-end; }
+#google-login-button { min-height: 44px; gap: 12px; }
+#google-login-button svg { width: 20px; height: 20px; flex: 0 0 20px; }
+#google-login-error { color: #8f3424; font-size: 13px; line-height: 1.5; }
+#google-login-error:focus { outline: 2px solid var(--focus, #555550); outline-offset: 3px; }
+.login-google-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 10px 0 0; }
+.login-google-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin: 20px 0; }
+.login-google-divider::before, .login-google-divider::after { content: ""; height: 1px; background: var(--line); flex: 1; }
 .button.primary, .bdsg-run-button { background: var(--action); color: #fff; }
 .button.primary:hover, .bdsg-run-button:hover { background: #333330; }
 .page-heading h1, .bdsg-work-page-heading h1 { color: var(--ink); letter-spacing: -0.025em; }
