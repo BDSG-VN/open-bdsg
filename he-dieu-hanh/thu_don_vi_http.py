@@ -12,6 +12,7 @@ from may_chu import UngDung, tao_may_chu
 from ngan_sach_ai import DEFAULT_POLICY
 from trung_tam_ai import MoHinhLiteLLM
 from thu_mo_hinh_bdsg import Transport, answer
+from thu_dau_noi_don_vi import TransportTongHop
 
 
 class ThuDonViHTTP(unittest.TestCase):
@@ -181,7 +182,7 @@ class ThuDonViHTTP(unittest.TestCase):
         staff = self.value(self.tool("nhan_su.danh_sach"))
         self.assertTrue(staff["agents"])
         self.assertFalse(staff["grants_permissions"])
-        self.assertFalse(self.app.core.goi(actor, "nen_tang.ket_noi", {})["ok"])
+        self.assertEqual(self.value(self.tool("nen_tang.ket_noi")), {"connections": []})
         project = self.value(self.tool("du_an.tao", {"name": "Du an kiem trang thai Office"}))
         state = self.value(self.tool("van_phong.trang_thai", {"project_id": project["id"]}))
         self.assertEqual(state["editor_state"], "chua-ho-tro-don-vi")
@@ -291,7 +292,7 @@ class ThuDonViHTTP(unittest.TestCase):
                                      unit=self.units[0], headers={"Authorization": "Bearer " + self.bearer})[0], 403)
         for tool in ("runtime.python", "mo_hinh.trang_thai",
                      "van_phong.google_nhap", "van_phong.tao_office", "van_phong.mo_soan_thao",
-                     "van_phong.luu_soan_thao", "cau_hinh.dau_noi", "nguoi_dung.tao", "nhat_ky.danh_sach"):
+                     "van_phong.luu_soan_thao", "cau_hinh.tat_mo_hinh", "nguoi_dung.tao", "nhat_ky.danh_sach"):
             self.assertEqual(self.tool(tool)[0], 403, tool)
 
     def test_kernel_cung_chan_cong_cu_toan_cong_chua_phan_don_vi(self):
@@ -300,7 +301,7 @@ class ThuDonViHTTP(unittest.TestCase):
         for actor in (self.root, {"id": "nguoi-a", "name": "nguoi-a", "role": "operator"}):
             scoped = self.app.units.bind(actor, self.units[0])
             for name in ("cau_hinh.mo_hinh", "cau_hinh.tat_mo_hinh",
-                         "nen_tang.ket_noi", "nhat_ky.danh_sach"):
+                         "ket_noi.ghi", "nhat_ky.danh_sach"):
                 result = self.app.core.goi(scoped, name, {})
                 self.assertFalse(result["ok"], (actor["id"], name, result))
             catalogue = self.app.core.goi(scoped, "nen_tang.danh_sach", {})
@@ -318,6 +319,33 @@ class ThuDonViHTTP(unittest.TestCase):
         revoked = self.tool("du_an.danh_sach", who="nguoi-b")
         self.assertEqual(revoked[0], 403)
         self.assertEqual(revoked[1].get("code"), "unit_changed", "Cửa sổ đang mở phải nhận biết phạm vi bị thu hồi")
+
+    def test_dau_noi_don_vi_qua_nhan_http_khong_dung_quyen_hoac_token_legacy(self):
+        platform = self.app.catalogue[0]["id"]
+        transport = TransportTongHop()
+        self.app.connectors.transport = transport
+        self.app.core.connections.config = [{"platform_id": platform,
+            "url": "https://legacy.bdsg.vn/mcp", "token": "synthetic-legacy-secret",
+            "read_tools": ["legacy.read"], "roles": ["quan-tri"]}]
+        config = {"platform_id": platform, "url": "https://crm-a.bdsg.vn/mcp",
+            "token": "synthetic-private-token-a", "read_tools": ["crm.list"], "read_roles": ["admin", "member"]}
+        saved = self.value(self.tool("cau_hinh.luu_dau_noi", config))
+        self.assertTrue(saved["has_token"])
+        self.assertNotIn(config["token"], json.dumps(saved))
+        self.assertEqual(self.value(self.tool("cau_hinh.dau_noi", unit=self.units[1])), {"connections": []})
+        self.assertEqual(self.value(self.tool("cau_hinh.kiem_tra_dau_noi", {"platform_id": platform}))["state"], "da-xac-minh")
+        self.app.units.set_member(self.root, {"unit_id": self.units[0], "identity": "nguoi-b", "role": "member"})
+        result = self.value(self.tool("ket_noi.doc", {"platform_id": platform, "tool": "crm.list", "arguments": {}}, who="nguoi-b"))
+        self.assertIn("crm-a.bdsg.vn", result["content"][0]["text"])
+        self.assertFalse(self.tool("cau_hinh.dau_noi", who="nguoi-b")[1]["ok"])
+        summary = self.value(self.tool("nen_tang.ket_noi", who="nguoi-b"))
+        self.assertNotIn("url", summary["connections"][0])
+        self.assertNotIn("synthetic-legacy-secret", json.dumps(summary))
+        modules = self.value(self.tool("mo_dun.danh_sach", who="nguoi-b"))["modules"]
+        selected = next(module for module in modules if module["id"] == platform)
+        self.assertEqual(selected["mcp"]["read_tools"], ["crm.list"])
+        self.assertEqual([entry[1] for entry in transport.calls], [config["token"], config["token"]])
+        self.assertFalse(self.tool("ket_noi.doc", {"platform_id": platform, "tool": "legacy.read", "arguments": {}})[1]["ok"])
 
     def test_cau_hinh_ai_qua_http_chi_thuoc_don_vi_va_khong_tra_khoa(self):
         first, second = self.units

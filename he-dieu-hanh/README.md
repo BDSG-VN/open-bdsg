@@ -137,6 +137,9 @@ Giao diện chọn đơn vị thử nghiệm, quyền ứng dụng và các gi�
 [V29 R7](V29-R7-GIAO-DIEN-DON-VI.md). Mã mới không tự bật chế độ đơn vị trên
 dữ liệu đang vận hành.
 
+Nền đầu nối riêng theo đơn vị, truyền tải HTTPS ghim IP và giới hạn còn lại:
+[V29 R8](V29-R8-DAU-NOI-DON-VI.md).
+
 Đóng gói web theo danh sách cho phép, giữ source và dữ liệu ngoài docroot.
 Chạy dưới tài khoản dịch vụ không đăng nhập, filesystem chỉ đọc trừ thư mục
 dữ liệu, giới hạn tài nguyên và không cấp sudo. Giữ bản phát hành trước;

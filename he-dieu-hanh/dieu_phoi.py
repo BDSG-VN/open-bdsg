@@ -198,6 +198,8 @@ class DieuPhoi:
         self.lock = threading.RLock()
         self.verify_actor = None
         self.connections = CongMCP(connections, catalogue)
+        self.connection_call = self.connections.goi
+        self.connection_summary = lambda actor: self.connections.tom_tat()
         self.audit = (kho.root / "nhat-ky-nhan.jsonl").open(
             "a", encoding="utf-8", buffering=1
         )
@@ -233,7 +235,7 @@ class DieuPhoi:
                     ),
                     BanKhaiCongCu(
                         "ket_noi",
-                        lambda a: {"connections": self.connections.tom_tat()},
+                        lambda a: {"connections": self.connection_summary(self.actor.get())},
                         mo_ta="Đầu nối MCP được chủ quản khai báo; chưa khai báo khác với đã kết nối.",
                         luoc_do=schema(),
                     ),
@@ -350,7 +352,7 @@ class DieuPhoi:
                 [
                     BanKhaiCongCu(
                         "doc",
-                        lambda a: self.connections.goi(
+                        lambda a: self.connection_call(
                             self.actor.get(),
                             a.get("platform_id"),
                             a.get("tool"),
@@ -362,7 +364,7 @@ class DieuPhoi:
                     ),
                     BanKhaiCongCu(
                         "ghi",
-                        lambda a: self.connections.goi(
+                        lambda a: self.connection_call(
                             self.actor.get(),
                             a.get("platform_id"),
                             a.get("tool"),
@@ -545,6 +547,7 @@ class DieuPhoi:
                                 "url": text,
                                 "token": text,
                                 "read_tools": {"type": "array", "items": text},
+                                "read_roles": {"type": "array", "items": text},
                                 "write_tools": {"type": "array", "items": text},
                                 "allow_writes": {"type": "boolean"},
                             },

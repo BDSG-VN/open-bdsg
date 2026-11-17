@@ -23,6 +23,7 @@ from cau_hinh_mo_hinh import CauHinhMoHinh
 from trung_tam_ai import TrungTamAI
 from ai_don_vi import AITheoDonVi
 from cau_hinh_ket_noi import CauHinhKetNoi
+from dau_noi_don_vi import DauNoiDonVi
 from du_an import DuAn
 from tai_lieu import TaiLieu
 from van_phong import VanPhong
@@ -47,6 +48,8 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
+    "nen_tang.ket_noi", "ket_noi.doc", "cau_hinh.dau_noi", "cau_hinh.luu_dau_noi",
+    "cau_hinh.kiem_tra_dau_noi", "cau_hinh.ngat_dau_noi",
     "mo_dun.danh_sach", "nhan_su.danh_sach",
     "mo_hinh.danh_sach", "mo_hinh.han_muc", "mo_hinh.cau_hinh", "mo_hinh.luu",
     'cong_viec.danh_sach','cong_viec.chi_tiet','cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung',
@@ -92,7 +95,7 @@ class UngDung:
         self.node = ThietBiMayChu(self.kho.root, node_id=os.environ.get("BDSG_NODE_ID"))
         self.customer_support = HoTroKhach(self.catalogue)
         self.chatgpt_connection = KetNoiChatGPT(self.kho)
-        self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
+        self.core = DieuPhoi(self.kho, self.catalogue, ghi, None if unit_preview else connections)
 
         def verify(actor):
             try:
@@ -140,9 +143,11 @@ class UngDung:
             probe=unit_ai_probe, adapter_factory=unit_ai_factory) if unit_preview else None
         if self.unit_ai is not None:
             self.tasks.scoped_ai = self.unit_ai
-        self.connectors = CauHinhKetNoi(
-            self.kho, self.core.connections, self.catalogue, self.origin
-        )
+        self.connectors = (DauNoiDonVi(self.kho, self.units, self.catalogue, origin=self.origin)
+            if unit_preview else CauHinhKetNoi(self.kho, self.core.connections, self.catalogue, self.origin))
+        if unit_preview:
+            self.core.connection_call = self.connectors.call
+            self.core.connection_summary = self.connectors.summary
         self.core.dang_ky_cong_viec(
             self.tasks,
             self.model_settings.save,
@@ -170,10 +175,11 @@ class UngDung:
                 tools = [tool for tool in tools if tool["ten"] in scoped_tools]
                 self.core.nhan.chinh_sach.khai_vai(role,
                     doc=[tool["ten"] for tool in tools if not tool["ghi"]]
-                        + (["mo_hinh.cau_hinh"] if role == "operator" else []),
+                        + (["mo_hinh.cau_hinh", "cau_hinh.dau_noi", "ket_noi.doc"] if role == "operator" else []),
                     ghi=[tool["ten"] for tool in tools if tool["ghi"]]
                         + (["don_vi.chia_se_du_an"] if role != "agent" else [])
-                        + (["mo_hinh.luu"] if role == "operator" else []))
+                        + (["mo_hinh.luu", "cau_hinh.luu_dau_noi", "cau_hinh.kiem_tra_dau_noi",
+                            "cau_hinh.ngat_dau_noi"] if role == "operator" else []))
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):
@@ -208,11 +214,10 @@ class UngDung:
     def modules(self, actor):
         if not self.unit_preview:
             return self.tasks.modules(actor)
-        with self.kho.ket_noi() as db:
-            db.execute("BEGIN")
-            self.units.require(actor, db)
-        return {"modules": [{**product, "kind": "web", "mcp": {
-            "state": "chua-ho-tro-don-vi", "read_tools": [], "write_tools": []}}
+        connections = {item["platform_id"]: item for item in self.connectors.summary(actor)}
+        return {"modules": [{**product, "kind": "mcp-declared" if product["id"] in connections else "web",
+            "mcp": connections.get(product["id"], {
+                "state": "chua-cau-hinh", "read_tools": [], "write_tools": []})}
             for product in self.catalogue]}
 
     def catalog(self):
