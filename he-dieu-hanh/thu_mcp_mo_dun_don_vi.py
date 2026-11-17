@@ -151,6 +151,43 @@ class ThuMCPMoDunDonVi(unittest.TestCase):
         self.assertFalse(self.decide(action)['ok'])
         self.assertEqual(len(self.writes()), 1)
 
+    def final_response_change(self, change):
+        issued, action = self.proposal()
+        original = self.app.core.goi
+        fired = []
+        class LateResponse(dict):
+            def get(response, key, default=None):
+                # Adapter nhân trả kết quả lazy: thay đổi sau guard mạng cuối,
+                # trước giao dịch xuất bản; bài kiểm vẫn gọi interface decide.
+                if key == 'ket_qua' and not fired:
+                    fired.append(True)
+                    change(issued)
+                return super().get(key, default)
+        def delayed(actor, name, arguments, **options):
+            result = original(actor, name, arguments, **options)
+            return LateResponse(result) if name == 'ket_noi.ghi' else result
+        self.app.core.goi = delayed
+        result = self.decide(action)
+        self.assertTrue(result['ok'])
+        self.assertEqual(fired, [True])
+        self.assertEqual(result['ket_qua']['status'], 'unknown')
+        stored = self.app.actions.get(self.actor, action['id'])
+        self.assertEqual(stored['status'], 'unknown')
+        self.assertNotIn(self.settings['url'], json.dumps(stored['result']))
+        self.assertEqual(len(self.writes()), 1)
+        self.assertFalse(self.decide(action)['ok'])
+        self.assertEqual(len(self.writes()), 1)
+
+    def test_thu_hoi_sau_guard_cuoi_truoc_commit_khong_luu_response(self):
+        self.final_response_change(lambda issued: self.service.revoke(self.actor, issued['id']))
+
+    def test_het_han_sau_guard_cuoi_truoc_commit_khong_luu_response(self):
+        def expire(_issued): self.now += 901
+        self.final_response_change(expire)
+
+    def test_doi_connector_sau_guard_cuoi_truoc_commit_khong_luu_response(self):
+        self.final_response_change(lambda _issued: self.app.connectors.save(self.actor, self.settings))
+
     def test_doc_mcp_dung_profile_va_gui_qua_guard_nhan(self):
         self.read_provider()
         issued = self.issue(module_drafts={}, module_reads={'bdsg_crm': ['crm.list']})

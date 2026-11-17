@@ -110,9 +110,15 @@ class HanhDongDonVi:
     def _check_source(self, db, payload):
         row = db.execute('SELECT document FROM cong_viec_tasks WHERE id=?', (payload['task_id'],)).fetchone()
         task = json.loads(row[0]) if row else {}
-        if task.get('run') != payload['run']:
+        if (task.get('run') != payload['run'] or task.get('cancel_requested')
+                or task.get('status') in ('cancelled', 'cancelling', 'failed', 'interrupted')
+                or task.get('owner') != payload['owner_scope']['identity']
+                or task.get('unit_id') != payload['owner_scope']['unit_id']
+                or task.get('project_id', '') != payload['project_id']):
             raise PermissionError('Dự thảo không thuộc lượt hiện hành')
         owner = self.units.restore(payload['owner_scope'], db)
+        if payload['project_id'] and self.tasks.projects.authorize(owner, payload['project_id'], db=db)['archived']:
+            raise PermissionError('Dự án đã lưu trữ')
         if self._source(db, owner, task, payload['arguments']) != payload.get('mcp_source'):
             raise PermissionError('Nguồn dự thảo đã thay đổi')
 
@@ -260,10 +266,33 @@ class HanhDongDonVi:
         except Exception:
             # Không lưu exception/response lỗi vì upstream có thể phản chiếu token.
             pass
+        # Hoàn tất tuần tự hóa trước writer: không chạy phản hồi lazy/callback
+        # trong khoảng từ kiểm nguồn cuối đến UPDATE đã chốt quyền.
+        try:
+            encoded_result = self._encode(result)
+        except (ValueError, TypeError):
+            state = 'unknown'
+            encoded_result = self._encode({'message': 'Không lưu được phản hồi; cần đối soát nền tảng'})
         with self.kho.ket_noi() as db:
             db.execute('BEGIN IMMEDIATE')
+            if state == 'completed':
+                try:
+                    current = self._get(db, actor, action['id'], admin=True)
+                    if (self._reference(self.units.require(actor, db)) != approver
+                            or current['status'] != 'executing' or current['digest'] != action['digest']
+                            or current['expires'] <= self.clock()):
+                        raise PermissionError('Phê duyệt đã thay đổi trước khi lưu kết quả')
+                    self._not_cancelled(db, payload)
+                    self._check_source(db, payload)
+                    revisions = self.connectors.delegation_reference(actor, {},
+                        {payload['arguments']['platform_id']: [payload['arguments']['tool']]}, db)
+                    if revisions[payload['arguments']['platform_id']] != payload['connector_revision']:
+                        raise PermissionError('Đầu nối đã thay đổi trước khi lưu kết quả')
+                except (PermissionError, ValueError):
+                    state = 'unknown'
+                    encoded_result = self._encode({'message': 'Quyền hoặc cấu hình đã thay đổi; cần đối soát nền tảng, không tự gửi lại'})
             db.execute("UPDATE unit_actions SET status=?,result=? WHERE id=? AND status='executing' AND digest=?",
-                       (state, self._encode(result), action['id'], action['digest']))
+                       (state, encoded_result, action['id'], action['digest']))
             self.units._audit(db, actor['id'], 'ket-qua-ghi-don-vi-'+state, action['id'])
         return self.get(actor, action['id'])
 

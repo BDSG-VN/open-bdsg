@@ -114,16 +114,20 @@ chủ tạo, đi qua nhân và guard trước/sau lời gọi.
 Dự thảo giữ grant ID/revision trong payload đã chốt digest; credential và
 issuer epoch không đưa vào payload. Nguồn đầy đủ nằm ở bản ghi task/run.
 Kiểm nguồn cùng giao dịch INSERT và claim, rồi trước mỗi gửi/sau kết quả.
+Phản hồi được tuần tự hóa trước giao dịch chốt kết quả; trong giao dịch
+kiểm lại nguồn, quyền dự án/thành viên, hủy lượt, người duyệt và đầu nối.
+Mất quyền trong khoảng sau guard mạng cuối không lưu nội dung upstream.
 Web không tự lập dự thảo thay nguồn của tác vụ token. Admin có quyền đơn
 vị/dự án mới được duyệt; agent không có quyền duyệt hoặc ghi trực tiếp.
 Thu hồi/hết hạn trước claim giữ dự thảo chưa gửi. Nếu đã claim mà nguồn
 mất hiệu lực thì kết quả là `unknown`, phải đối soát; không tự retry hoặc
 nhận là đã rút lại yêu cầu đã gửi.
 
-Ngày 17/11/2026: 17 bài AI/MCP/dự thảo qua gateway/nhân/SQLite thật đạt với
+Ngày 17/11/2026: 20 bài AI/MCP/dự thảo qua gateway/nhân/SQLite thật đạt với
 transport tổng hợp: hai đơn vị cùng identity chạy xen kẽ, tách chứng thư,
 member/admin, giao công cụ, phân biệt đọc/ghi, thu hồi trước INSERT/claim/
-send và sau send/đọc, hết hạn, xoay đầu nối, snapshot restore và token mới
+send và sau send/đọc, revoke/expiry/đổi đầu nối sau guard cuối trước commit,
+hết hạn, xoay đầu nối, snapshot restore và token mới
 không hồi sinh dự thảo cũ. Không gọi endpoint nghiệp vụ thật/API trả phí.
 
 ```sh
