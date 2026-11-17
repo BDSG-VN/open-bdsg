@@ -5,11 +5,20 @@
     'mo_dun.danh_sach':'Xem mô-đun','du_an.danh_sach':'Xem dự án được chọn','cong_viec.danh_sach':'Xem danh sách công việc',
     'cong_viec.chi_tiet':'Xem chi tiết công việc','cong_viec.tao':'Tạo công việc','cong_viec.tiep_tuc':'Tiếp tục công việc','cong_viec.dung':'Dừng công việc'};
   const params = new URLSearchParams(location.hash.slice(1));
-  let request = params.get('request'), actor = null, bound = null, expires = 0, generation = 0, busy = false, checking = null;
+  const taskTools = new Set(['cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung']);
+  let request = params.get('request'), actor = null, bound = null, expires = 0, generation = 0, busy = false, checking = null, modules = [];
   if (params.size !== 1 || !/^[A-Za-z0-9_-]{43}$/.test(request || '')) request = null;
   function message(text, error = false) { $('message').textContent = text; $('message').className = error ? 'error' : ''; $('message').setAttribute('role',error ? 'alert' : 'status'); }
   function lock(value) { busy = value; $('consent').setAttribute('aria-busy',String(value)); document.querySelectorAll('button,input,select').forEach(el => el.disabled = value); }
-  function clearPermissions() { $('tools').replaceChildren(); $('projects').replaceChildren(); $('permission-form').hidden = true; $('client-name').textContent = ''; $('bound-identity').textContent = ''; }
+  function clearPermissions() { $('tools').replaceChildren(); $('projects').replaceChildren(); $('module-permissions').replaceChildren(); modules=[]; $('allow-ai').checked=false; $('task-profile').hidden=true; $('module-permissions').hidden=true; $('permission-form').hidden = true; $('client-name').textContent = ''; $('bound-identity').textContent = ''; }
+  function updateProfile() {
+    const active=[...$('tools').querySelectorAll('input:checked')].some(input=>taskTools.has(input.value));
+    $('task-profile').hidden=!active;
+    if(!active)$('allow-ai').checked=false;
+    const allow=active&&$('allow-ai').checked;
+    $('module-permissions').hidden=!allow;
+    if(!allow)$('module-permissions').querySelectorAll('input').forEach(input=>input.checked=false);
+  }
   function stop(text) {
     generation++; request = null; bound = null; expires = 0; clearPermissions();
     $('unit-panel').hidden = true; $('login-panel').hidden = true; $('retry').hidden = true;
@@ -73,10 +82,27 @@
       const result = await api('/api/oauth/bind',{request},true); if (!alive(ticket) || !unit.current(capture)) return;
       // Bind trước khi đọc dự án để đổi quyền không tạo biểu mẫu dưới ngữ cảnh khác.
       bound = capture; expires = result.expires;
-      const projects = await api('/api/tools',{name:'du_an.danh_sach',arguments:{}},true);
+      const advanced=result.tools.some(tool=>taskTools.has(tool));
+      const [projects,connections,catalogue] = await Promise.all([
+        api('/api/tools',{name:'du_an.danh_sach',arguments:{}},true),
+        advanced?api('/api/tools',{name:'nen_tang.ket_noi',arguments:{}},true):Promise.resolve(null),
+        advanced?api('/api/catalogue'):Promise.resolve(null)]);
       if (!alive(ticket) || !unit.current(capture)) return;
       if (!projects.ok || !Array.isArray(projects.ket_qua?.projects)) throw new Error('Chưa đọc được dự án.');
       clearPermissions(); $('client-name').textContent = result.client.name;
+      if(advanced){
+        if(!connections?.ok||!Array.isArray(connections.ket_qua?.connections)||!Array.isArray(catalogue.products))throw new Error('Chưa đọc được quyền đầu nối.');
+        modules=connections.ket_qua.connections;
+        modules.forEach((row,index)=>{
+          const title=document.createElement('h3');title.textContent=catalogue.products.find(item=>item.id===row.platform_id)?.name||row.platform_id;
+          $('module-permissions').append(title);
+          (row.read_tools||[]).forEach(name=>choice('module-permissions','read-'+index,name,'Đọc · '+name));
+          (row.proposal_tools||[]).forEach(name=>choice('module-permissions','draft-'+index,name,'Đề xuất · '+name,'Mỗi nội dung ghi cần được người có quyền dự án duyệt riêng.'));
+        });
+        if(!modules.some(row=>row.read_tools?.length||row.proposal_tools?.length)){
+          const note=document.createElement('p');note.className='note';note.textContent='Chưa có công cụ nền tảng đã xác minh để cấp.';$('module-permissions').append(note);
+        }
+      }
       $('bound-identity').textContent = actor.name+' · '+unit.snapshot().selected.name;
       result.tools.forEach(tool => choice('tools','tool',tool,labels[tool] || tool,tool));
       projects.ket_qua.projects.filter(row => !row.archived).forEach(row => choice('projects','project',row.id,row.name));
@@ -109,7 +135,16 @@
       if (!tools.length) { message('Chọn ít nhất một công cụ hoặc từ chối kết nối.',true); return; }
       if (tools.some(tool => tool.startsWith('du_an.') || tool.startsWith('cong_viec.')) && !project_ids.length) { message('Chọn phạm vi dự án cho các công cụ đã chọn.',true); return; }
       body.selection = {tools,project_ids,expires_in:Number($('duration').value)};
-      if (tools.some(tool => ['cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung'].includes(tool))) body.selection.task_profile = {allow_ai:false};
+      if (tools.some(tool => taskTools.has(tool))) {
+        const profile={allow_ai:$('allow-ai').checked,module_reads:{},module_drafts:{}};
+        if(profile.allow_ai)modules.forEach((row,index)=>{
+          for(const [prefix,key] of [['read','module_reads'],['draft','module_drafts']]){
+            const selected=[...$('module-permissions').querySelectorAll(`input[name="${prefix}-${index}"]:checked`)].map(input=>input.value);
+            if(selected.length)profile[key][row.platform_id]=selected;
+          }
+        });
+        body.selection.task_profile=profile;
+      }
     }
     lock(true); message(approve ? 'Đang cấp quyền đã chọn…' : 'Đang từ chối kết nối…');
     let submitted = false;
@@ -132,6 +167,8 @@
   }
   $('permission-form').onsubmit = event => { event.preventDefault(); decide(true); };
   $('deny').onclick = () => decide(false);
+  $('tools').addEventListener('change',updateProfile);
+  $('allow-ai').onchange=updateProfile;
   $('logout').onclick = async () => { if (busy) return; lock(true); try { await api('/api/logout',{}); stop('Đã đăng xuất. Hãy bắt đầu kết nối lại bằng tài khoản anh muốn dùng.'); } catch (_) { message('Chưa đăng xuất được. Kiểm tra mạng rồi thử lại.',true); } finally { lock(false); } };
   $('retry').onclick = () => { if (bound) stop('Yêu cầu đã gắn với phiên duyệt. Hãy bắt đầu kết nối lại từ ứng dụng.'); else boot(); };
   window.addEventListener('bdsg-unit-changed',() => { if (bound && !unit.current(bound)) stop('Đơn vị hoặc quyền đã thay đổi. Hãy bắt đầu kết nối lại từ ứng dụng.'); });

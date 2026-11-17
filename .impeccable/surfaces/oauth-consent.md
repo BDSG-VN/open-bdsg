@@ -37,11 +37,17 @@ khi chưa rõ kết quả. Chấp thuận trả code thật cho callback đã đ
 
 CONSTRAINTS: Nonce ở fragment, không có mật khẩu/token trong lưu trữ trình
 duyệt hoặc log. Cookie/identity/unit và snapshot quyền được backend kiểm.
-Chưa quảng bá metadata, chưa có trang quản lý grant/client hoặc SDK tự OAuth.
-Profile công việc của trang này chưa cấp AI/đọc/ghi nền tảng ngoài; các khả
-năng đó vẫn còn trong phạm vi đầy đủ R11 và sẽ có bề mặt cấp rõ tương ứng.
+Metadata, quản lý grant/client và SDK tự OAuth đã có trong bản thử. Trang
+chấp thuận có profile AI/đọc/lập đề xuất cho công cụ tác vụ; AI mặc định tắt,
+công cụ lấy summary đã xác minh theo unit. Không cấp ghi trực tiếp, duyệt
+hoặc đối soát. Bỏ công cụ tác vụ hoặc tắt AI phải bỏ lựa chọn mô-đun cũ.
+Đổi context xóa cả profile, không giữ grant dưới danh tính hoặc đơn vị mới.
 
 FINISH: Desktop1440/mobile390: login/đơn vị/consent/error/empty/loading/
 retry/approve/deny/account/membership/expiry. Chỉ dữ liệu tổng hợp. Kiểm ảnh,
 keyboard/focus, overflow, code exchange và không hiện lại dữ liệu sau đổi
 context. Detector một lần, reviewer độc lập trước khi nhận bề mặt hoàn tất.
+Thêm opt-in/profile reset và SDK qua trang thật approve/deny/stale ở hai kích
+thước; kiểm policy đi qua token/worker/provider tổng hợp và đổi revision đầu
+nối sau consent làm exchange bị chặn. Không gọi API trả phí hoặc nhận client
+ChatGPT/Claude thật đã kết nối.

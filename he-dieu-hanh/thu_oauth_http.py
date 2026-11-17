@@ -3,10 +3,12 @@ import base64
 import hashlib
 import http.client
 import json
+import time
 import unittest
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import thu_don_vi_http as fixture
+from thu_ai_don_vi import config as ai_config
 
 
 class ThuOAuthHTTP(unittest.TestCase):
@@ -106,6 +108,65 @@ class ThuOAuthHTTP(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(body['result']['isError'])
         self.assertEqual([row['id'] for row in json.loads(body['result']['content'][0]['text'])['projects']], [self.project])
+
+    def advanced_code(self):
+        actor=self.app.units.bind({'id':'nguoi-a','role':'operator'},self.units[0])
+        transport=fixture.TransportTongHop();self.app.connectors.transport=transport
+        settings={'platform_id':'bdsg_crm','url':'https://crm.bdsg.vn/mcp','token':'synthetic-profile-key',
+                  'read_tools':['crm.list'],'write_tools':['crm.delete'],'allow_writes':True}
+        self.app.connectors.save(actor,settings);self.app.connectors.probe(actor,'bdsg_crm')
+        status,saved,_=self.request('/api/tools',{'name':'mo_hinh.luu','arguments':ai_config()},'nguoi-a',self.units[0])
+        self.assertEqual(status,200);self.assertTrue(saved['ok'])
+        tools=['cong_viec.tao','cong_viec.chi_tiet','du_an.danh_sach']
+        status,self.client,_=self.request('/api/oauth/clients',{'name':'Client profile HTTP','redirect_uris':['https://client.test/callback'],
+            'allowed_tools':tools},'chu-quan')
+        self.assertEqual(status,200)
+        status,_,headers=self.request('/oauth/authorize?'+urlencode({'client_id':self.client['id'],
+            'redirect_uri':self.client['redirect_uris'][0],'response_type':'code','resource':self.app.inbound_mcp.resource,
+            'scope':' '.join('tool:'+tool for tool in tools),'code_challenge':self.challenge,'code_challenge_method':'S256'}))
+        self.assertEqual(status,303)
+        pending=parse_qs(urlsplit(headers['Location']).fragment)['request'][0]
+        self.assertEqual(self.request('/api/oauth/bind',{'request':pending},'nguoi-a',self.units[0])[0],200)
+        status,decision,_=self.request('/api/oauth/decide',{'request':pending,'approve':True,'selection':{
+            'tools':tools,'project_ids':[self.project],'expires_in':900,'task_profile':{'allow_ai':True,
+            'module_reads':{'bdsg_crm':['crm.list']},'module_drafts':{'bdsg_crm':['crm.delete']}}}},'nguoi-a',self.units[0])
+        self.assertEqual(status,200)
+        self.assertEqual(self.provider_requests,[])
+        self.assertEqual(len(transport.calls),1)
+        return parse_qs(urlsplit(decision['redirect_uri']).query)['code'][0],actor,settings,transport
+
+    def test_profile_oauth_kept_through_token_worker_and_fake_provider(self):
+        code,actor,_,transport=self.advanced_code()
+        status,token,_=self.token(code);self.assertEqual(status,200)
+        metadata=self.app.inbound_mcp.list(actor)['grants'][0]
+        self.assertEqual(metadata['task_profile']['module_reads'],{'bdsg_crm':['crm.list']})
+        self.assertEqual(metadata['task_profile']['module_drafts'],{'bdsg_crm':['crm.delete']})
+        def call(name,arguments):
+            status,result,_=self.request('/mcp',{'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':name,'arguments':arguments}},
+                headers={'Authorization':'Bearer '+token['access_token'],'Accept':'application/json, text/event-stream'})
+            self.assertEqual(status,200);self.assertFalse(result['result']['isError'])
+            return json.loads(result['result']['content'][0]['text'])
+        task=call('cong_viec.tao',{'prompt':'Tong hop du an theo OAuth profile','template':'tong-quan','project_id':self.project,'module_ids':[]})
+        deadline=time.monotonic()+5
+        while time.monotonic()<deadline:
+            detail=call('cong_viec.chi_tiet',{'id':task['id']})
+            if detail['status'] in ('completed','failed','cancelled','interrupted'):break
+            time.sleep(.02)
+        self.assertEqual(detail['status'],'completed')
+        self.assertTrue(detail['mcp_delegated']);self.assertTrue(detail['artifacts'])
+        self.assertEqual(len(self.provider_requests),1)
+        request=self.provider_requests[0][1].requests[0][0]
+        self.assertTrue(token['access_token'].encode() not in request.data,'Không đưa access token vào mô hình')
+        self.assertEqual(len(transport.calls),1)
+
+    def test_profile_oauth_config_revision_change_blocks_exchange(self):
+        code,actor,settings,_=self.advanced_code()
+        self.app.connectors.save(actor,settings)
+        self.app.connectors.probe(actor,'bdsg_crm')
+        status,result,_=self.token(code)
+        self.assertEqual((status,result['error']),(400,'invalid_grant'))
+        self.assertEqual(self.app.inbound_mcp.list(actor)['grants'],[])
+        self.assertEqual(self.provider_requests,[])
 
     def test_admin_client_registry_is_control_plane_and_no_epoch_leak(self):
         status, body, _ = self.request('/api/oauth/clients', who='chu-quan')

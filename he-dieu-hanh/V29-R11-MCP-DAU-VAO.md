@@ -369,3 +369,31 @@ Kiểm clipboard thực sau nút sao chép, xóa field/list không echo, root kh
 unit đăng ký/ngắt client, member chỉ own và admin revoke khác có hiệu lực.
 Một bài Node mới giữ ranh giới client control plane/bind/consent/grant;
 đóng gói đã kiểm hai asset mới. Chưa deploy R11 hoặc nhận toàn mục tiêu xong.
+
+## R11c — quyền AI/MCP trong chấp thuận OAuth
+
+Ngày18/11/2026: khi người dùng chọn công cụ tác vụ, trang chấp thuận cho chọn
+AI của đơn vị, đọc và lập đề xuất trên công cụ đầu nối đã xác minh. AI và
+công cụ đều chưa chọn sẵn. Tắt AI hoặc bỏ tác vụ xóa lựa chọn mô-đun, không
+gửi scope cũ. Chỉ cấp đọc/dự thảo, không ghi trực tiếp/duyệt/đối soát. Summary
+đi qua nhân với actor/unit đã bind; tên nền tảng từ catalogue công khai.
+
+Profile được backend chốt cùng snapshot khi quyết định, qua code/token tới
+worker. Đổi account/unit/membership/expiry xóa cả DOM/options/profile. Từ
+chối không cấp quyền; kết quả chưa rõ không tự gửi lại.
+
+Ngày18/11/2026:14 bài HTTP cục bộ đạt, gồm hai bài mới: profile OAuth qua
+token/worker/provider tổng hợp tạo kết quả, không gửi access token vào mô
+hình; đổi revision đầu nối sau consent (kể cả xác minh lại cùng tool) chặn
+exchange và không tạo grant/gọi provider. Không gọi mô hình tính phí.
+
+SDK+Chrome1440/390: sáu luồng profile approve/deny/stale đạt, không JSerror/
+overflow; toggle AI/TASK không giữ công cụ cũ, grant có đúng profile đã chọn,
+thu hồi membership xóa profile và không nhận token. Kiểm cơ bản16 tình huống
+consent và bốn luồng SDK cũng đạt. Bằng chứng R11c8 tách riêng; ảnh/QA R11c5
+và R11c6 bị helper cũ ghi đè đã được tái tạo bằng đúng commit trong worktree
+độc lập, có audit note. Helper mặc định tạo output theo thời gian, không ghi
+đè báo cáo phát hành trước.
+
+Còn review/CI và các cửa nghiệm thu R11d trước triển khai. Không nhận toàn
+mục tiêu, cutover đơn vị hoặc client ChatGPT/Claude thật đã hoàn tất.
