@@ -195,7 +195,8 @@ class UngDung:
                                          origin=self.origin, connectors=self.connectors)
                             if unit_preview else None)
         self.core.delegated_calls = self.inbound_mcp
-        self.oauth_mcp = OAuthMCPDonVi(self.kho, self.inbound_mcp, self.web_sessions, origin=self.origin) if unit_preview else None
+        self.oauth_mcp = (OAuthMCPDonVi(self.kho, self.inbound_mcp, self.web_sessions, self.units,
+                                      origin=self.origin) if unit_preview else None)
         self.inbound_http = MCPHTTPDonVi(self.inbound_mcp, origin=self.origin) if unit_preview else None
         self.tasks.inbound_mcp = self.inbound_mcp
         if self.unit_ai is not None:

@@ -24,8 +24,9 @@ def _hash(value):
 
 
 class OAuthMCPDonVi:
-    def __init__(self, kho, authority, sessions, *, origin, clock=time.time):
+    def __init__(self, kho, authority, sessions, units, *, origin, clock=time.time):
         self.kho, self.authority, self.sessions = kho, authority, sessions
+        self.units = units
         self.origin, self.clock = origin.rstrip('/'), clock
         if self.origin+'/mcp' != authority.resource:
             raise ValueError('Issuer và resource OAuth không khớp')
@@ -43,8 +44,9 @@ class OAuthMCPDonVi:
     def _redirect(uri):
         if not isinstance(uri, str) or len(uri) > 2048 or not uri.isascii() or any(ord(c) <= 32 for c in uri):
             raise LoiOAuth('invalid_redirect_uri')
-        parsed = urlsplit(uri)
-        try: port = parsed.port
+        try:
+            parsed = urlsplit(uri)
+            port = parsed.port
         except ValueError: raise LoiOAuth('invalid_redirect_uri') from None
         loopback = parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', '::1') and port is not None and port > 0
         if (not parsed.hostname or parsed.username or parsed.password or parsed.fragment
@@ -76,13 +78,13 @@ class OAuthMCPDonVi:
             if db.execute('SELECT count(*) FROM unit_oauth_clients').fetchone()[0] >= 256:
                 raise LoiOAuth('temporarily_unavailable')
             db.execute('INSERT INTO unit_oauth_clients VALUES(?,?,?)', (identifier, revision, json.dumps(document)))
-            self.authority.units._audit(db, actor['id'], 'dang-ky-client-oauth', identifier)
+            self.units._audit(db, actor['id'], 'dang-ky-client-oauth', identifier)
         return document
 
     def _system_actor(self, actor, db):
         if not isinstance(actor, dict) or 'mcp_delegation' in actor:
             raise PermissionError('Cần chủ quản web để quản lý client OAuth')
-        self.authority.units.require_system_admin(actor, db)
+        self.units.require_system_admin(actor, db)
 
     def _client(self, db, identifier):
         if not isinstance(identifier, str) or not re.fullmatch(r'bdsg_client_[A-Za-z0-9_-]{24}', identifier):
@@ -106,7 +108,7 @@ class OAuthMCPDonVi:
             client.update(enabled=False, revision=secrets.token_hex(16))
             db.execute('UPDATE unit_oauth_clients SET revision=?,document=? WHERE id=?',
                        (client['revision'], json.dumps(client), identifier))
-            self.authority.units._audit(db, actor['id'], 'ngat-client-oauth', identifier)
+            self.units._audit(db, actor['id'], 'ngat-client-oauth', identifier)
         return {'id': identifier, 'enabled': False}
 
     def start(self, parameters):
@@ -164,7 +166,7 @@ class OAuthMCPDonVi:
 
     def _bound(self, actor, session, document, db):
         current = self.sessions.authorization_reference(actor, session, db)
-        owner = self.authority.units.reference(actor, db)
+        owner = self.units.reference(actor, db)
         if document.get('session') != current or document.get('owner_scope') != owner:
             raise PermissionError('Tài khoản, phiên hoặc đơn vị đã thay đổi; cần xin quyền lại')
 
@@ -176,7 +178,7 @@ class OAuthMCPDonVi:
                 raise PermissionError('Cần phiên web để duyệt OAuth')
             if 'session' not in document:
                 document['session'] = self.sessions.authorization_reference(actor, session, db)
-                document['owner_scope'] = self.authority.units.reference(actor, db)
+                document['owner_scope'] = self.units.reference(actor, db)
                 db.execute("UPDATE unit_oauth_requests SET state='bound',document=? WHERE hash=?",
                            (json.dumps(document), _hash(request)))
             self._bound(actor, session, document, db)
@@ -215,7 +217,7 @@ class OAuthMCPDonVi:
                            (_hash(code), _hash(request), min(document['expires'], self.clock()+300)))
             db.execute('UPDATE unit_oauth_requests SET state=?,document=? WHERE hash=?',
                        ('approved' if approve else 'denied', json.dumps(document), _hash(request)))
-            self.authority.units._audit(db, actor['id'], 'duyet-oauth' if approve else 'tu-choi-oauth', _hash(request))
+            self.units._audit(db, actor['id'], 'duyet-oauth' if approve else 'tu-choi-oauth', _hash(request))
         return {'redirect_uri': self._callback(document, **({'code': code, 'iss': self.origin} if approve else {'error': 'access_denied', 'iss': self.origin}))}
 
     def exchange(self, parameters):
@@ -246,7 +248,7 @@ class OAuthMCPDonVi:
             else:
                 if row['expires'] <= self.clock(): raise LoiOAuth('invalid_grant')
                 try:
-                    actor = self.authority.units.restore(document['owner_scope'], db)
+                    actor = self.units.restore(document['owner_scope'], db)
                     self.sessions.require_authorization(actor, document['session'], db)
                     issued = self.authority.issue_oauth(actor, document['grant_data'], document['snapshot'], client['revision'], db)
                 except (PermissionError, ValueError):

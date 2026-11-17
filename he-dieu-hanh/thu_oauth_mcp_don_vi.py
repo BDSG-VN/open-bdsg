@@ -78,7 +78,8 @@ class ThuOAuthMCPDonVi(unittest.TestCase):
             self.oauth.register_client(self.actor, {'name': 'Client khong duoc', 'redirect_uris': ['https://safe.test/cb'],
                 'allowed_tools': ['du_an.danh_sach']})
         for uri in ('http://example.test/cb', 'https://user:pass@example.test/cb', 'https://example.test/cb#fragment',
-                    'https://example.test/cb?%63ode=pretend', 'https://example.test/cb\r\nLocation: other'):
+                    'https://example.test/cb?%63ode=pretend', 'https://example.test/cb\r\nLocation: other',
+                    'https://[bad-address/callback'):
             with self.subTest(uri=uri), self.assertRaises(LoiOAuth):
                 self.oauth.register_client(fixture.OWNER, {'name': 'Client sai callback', 'redirect_uris': [uri],
                     'allowed_tools': ['du_an.danh_sach']})
