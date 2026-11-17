@@ -93,6 +93,99 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertNotIn("unit_scope", json.dumps(me))
         self.assertEqual(self.value(self.tool("du_an.danh_sach"))["projects"][0]["id"], project["id"])
 
+    def test_workspace_metadata_and_own_membership_versions(self):
+        guest = self.request("/api/me")[1]
+        self.assertEqual(guest["workspace"]["mode"], "units")
+        self.assertFalse(guest["workspace"]["system_admin"])
+        self.assertIsNone(guest["user"])
+        root = self.request("/api/me", who="chu-quan")[1]
+        self.assertTrue(root["workspace"]["system_admin"])
+        me = self.request("/api/me", who="nguoi-a")[1]
+        self.assertEqual(set(me["user"]), {"id", "name", "role"})
+        self.assertFalse(me["workspace"]["system_admin"])
+        self.assertEqual(me["workspace"]["apps"], ["account", "work", "tasks", "projects",
+            "office", "ai-settings", "browser", "modules", "staff"])
+        rows = self.request("/api/units", who="nguoi-a")[1]["units"]
+        self.assertEqual({row["id"] for row in rows}, set(self.units))
+        for row in rows:
+            self.assertEqual(set(row), {"id", "name", "role", "epoch", "revision"})
+            self.assertEqual((row["epoch"], row["revision"]), (1, 1))
+        self.assertEqual(self.request("/api/units", who="nguoi-b")[1], {"units": []})
+
+    def test_unit_version_headers_reject_stale_and_malformed_requests(self):
+        unit = self.units[0]
+        path = "/api/tasks"
+        valid = {"X-BDSG-Unit-Epoch": "1", "X-BDSG-Unit-Revision": "1"}
+        self.assertEqual(self.request(path, who="nguoi-a", unit=unit, headers=valid)[0], 200)
+        for headers in ({"X-BDSG-Unit-Epoch": "1"},
+                        {"X-BDSG-Unit-Revision": "1"},
+                        {**valid, "X-BDSG-Unit-Epoch": "0"},
+                        {**valid, "X-BDSG-Unit-Revision": "1.0"},
+                        {**valid, "X-BDSG-Unit-Revision": "2"}):
+            status, body, _ = self.request(path, who="nguoi-a", unit=unit, headers=headers)
+            self.assertEqual((status, body["code"]), (409, "unit_changed"))
+        self.app.units.set_member(self.root, {"unit_id": unit, "identity": "nguoi-b", "role": "member"})
+        self.app.units.set_member(self.root, {"unit_id": unit, "identity": "nguoi-b", "role": "revoke"})
+        self.assertEqual(self.request(path, who="nguoi-b", unit=unit, headers=valid)[0], 403)
+        self.app.units.set_member(self.root, {"unit_id": unit, "identity": "nguoi-b", "role": "member"})
+        self.assertEqual(self.request(path, who="nguoi-b", unit=unit, headers=valid)[:2],
+            (409, {"code": "unit_changed", "error": "Quyền đơn vị đã thay đổi. Hãy chọn lại đơn vị."}))
+        row = self.request("/api/units", who="nguoi-b")[1]["units"][0]
+        self.assertGreater(row["epoch"], 1)
+        self.assertGreater(row["revision"], 1)
+        self.assertEqual(self.request(path, who="nguoi-b", unit=unit)[0], 200)
+        fresh = {"X-BDSG-Unit-Epoch": str(row["epoch"]), "X-BDSG-Unit-Revision": str(row["revision"])}
+        self.assertEqual(self.request(path, who="nguoi-b", unit=unit, headers=fresh)[0], 200)
+        self.assertEqual(self.request(path, who="chu-quan", unit=unit, headers=fresh)[0], 403)
+        self.app.units.set_member(self.root, {"unit_id": unit, "identity": "nguoi-b", "role": "admin"})
+        self.assertEqual(self.request(path, who="nguoi-b", unit=unit, headers=fresh)[0], 409)
+        stale_write = self.request("/api/tools", {"name": "du_an.tao", "arguments": {
+            "name": "Du an tu bieu mau cu"}}, "nguoi-b", unit, fresh)
+        self.assertEqual((stale_write[0], stale_write[1]["code"]), (409, "unit_changed"))
+
+    def test_catalogue_bootstrap_and_scoped_model_modules_are_safe(self):
+        product = self.app.catalogue[0]
+        self.app.core.connections.config = [{"platform_id": product["id"],
+            "url": "https://private-synthetic.bdsg.vn/mcp", "token": "synthetic-private-token",
+            "state": "synthetic-private-state", "checked_at": "synthetic-private-check",
+            "read_tools": ["private-tool"], "write_tools": []}]
+        (self.app.kho.root / "web-status.json").write_text(json.dumps({
+            "checked_at": "synthetic-private-web-check", "checks": {
+                product["id"]: {"state": "synthetic-private-web-state"}}}), encoding="utf-8")
+        status, catalogue, _ = self.request("/api/catalogue")
+        self.assertEqual(status, 200)
+        self.assertEqual(catalogue["products"][0]["id"], product["id"])
+        self.assertNotIn("mcp_endpoint", catalogue)
+        self.assertFalse(any(key in catalogue["products"][0] for key in ("web", "mcp", "mcp_status")))
+        self.assertNotIn("synthetic-private", json.dumps(catalogue))
+        for path in ("/api/model", "/api/modules"):
+            self.assertEqual(self.request(path)[0], 401)
+            self.assertEqual(self.request(path, who="nguoi-a")[0], 403)
+            self.assertEqual(self.request(path, who="chu-quan", unit=self.units[0])[0], 403)
+            self.assertEqual(self.request(path, who="nguoi-a", unit=self.units[0],
+                headers={"X-BDSG-Unit-Epoch": "1", "X-BDSG-Unit-Revision": "2"})[0], 409)
+        model = self.request("/api/model", who="nguoi-a", unit=self.units[0])[1]
+        self.assertFalse(model["configured"])
+        self.assertEqual(model["provider"], "litellm")
+        modules = self.request("/api/modules", who="nguoi-a", unit=self.units[0])[1]
+        self.assertEqual(modules, self.value(self.tool("mo_dun.danh_sach")))
+        for module in modules["modules"]:
+            self.assertEqual(module["kind"], "web")
+            self.assertEqual(module["mcp"]["read_tools"], [])
+            self.assertEqual(module["mcp"]["write_tools"], [])
+        self.assertNotIn("synthetic-private", json.dumps(modules))
+        actor = self.app.units.bind({"id": "nguoi-a", "name": "A", "role": "operator"}, self.units[0])
+        direct = self.app.core.goi(actor, "mo_dun.danh_sach", {})
+        self.assertTrue(direct["ok"], direct)
+        self.assertEqual(direct["ket_qua"], modules)
+        staff = self.value(self.tool("nhan_su.danh_sach"))
+        self.assertTrue(staff["agents"])
+        self.assertFalse(staff["grants_permissions"])
+        self.assertFalse(self.app.core.goi(actor, "nen_tang.ket_noi", {})["ok"])
+        project = self.value(self.tool("du_an.tao", {"name": "Du an kiem trang thai Office"}))
+        state = self.value(self.tool("van_phong.trang_thai", {"project_id": project["id"]}))
+        self.assertEqual(state["editor_state"], "chua-ho-tro-don-vi")
+
     def test_default_gateway_refuses_store_with_units(self):
         with self.assertRaises(PermissionError):
             UngDung(self.tmp.name, self.app.origin, True)
@@ -129,6 +222,33 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertEqual(self.request("/api/units/members", {
             "identity": "nguoi-b", "role": "member", "unit_id": self.units[1]}, "nguoi-a", self.units[0])[0], 400)
 
+    def test_office_file_lifecycle_requires_unit_and_explicit_editor_share(self):
+        first, second = self.units
+        project = self.value(self.tool("du_an.tao", {"name": "Du an vong doi tep"}))
+        content = base64.b64encode(b"ban dau").decode()
+        file = self.value(self.tool("van_phong.tao", {"project_id": project["id"],
+            "name": "thu.txt", "content_base64": content}))
+        for action, extra in (("rename", {"name": "moi.txt"}), ("trash", {}),
+                              ("untrash", {}), ("restore-version", {"version": 1})):
+            result = self.tool("van_phong.cap_nhat", {"id": file["id"],
+                "expected_revision": file["revision"], "action": action, **extra}, unit=second)
+            self.assertFalse(result[1]["ok"], action)
+        self.value(self.tool("don_vi.chia_se_du_an", {"id": project["id"],
+            "identity": "nguoi-a", "unit_id": second, "role": "viewer"}))
+        self.assertFalse(self.tool("van_phong.cap_nhat", {"id": file["id"],
+            "expected_revision": file["revision"], "action": "trash"}, unit=second)[1]["ok"])
+        self.value(self.tool("don_vi.chia_se_du_an", {"id": project["id"],
+            "identity": "nguoi-a", "unit_id": second, "role": "editor"}))
+        for action, extra in (("rename", {"name": "moi.txt"}), ("save", {
+                "content_base64": base64.b64encode(b"ban moi").decode()}),
+                ("restore-version", {"version": 1}), ("trash", {}), ("untrash", {})):
+            file = self.value(self.tool("van_phong.cap_nhat", {"id": file["id"],
+                "expected_revision": file["revision"], "action": action, **extra}, unit=second))
+            listed = self.value(self.tool("van_phong.danh_sach", {
+                "project_id": project["id"], "trashed": action == "trash"}, unit=second))
+            self.assertIn(file["id"], [entry["id"] for entry in listed["files"]])
+        self.assertEqual(self.value(self.tool("van_phong.doc", {"id": file["id"]}))["content_base64"], content)
+
     def test_yeu_cau_va_phien_tai_office_tach_theo_don_vi_qua_http(self):
         first, second = self.units
         project = self.value(self.tool("du_an.tao", {"name": "Du an chia se de thu Office"}))
@@ -162,7 +282,7 @@ class ThuDonViHTTP(unittest.TestCase):
 
     def test_unported_routes_tools_and_mcp_are_denied(self):
         for path in ("/api/requests", "/api/activity", "/api/agents",
-                     "/api/connections", "/api/model", "/api/modules", "/api/google/callback",
+                     "/api/connections", "/api/google/callback",
                      "/api/auth/google", "/api/office-source", "/api/office-engine-auth", "/mcp"):
             self.assertEqual(self.request(path, who="chu-quan", unit=self.units[0])[0], 403, path)
         for path in ("/mcp", "/api/office-callback", "/api/google/start", "/api/model-config", "/api/customer-support"):
@@ -205,6 +325,8 @@ class ThuDonViHTTP(unittest.TestCase):
             "policy": dict(DEFAULT_POLICY)}
         saved = self.value(self.tool("mo_hinh.luu", config, unit=first))
         self.assertEqual(saved["default_model"], "thu-model")
+        self.assertTrue(self.request("/api/model", who="nguoi-a", unit=first)[1]["configured"])
+        self.assertFalse(self.request("/api/model", who="nguoi-a", unit=second)[1]["configured"])
         self.assertNotIn("synthetic-key-only-test", json.dumps(saved))
         self.assertNotIn("api_key", saved["models"][0])
         self.assertEqual(self.value(self.tool("mo_hinh.danh_sach", unit=second))["models"], [])

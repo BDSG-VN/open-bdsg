@@ -398,7 +398,7 @@ class DieuPhoi:
         )
 
     def dang_ky_cong_viec(
-        self, engine, configure_model, connectors, disable_model, projects
+        self, engine, configure_model, connectors, disable_model, projects, *, modules=None
     ):
         text = {"type": "string"}
         project_fields = {"name": text, "instructions": text, "context": text}
@@ -451,7 +451,7 @@ class DieuPhoi:
                 [
                     BanKhaiCongCu(
                         "danh_sach",
-                        lambda a: engine.modules(self.actor.get()),
+                        lambda a: (modules or engine.modules)(self.actor.get()),
                         mo_ta="Mô-đun web và công cụ MCP đã khai báo, không suy diễn liên thông.",
                         luoc_do=schema(),
                     )

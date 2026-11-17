@@ -102,7 +102,7 @@
       slot.removeAttribute("role");
       slot.innerHTML = `<div class="bdsg-staff-search"><label for="bdsg-staff-query">Tìm chuyên môn</label><input id="bdsg-staff-query" type="search" placeholder="Tên công việc, kỹ năng hoặc lĩnh vực…" autocomplete="off"><span id="bdsg-staff-count" role="status"></span></div><p class="bdsg-staff-note">Kỹ năng hướng dẫn cách làm. Mô hình AI và công cụ vẫn cần được cấu hình, cấp quyền theo tác vụ.</p><div id="bdsg-staff-list"></div>`;
       rows();
-      slot
+      if (window.BDSGUnit?.snapshot().mode !== "units") slot
         .querySelector(".bdsg-staff-search")
         .insertAdjacentHTML(
           "afterend",

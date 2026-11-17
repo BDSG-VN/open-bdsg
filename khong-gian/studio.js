@@ -226,7 +226,7 @@
     }
   });
   document.addEventListener("submit", async (e) => {
-    const id = e.target.id;
+    const id = e.target.getAttribute("id") || "";
     if (!id.startsWith("studio-")) return;
     e.preventDefault();
     if (busy) return;

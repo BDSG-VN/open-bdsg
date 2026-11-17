@@ -119,35 +119,52 @@ let afterLogin = null,
   toastTimer,
   refreshVersion = 0;
 
+const activeUnitRequests = new Set();
 async function api(path, options = {}, brokered = false) {
-  const publicRead = ["/api/me", "/api/catalogue", "/api/model", "/api/modules", "/api/auth/google", "/api/ready"].includes(path);
+  const unit = window.BDSGUnit;
+  const scopeHeaders = unit?.headers(path) || {};
+  const token = unit?.capture();
+  const publicRead = ["/api/me", "/api/catalogue", "/api/auth/google", "/api/ready"].includes(path);
+  const scoped = !!scopeHeaders["X-BDSG-Unit"] || (!publicRead && !path.startsWith('/api/sessions') && !path.startsWith('/api/units') && !path.startsWith('/api/auth/') && !['/api/login','/api/logout'].includes(path));
   let sharedRead = !options.method && !publicRead;
   if (path === "/api/tools" && options.body) {
     try { sharedRead = ["mo_dun.danh_sach", "du_an.danh_sach"].includes(JSON.parse(options.body).name); } catch (_) {}
   }
   if (!brokered && sharedRead && location.pathname === "/workspace.html" && parent !== window && parent.BDSGReadBroker) {
-    return parent.BDSGReadBroker.read(path + "|" + (options.body || ""), state.user?.id || "guest", () => api(path, options, true));
+    return parent.BDSGReadBroker.read(path + "|" + (options.body || ""), unit?.contextKey() || state.user?.id || "guest", () => api(path, options, true));
   }
-  const r = await fetch(path, {
-    credentials: "same-origin",
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {}),
-      ...(state.user?.id && !["/api/me", "/api/catalogue", "/api/login", "/api/auth/google", "/api/auth/google/start"].includes(path) ? {"X-BDSG-Actor":state.user.id} : {}),
-    },
-  });
-  let data;
+  const controller = new AbortController();
+  if (scoped) activeUnitRequests.add(controller);
+  const headers = new Headers(options.headers || {});
+  // Người gọi không thể ghi đè phạm vi đã chụp, kể cả bằng tên header khác hoa/thường.
+  for (const name of ['X-BDSG-Unit','X-BDSG-Unit-Epoch','X-BDSG-Unit-Revision','X-BDSG-Actor']) headers.delete(name);
+  if (options.body && !headers.has('Content-Type')) headers.set('Content-Type','application/json');
+  if (state.user?.id && !["/api/me", "/api/catalogue", "/api/login"].includes(path) && !path.startsWith('/api/auth/')) headers.set('X-BDSG-Actor', token?.actorId || state.user.id);
+  for (const [name,value] of Object.entries(scopeHeaders)) headers.set(name,value);
+  const stale = () => controller.signal.aborted || (scoped && unit && !unit.current(token));
+  const changedError = () => Object.assign(new Error('Phạm vi làm việc đã thay đổi. Hãy mở lại ứng dụng.'),{name:'AbortError'});
   try {
-    data = await r.json();
-  } catch (_) {
-    throw new Error("Dịch vụ chưa sẵn sàng. Vui lòng thử lại.");
-  }
-  if (!r.ok) {
-    if (data.code === "identity_changed") window.BDSGSession?.invalidate();
-    throw new Error(data.error || "Chưa hoàn tất được yêu cầu.");
-  }
-  return data;
+    const r = await fetch(path, {
+      credentials: "same-origin", ...options, headers,
+      signal: options.signal ? AbortSignal.any([controller.signal,options.signal]) : controller.signal,
+    });
+    if (stale()) throw changedError();
+    let data;
+    try { data = await r.json(); } catch (_) {
+      if (stale()) throw changedError();
+      throw new Error("Dịch vụ chưa sẵn sàng. Vui lòng thử lại.");
+    }
+    if (stale()) throw changedError();
+    if (!r.ok) {
+      if (data.code === "identity_changed") window.BDSGSession?.invalidate();
+      if ([403,409].includes(r.status) && data.code === 'unit_changed') {
+        void unit?.refresh({invalidate:true});
+        throw changedError();
+      }
+      throw new Error(data.error || "Chưa hoàn tất được yêu cầu.");
+    }
+    return data;
+  } finally { activeUnitRequests.delete(controller); }
 }
 async function tool(name, args = {}) {
   const r = await api("/api/tools", {
@@ -494,7 +511,7 @@ function newRequest(sector) {
   });
 }
 async function loadPrivate() {
-  if (!state.user) return;
+  if (!state.user || window.BDSGUnit?.snapshot().mode === 'units') return;
   // Các ứng dụng có API riêng không cần tải lại toàn bộ hộp thư/nhật ký khi mở cửa sổ.
   if (!['#overview', '#requests', '#agents', '#activity', '#connections'].includes(location.hash)) return;
   const actor = state.user.id;
@@ -513,17 +530,19 @@ async function loadPrivate() {
   );
 }
 async function refresh() {
-  const version = ++refreshVersion;
+  let version = ++refreshVersion;
   const [catalog, me] = await Promise.all([
     api("/api/catalogue"),
     api("/api/me"),
   ]);
   if (version !== refreshVersion) return;
-  if ((state.user?.id || "guest") !== (me.user?.id || "guest")) clearPrivateState();
+  if ((state.user?.id || "guest") !== (me.user?.id || "guest")) { clearPrivateState(); version = refreshVersion; }
   state.products = catalog.products;
   state.checkedAt = catalog.checked_at;
   state.endpoint = catalog.mcp_endpoint;
   state.user = me.user;
+  await window.BDSGUnit?.boot(me);
+  if (version !== refreshVersion) return;
   $("#nav-count").textContent = state.products.length;
   $("#profile-name").textContent = state.user
     ? state.user.name || 'Người dùng BDSG'
@@ -745,18 +764,28 @@ $("#profile").addEventListener("click", async () => {
     toast(err.message);
   }
 });
-function clearPrivateState() {
-  refreshVersion++;
-  state.user = null;
-  window.BDSGDesktop?.reset();
+function clearUnitState() {
+  for (const controller of activeUnitRequests) controller.abort();
+  activeUnitRequests.clear();
   window.BDSGSessions?.reset();
   window.BDSGNode?.reset();
   window.BDSGReadBroker?.reset();
+  window.BDSGProjects?.reset?.();
   window.BDSGProjects?.clearSelected();
   window.BDSGTasks?.reset(); window.BDSGStaff?.reset(); window.BDSGAI?.reset();
   window.BDSGStudio?.reset(); window.BDSGOffice?.reset(); window.BDSGConnectors?.reset();
   window.BDSGVietnam?.reset(); window.BDSGSupport?.reset();
   state.requests = []; state.agents = []; state.messages = []; state.events = []; state.connections = [];
+}
+window.addEventListener('bdsg-unit-changed', () => {
+  clearUnitState();
+  if (state.user && state.user.id === window.BDSGUnit?.snapshot().actorId) render();
+});
+function clearPrivateState() {
+  refreshVersion++;
+  state.user = null;
+  clearUnitState();
+  window.BDSGDesktop?.reset();
   $("#profile-name").textContent = "Không gian công khai";
   $("#profile-role").textContent = "Đăng nhập để làm việc";
 }

@@ -1,5 +1,8 @@
 "use strict";
 (() => {
+  const unitMode = () => window.BDSGUnit?.snapshot().mode === "units";
+  const canAdmin = () => window.BDSGUnit ? window.BDSGUnit.canAdmin() : state.user?.role === "quan-tri";
+  const policyLabel = (label) => unitMode() ? label.replace("toàn hệ thống", "đơn vị") : label;
   let epoch = 0,
     configuration = null,
     saving = false;
@@ -86,7 +89,7 @@
         .map(([key, label]) =>
           field(
             key,
-            label,
+            policyLabel(label),
             configuration.policy[key],
             "number",
             `required min="${key.startsWith("usd_") ? 0 : 1}" step="${key.startsWith("usd_") ? "any" : 1}"`,
@@ -162,9 +165,9 @@
       if (!current(ticket, actor)) return;
       document.querySelector("#bdsg-ai-status").textContent =
         `Còn ${quota.tasks_remaining}/${quota.policy.tasks_per_user} tác vụ được tài trợ hôm nay, trong trần token và ngân sách. Đặt lại lúc 00:00 giờ Việt Nam.`;
-      if (state.user.role !== "quan-tri") {
+      if (!canAdmin()) {
         document.querySelector("#bdsg-ai-content").innerHTML =
-          "<p>Chủ quản cấu hình mô hình và tài trợ. Chọn Tự động hoặc mô hình cụ thể trong ô giao việc.</p>";
+          unitMode() ? "<p>Quản trị đơn vị cấu hình mô hình và hạn mức. Chọn Tự động hoặc mô hình cụ thể trong ô giao việc.</p>" : "<p>Chủ quản cấu hình mô hình và tài trợ. Chọn Tự động hoặc mô hình cụ thể trong ô giao việc.</p>";
         return;
       }
       const result = await tool("mo_hinh.cau_hinh");

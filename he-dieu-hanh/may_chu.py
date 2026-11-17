@@ -47,6 +47,7 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
+    "mo_dun.danh_sach", "nhan_su.danh_sach",
     "mo_hinh.danh_sach", "mo_hinh.han_muc", "mo_hinh.cau_hinh", "mo_hinh.luu",
     'cong_viec.danh_sach','cong_viec.chi_tiet','cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung',
     "du_an.danh_sach", "du_an.tao", "du_an.cap_nhat", "du_an.luu_tru", "du_an.khoi_phuc",
@@ -60,6 +61,10 @@ PREVIEW_TOOLS = frozenset({
 })
 
 
+PREVIEW_APPS = ("account", "work", "tasks", "projects", "office", "ai-settings",
+                "browser", "modules", "staff")
+
+
 class UngDung:
     def __init__(self, data, origin, ghi=False, catalogue=None, connections=None, *, unit_preview=False,
                  unit_ai_probe=None, unit_ai_factory=None):
@@ -71,6 +76,11 @@ class UngDung:
                 (GOC / "nen-tang/danh-muc.json").read_text(encoding="utf-8-sig")
             )["products"]
         )
+        if unit_preview:
+            # Danh mục thử chỉ giữ dữ liệu nguồn công khai, không mang trạng thái kết nối cũ.
+            fields = ("id", "name", "url", "group", "purpose", "color")
+            self.catalogue = [{key: product[key] for key in fields if key in product}
+                              for product in self.catalogue]
         self.kho = Kho(data)
         # Chưa lắp mọi đường HTTP/MCP/worker với phạm vi đơn vị: không khởi
         # động gateway toàn cổng trên kho đã chuyển rồi rơi về quyền cũ.
@@ -106,7 +116,7 @@ class UngDung:
         self.google_login = DangNhapGoogle(self.kho, self.origin)
         self.vn_integrations = TichHopVietNam(self.kho)
         self.vn_sync = DongBoVietNam(self.vn_integrations)
-        self.office.editor_status = self.office_editor.status
+        self.office.editor_status = (lambda: {"state": "chua-ho-tro-don-vi"}) if unit_preview else self.office_editor.status
         self.tasks.documents = self.documents
         self.runtime = RuntimeTacVu(self.kho, self.tasks)
         self.browser = TrinhDuyet(self.kho, self.tasks)
@@ -139,6 +149,7 @@ class UngDung:
             self.connectors,
             self.model_settings.disable,
             self.projects,
+            modules=self.modules,
         )
         self.core.dang_ky_mo_rong(self)
         if unit_preview:
@@ -194,7 +205,19 @@ class UngDung:
     def ai_admin(self, actor):
         return self.unit_ai.admin(actor) if self.unit_ai is not None else self.ai.admin(actor)
 
+    def modules(self, actor):
+        if not self.unit_preview:
+            return self.tasks.modules(actor)
+        with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
+            self.units.require(actor, db)
+        return {"modules": [{**product, "kind": "web", "mcp": {
+            "state": "chua-ho-tro-don-vi", "read_tools": [], "write_tools": []}}
+            for product in self.catalogue]}
+
     def catalog(self):
+        if self.unit_preview:
+            return {"products": self.catalogue, "checked_at": None}
         p = self.kho.root / "web-status.json"
         checks = (
             json.loads(p.read_text())
@@ -282,7 +305,8 @@ def tao_may_chu(app, port=8766):
             if not app.unit_preview:
                 return True
             allowed = ({"/api/me", "/api/sessions", "/api/units", "/api/units/members",
-                        "/api/document", "/api/tasks", "/api/task", "/api/suc-khoe", "/api/ready"} if method == "GET" else
+                        "/api/document", "/api/tasks", "/api/task", "/api/suc-khoe", "/api/ready",
+                        "/api/catalogue", "/api/model", "/api/modules"} if method == "GET" else
                        {"/api/login", "/api/logout", "/api/tools", "/api/upload", "/api/units",
                         "/api/units/members", "/api/sessions/rename", "/api/sessions/revoke",
                         "/api/sessions/revoke-others"})
@@ -295,7 +319,22 @@ def tao_may_chu(app, port=8766):
             if not app.unit_preview:
                 return actor
             try:
-                return app.units.bind(actor, self.headers.get("X-BDSG-Unit", ""))
+                scoped = app.units.bind(actor, self.headers.get("X-BDSG-Unit", ""))
+                epoch = self.headers.get("X-BDSG-Unit-Epoch")
+                revision = self.headers.get("X-BDSG-Unit-Revision")
+                if epoch is not None or revision is not None:
+                    # Metadata chỉ phát hiện biểu mẫu cũ; bind vẫn kiểm tư cách sống.
+                    if (epoch is None or revision is None
+                            or not epoch.isascii() or not revision.isascii()
+                            or not epoch.isdecimal() or not revision.isdecimal()
+                            or len(epoch) > 20 or len(revision) > 20
+                            or int(epoch) < 1 or int(revision) < 1
+                            or int(epoch) != scoped["unit_scope"].epoch
+                            or int(revision) != scoped["unit_scope"].revision):
+                        self.send(409, {"code": "unit_changed",
+                            "error": "Quyền đơn vị đã thay đổi. Hãy chọn lại đơn vị."})
+                        return None
+                return scoped
             except (ValueError, PermissionError):
                 self.send(403, {"error": "Cần chọn đơn vị có tư cách thành viên còn hiệu lực"})
                 return None
@@ -396,7 +435,7 @@ def tao_may_chu(app, port=8766):
                 "/api/model", "/api/suc-khoe", "/api/me",
             }
             if app.unit_preview:
-                public_paths = {"/api/ready", "/api/suc-khoe", "/api/me"}
+                public_paths = {"/api/ready", "/api/suc-khoe", "/api/me", "/api/catalogue"}
             if path not in public_paths and not self.cookie_actor_matches(self.actor()):
                 return
             if app.unit_preview and path in ("/api/units", "/api/units/members"):
@@ -477,6 +516,22 @@ def tao_may_chu(app, port=8766):
                     return self.send(200, app.customer_support.brains.detail(parse_qs(urlsplit(self.path).query).get('id',[''])[0]))
                 except ValueError as error:
                     return self.send(404, {'error':str(error)})
+            if path in ("/api/modules", "/api/model") and app.unit_preview:
+                actor = self.actor()
+                if not actor:
+                    return self.send(401, {"error": "Cần đăng nhập"})
+                actor = self.scoped_actor(actor)
+                if not actor:
+                    return
+                try:
+                    if path == "/api/modules":
+                        result = app.core.goi(actor, "mo_dun.danh_sach", {})
+                        if not result.get("ok"):
+                            return self.send(403, {"error": "Không có quyền trong đơn vị"})
+                        return self.send(200, result["ket_qua"])
+                    return self.send(200, app.unit_ai.bind(actor).public_status())
+                except PermissionError:
+                    return self.send(403, {"error": "Không có quyền trong đơn vị"})
             if path == "/api/modules":
                 return self.send(200, app.tasks.modules(None))
             if path == "/api/model":
@@ -532,7 +587,11 @@ def tao_may_chu(app, port=8766):
                         return self.send(503, {"error": "Chưa xác minh được phiên; hãy thử lại"})
                 return self.send(
                     200, {"authenticated": actor is not None, "user":
-                          {key: actor[key] for key in ("id", "name", "role")} if actor else None}
+                          {key: actor[key] for key in ("id", "name", "role")} if actor else None,
+                          "workspace": {"mode": "units" if app.unit_preview else "legacy",
+                              "system_admin": bool(actor and actor["id"] == "chu-quan"
+                                                   and actor["role"] == "quan-tri"),
+                              "apps": list(PREVIEW_APPS) if app.unit_preview else []}}
                 )
             routes = {
                 "/api/agents": "agent.danh_sach",

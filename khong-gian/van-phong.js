@@ -1,5 +1,6 @@
 "use strict";
 (() => {
+  const unitMode = () => window.BDSGUnit?.snapshot().mode === "units";
   let projects = [],
     files = [],
     selected = "",
@@ -284,11 +285,11 @@
       <div class="office-controls"><label class="office-project-label">Dự án<select id="office-project" ${busy ? "disabled" : ""}><option value="">Chọn dự án…</option>${projects.map((p) => `<option value="${esc(p.id)}" ${p.id === selected ? "selected" : ""}>${esc(p.name)}${p.archived ? " · Đã lưu trữ" : ""}</option>`).join("")}</select></label>
       <div class="office-primary-actions"><button class="button" type="button" data-office-new ${!write() || loading || busy ? "disabled" : ""}>${icon("plus")}Tạo văn bản</button><label class="button primary office-upload ${!write() || loading || busy ? "disabled" : ""}">Tải tệp lên<input id="office-upload" type="file" accept=".txt,.md,.csv,.pdf,.docx,.xlsx,.pptx" aria-label="Chọn tệp để tải lên" ${!write() || loading || busy ? "disabled" : ""}></label></div></div>
       <div class="office-filter-bar"><div class="office-tabs" role="group" aria-label="Khu vực tệp"><button type="button" data-office-tab="files" aria-pressed="${!trash}" ${busy ? "disabled" : ""}>Tệp của dự án</button><button type="button" data-office-tab="trash" aria-pressed="${trash}" ${busy ? "disabled" : ""}>Thùng rác</button></div><label class="office-search">${icon("search")}<input id="office-search" type="search" placeholder="Tìm tên tệp…" aria-label="Tìm tên tệp" value="${esc(query)}"></label></div>
-      <div class="office-formats" role="group" aria-label="Tạo tài liệu Office">${[
+      <div class="office-formats" role="group" aria-label="Tạo tài liệu Office">${(unitMode() ? [] : [
         ["docx", "Tạo Word"],
         ["xlsx", "Tạo Excel"],
         ["pptx", "Tạo PowerPoint"],
-      ]
+      ])
         .map(
           ([ext, label]) =>
             `<button type="button" class="button" data-office-format="${ext}" ${!write() || busy || loading ? "disabled" : ""}>${label}</button>`,
@@ -298,7 +299,7 @@
       <div id="office-progress" class="office-progress" hidden></div>
       <div id="office-transfers"></div>
       <div id="office-files" aria-busy="${loading}"></div>
-      <details class="office-google"><summary>Kết nối Google Drive</summary><div id="office-google-body"><p>Mở để kiểm tra kết nối tài khoản riêng của bạn.</p></div></details>
+      ${unitMode() ? '<p>Đơn vị đang dùng kho tệp riêng theo quyền dự án. Soạn thảo Word/Excel/PowerPoint trực tuyến và kết nối Google chưa mở ở chế độ này; bạn vẫn có thể tải tệp lên và tải về.</p>' : '<details class="office-google"><summary>Kết nối Google Drive</summary><div id="office-google-body"><p>Mở để kiểm tra kết nối tài khoản riêng của bạn.</p></div></details>'}
       <div class="office-footer"><p id="office-usage"></p><p>Tệp tối đa 8 MiB; sửa văn bản tối đa 32 KiB. Word, Excel và PowerPoint soạn trên máy tính bằng ONLYOFFICE. ${access?.scan_state === "san-sang" ? "Bộ quét virus đang sẵn sàng." : "Bộ quét virus chưa sẵn sàng; không coi tệp là đã được quét."}</p></div>
       </section>`;
     drawFiles();
@@ -549,7 +550,7 @@
     );
     if (!element) return;
     const actions = element.querySelector(".office-file-actions");
-    if (write() && !file.trashed && /\.(docx|xlsx|pptx)$/i.test(file.name)) {
+    if (!unitMode() && write() && !file.trashed && /\.(docx|xlsx|pptx)$/i.test(file.name)) {
       const link = document.createElement("a");
       link.className = "button primary";
       link.href = "/soan-thao.html?id=" + encodeURIComponent(file.id);
@@ -557,7 +558,7 @@
       separateTab(link);
       actions.prepend(link);
     }
-    if (!file.trashed) {
+    if (!unitMode() && !file.trashed) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "button";

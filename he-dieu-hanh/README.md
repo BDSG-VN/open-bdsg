@@ -133,6 +133,10 @@ hệ thống chính phủ và không tự gắn nhãn EMC.
 
 ## Triển khai và quay lại
 
+Giao diện chọn đơn vị thử nghiệm, quyền ứng dụng và các giới hạn chuyển đổi:
+[V29 R7](V29-R7-GIAO-DIEN-DON-VI.md). Mã mới không tự bật chế độ đơn vị trên
+dữ liệu đang vận hành.
+
 Đóng gói web theo danh sách cho phép, giữ source và dữ liệu ngoài docroot.
 Chạy dưới tài khoản dịch vụ không đăng nhập, filesystem chỉ đọc trừ thư mục
 dữ liệu, giới hạn tài nguyên và không cấp sudo. Giữ bản phát hành trước;

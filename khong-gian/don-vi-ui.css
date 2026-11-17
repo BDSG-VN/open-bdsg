@@ -1,0 +1,30 @@
+.os-unit-row { margin: 0 32px 8px; padding: 12px 16px; background: #fff; border-radius: 16px; max-height: min(52dvh, 430px); overflow-y: auto; }
+.os-unit-current { display: grid; grid-template-columns: auto minmax(160px, 360px) 1fr auto; align-items: center; gap: 8px 16px; }
+.os-unit-row label, .os-unit-row summary { font-size: 14px; font-weight: 600; }
+.os-unit-row select, .os-unit-row input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #d8d8df; border-radius: 12px; background: #f2f2f7; color: #1c1c1e; padding: 10px 12px; font-size: 16px; }
+.os-unit-row p { margin: 0; color: #62626c; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.os-unit-row .os-unit-name { grid-column: 2 / -1; color: #1c1c1e; font-weight: 600; }
+.os-unit-row button { min-height: 44px; padding: 10px 16px; border-radius: 12px; font-size: 14px; }
+.os-unit-retry { background: #e5eefb; color: #005bc4 !important; border: 0; }
+.os-unit-admin { margin-top: 8px; }
+.os-unit-admin summary { color: #005bc4; cursor: pointer; min-height: 44px; padding: 12px 0; }
+.os-unit-admin form { max-width: 560px; display: grid; gap: 8px; padding: 8px 0; }
+.os-unit-admin h2 { font-size: 20px; margin: 0 0 8px; }
+.os-unit-admin form button { justify-self: start; margin-top: 8px; }
+.os-unit-row :focus-visible { outline: 3px solid #0067dc; outline-offset: 3px; }
+.os-unit-mode { display: flex; flex-direction: column; }
+.os-unit-mode .os-status { flex-shrink: 0; }
+.os-unit-mode .os-unit-row { flex-shrink: 0; }
+.os-unit-mode #os-view { flex: 1; min-height: 0; height: auto; padding-bottom: 112px; }
+.os-unit-mode .os-stage { flex: 1; min-height: 0; height: auto; margin-bottom: 112px; }
+.os-app[aria-disabled="true"] .os-app-icon { opacity: .45; }
+.os-app-unavailable { color: #62626c; font-size: 14px; line-height: 1.35; max-width: 120px; }
+.ios-large-text .os-unit-row label, .ios-large-text .os-unit-row summary, .ios-large-text .os-unit-row p, .ios-large-text .os-app-unavailable { font-size: 16px; }
+@media (max-width: 600px) {
+  .os-unit-row { margin: 0 20px 8px; padding: 12px; }
+  .os-unit-current { grid-template-columns: 1fr auto; gap: 6px 8px; }
+  .os-unit-current label, .os-unit-current select { grid-column: 1 / -1; }
+  .os-unit-row .os-unit-name { grid-column: 1 / -1; }
+  .os-unit-mode .os-stage { margin-bottom: 104px; }
+  .os-app-unavailable { font-size: 14px; }
+}

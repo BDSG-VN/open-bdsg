@@ -27,10 +27,9 @@
     check() {
       if (checking) return checking;
       const expected = state.user?.id || "guest";
-      checking = fetch("/api/me", {credentials:"same-origin", cache:"no-store"}).then(async response => {
-        if (!response.ok) return false;
-        const result = await response.json();
+      checking = api("/api/me", {cache:"no-store"}).then(async result => {
         if ((result.user?.id || "guest") !== expected) { invalidateSession(); return false; }
+        await window.BDSGUnit?.boot(result);
         return (state.user?.id || "guest") === expected && !invalidating;
       }).catch(() => false).finally(() => { checking = null; });
       return checking;
@@ -64,7 +63,8 @@
     window.addEventListener("hashchange", () => parent.postMessage({type:"bdsg-os-route", route:location.hash}, location.origin));
     return;
   }
-  window.BDSGReadBroker = window.BDSGOSState.createReadBroker({getIdentity:()=>state.user?.id || "guest", maxConcurrent:2});
+  const scopeIdentity = () => window.BDSGUnit?.contextKey() || state.user?.id || "guest";
+  window.BDSGReadBroker = window.BDSGOSState.createReadBroker({getIdentity:scopeIdentity, maxConcurrent:2});
   const apps = [
     {id:"account", title:"Tài khoản", route:"#account", icon:"lock", color:"gray", description:"Các phiên đăng nhập web và tên thiết bị"},
     {id:"system", title:"Máy chủ", route:"#system", icon:"activity", color:"gray", description:"TH01, tài nguyên và phục hồi dữ liệu"},
@@ -100,15 +100,16 @@
   } catch (_) {}
   const sessionKey = id => "bdsg-os-v27:" + id;
   function syncIdentity() {
-    const next = state.user?.id || "guest";
+    const next = scopeIdentity();
     if (next === identity) return;
     if (storageKey) { try { sessionStorage.removeItem(storageKey); } catch (_) {} }
     for (const frame of frames.values()) frame.remove();
     frames.clear();
+    window.BDSGReadBroker?.reset();
     identity = next; storageKey = sessionKey(next);
     manager = window.BDSGOSState.create({apps, identityId:next, maxSessions:8});
     try { const value = JSON.parse(sessionStorage.getItem(storageKey) || "null"); if (value) manager.restore(value); } catch (_) {}
-    surface = "home";
+    surface = "home"; query = "";
   }
   function persist() {
     try { sessionStorage.setItem(storageKey, JSON.stringify(manager.snapshot())); } catch (_) {}
@@ -124,6 +125,7 @@
     root = document.createElement("section"); root.id = "bdsg-os"; root.className = "os-system";
     root.innerHTML = `<header class="os-status"><a class="os-wordmark" href="#desktop" aria-label="Màn hình chính BDSG"><img src="/bdsg-mark.svg" alt="" width="26" height="26"><span>BDSG <strong>Thanh Hoá</strong></span></a><time id="os-clock"></time><div class="os-status-actions"><button type="button" data-os-action="switcher" aria-label="Ứng dụng đang mở">${icon("grid")}<span id="os-session-count">0</span></button><button type="button" data-os-action="preferences" aria-label="Tùy chỉnh giao diện">${icon("activity")}</button><button type="button" data-os-action="account" id="os-account">Tài khoản</button></div></header><div id="os-view"></div><section id="os-stage" class="os-stage" aria-label="Cửa sổ ứng dụng" hidden><div class="os-window-bar"><button type="button" data-os-action="home">${icon("home")}<span>Màn hình chính</span></button><strong id="os-window-title"></strong><div><button type="button" data-os-action="duplicate" aria-label="Mở cửa sổ khác">${icon("plus")}</button><button type="button" data-os-action="minimize" aria-label="Thu nhỏ ứng dụng">${icon("arrow")}</button><button type="button" data-os-action="close" aria-label="Đóng ứng dụng">${icon("close")}</button></div></div><div id="os-frames"></div></section><nav class="os-dock" aria-label="Dock ứng dụng"><button type="button" data-os-action="home" class="os-dock-home" aria-label="Màn hình chính">${icon("home")}</button>${["work","browser","office"].map(id => tile(apps.find(app => app.id === id), true)).join("")}<button type="button" data-os-action="switcher" class="os-dock-home" aria-label="Chuyển ứng dụng">${icon("grid")}</button></nav><p class="os-notice" id="os-notice" role="status" aria-live="polite" hidden></p>`;
     document.body.append(root);
+    window.BDSGUnitUI?.mount(root);
     root.addEventListener("click", handleClick);
     root.addEventListener("submit", event => { if (event.target.id === "os-search-form") event.preventDefault(); });
     root.addEventListener("input", event => {
@@ -143,11 +145,20 @@
     if (clock) { const now = new Date(); clock.dateTime = now.toISOString(); clock.textContent = now.toLocaleTimeString("vi-VN", {hour:"2-digit",minute:"2-digit"}); }
   }
   function tile(app, dock = false) {
-    return `<button class="os-app${dock ? " os-dock-app" : ""}" type="button" data-os-app="${esc(app.id)}" aria-label="Mở ${esc(app.title)}"><span class="os-app-icon os-${app.color || "blue"}">${icon(app.icon || "globe")}</span><span class="os-app-label">${esc(app.title)}</span></button>`;
+    const blocked = appBlocked(app.id);
+    return `<button class="os-app${dock ? " os-dock-app" : ""}" type="button" data-os-app="${esc(app.id)}" aria-disabled="${!!blocked}" aria-label="${esc(blocked ? app.title + ': ' + blocked : 'Mở ' + app.title)}"${blocked ? ` title="${esc(blocked)}"` : ""}><span class="os-app-icon os-${app.color || "blue"}">${icon(app.icon || "globe")}</span><span class="os-app-label">${esc(app.title)}</span>${blocked && !dock ? '<span class="os-app-unavailable">' + esc(blocked) + '</span>' : ""}</button>`;
+  }
+  function appBlocked(id) {
+    const unit = window.BDSGUnit?.snapshot();
+    if (!unit || unit.mode !== "units") return "";
+    if (id === "account" || id === "browser") return "";
+    if (!unit.selected || unit.status !== "ready") return "Chọn đơn vị để làm việc";
+    return Array.isArray(unit.apps) && unit.apps.includes(id) ? "" : "Chưa hỗ trợ theo đơn vị";
   }
   function notice(text) {
     message = text;
     const target = root.querySelector("#os-notice"); target.textContent = text; target.hidden = !text;
+    if (text === "Chọn đơn vị để làm việc") root.querySelector("#os-unit-select")?.focus();
     if (text) setTimeout(() => { if (message === text) { target.hidden = true; message = ""; } }, 6000);
   }
   function renderHome() {
@@ -194,6 +205,11 @@
     const snapshot = manager.snapshot();
     root.querySelector("#os-session-count").textContent = snapshot.sessions.length;
     root.querySelector("#os-account").textContent = state.user ? "Đăng xuất" : "Đăng nhập";
+    root.querySelectorAll(".os-dock [data-os-app]").forEach(button => {
+      const blocked = appBlocked(button.dataset.osApp);
+      button.setAttribute("aria-disabled", String(!!blocked));
+      button.title = blocked;
+    });
     const active = surface === "app" && snapshot.sessions.find(session => session.id === snapshot.activeSessionId);
     root.querySelector("#os-stage").hidden = !active;
     root.querySelector("#os-view").hidden = !!active;
@@ -212,7 +228,11 @@
     persist(); applyPreferences();
   }
   async function openApp(id, newInstance = false) {
+    const context = window.BDSGUnit?.capture();
     if (!await window.BDSGSession.check() || !manager) { if (root && !root.hidden) notice("Chưa xác minh được phiên. Hãy thử lại sau khi tài khoản tải xong."); return null; }
+    if (context && !window.BDSGUnit.current(context)) return null;
+    const blocked = appBlocked(id);
+    if (blocked) { notice(blocked); return null; }
     const session = manager.open(id, {newInstance});
     if (!session) { notice("Đã mở tối đa 8 cửa sổ. Hãy đóng một cửa sổ trước khi mở thêm."); return; }
     surface = "app"; draw(); return session;
@@ -225,7 +245,7 @@
   }
   async function handleClick(event) {
     const launch = event.target.closest("[data-os-app]"); if (launch) return openApp(launch.dataset.osApp);
-    const selection = event.target.closest("[data-os-session]"); if (selection) { if (!await window.BDSGSession.check() || !manager) return; manager.activate(selection.dataset.osSession); surface = "app"; return draw(); }
+    const selection = event.target.closest("[data-os-session]"); if (selection) { const context = window.BDSGUnit?.capture(); if (!await window.BDSGSession.check() || !manager || (context && !window.BDSGUnit.current(context))) return; manager.activate(selection.dataset.osSession); surface = "app"; return draw(); }
     const close = event.target.closest("[data-os-close]"); if (close) return closeSession(close.dataset.osClose);
     const tab = event.target.closest("[data-os-group]"); if (tab) { group = tab.dataset.osGroup; return renderHome(); }
     const action = event.target.closest("[data-os-action]")?.dataset.osAction;
@@ -273,6 +293,7 @@
     openRoute(hash) {
       const id = appIdForRoute(hash);
       if (!id) return false;
+      if (appBlocked(id)) { this.open(); notice(appBlocked(id)); return false; }
       this.open(); openApp(id).then(session => {
         const frame = session && frames.get(session.id);
         if (frame && hash !== apps.find(app => app.id === id).route) frame.src = "/workspace.html" + hash;
@@ -290,4 +311,11 @@
       identity = null; manager = null; surface = "home"; query = "";
     },
   };
+  window.BDSGUnit?.beforeSwitch(() => !frames.size || confirm("Chuyển đơn vị và đóng các cửa sổ đang mở? Biểu mẫu chưa lưu có thể mất. Tác vụ đã gửi tiếp tục chạy trong đơn vị cũ."));
+  window.addEventListener("bdsg-unit-changed", () => {
+    // Xóa cả iframe trình duyệt: lịch sử phiên chỉ thuộc phạm vi vừa rời.
+    syncIdentity();
+    if (root) { window.BDSGUnitUI?.mount(root); draw(); }
+  });
+  window.addEventListener("bdsg-unit-list-changed", () => { if (root) draw(); });
 })();

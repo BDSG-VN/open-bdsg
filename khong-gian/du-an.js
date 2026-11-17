@@ -172,7 +172,7 @@
     if (restoring) changeArchive(restoring.dataset.projectRestore, false);
   });
   document.addEventListener("submit", async (event) => {
-    if (event.target.id !== "project-edit-form") return;
+    if (event.target.getAttribute("id") !== "project-edit-form") return;
     event.preventDefault();
     const form = event.target,
       button = form.querySelector('[type="submit"]');
@@ -206,5 +206,13 @@
     getSelected: () => selectedProject,
     setSelected,
     clearSelected,
+    reset() {
+      revision++;
+      projects = [];
+      selectedProject = "";
+      archivedView = false;
+      pending = false;
+      document.querySelector("#project-dialog")?.remove();
+    },
   };
 })();

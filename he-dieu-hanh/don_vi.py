@@ -99,7 +99,7 @@ class DonVi:
         with self.kho.ket_noi() as db:
             db.execute("BEGIN")
             identity = self._identity(db, actor)
-            rows = db.execute("""SELECT u.id,u.name,m.role FROM don_vi u JOIN don_vi_members m ON m.unit_id=u.id
+            rows = db.execute("""SELECT u.id,u.name,m.role,m.epoch,m.revision FROM don_vi u JOIN don_vi_members m ON m.unit_id=u.id
                 WHERE m.identity=? AND m.active=1 AND u.active=1 ORDER BY u.created,u.id""", (identity,)).fetchall()
             return {"units": [dict(row) for row in rows]}
 
