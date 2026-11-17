@@ -49,7 +49,7 @@
     document.addEventListener("click", event => {
       const anchor = event.target.closest('a[href^="#"]');
       const route = anchor?.getAttribute("href");
-      if (!route || !/^#(?:work|office|projects|studio|tasks|staff|modules|integrations|ai-settings|support|overview|agents|requests|activity|settings|platforms|sectors|connections|task\/[a-f0-9]{24}|support\/[a-z0-9_-]{1,80})$/.test(route)) return;
+      if (!route || !/^#(?:system|work|office|projects|studio|tasks|staff|modules|integrations|ai-settings|support|overview|agents|requests|activity|settings|platforms|sectors|connections|task\/[a-f0-9]{24}|support\/[a-z0-9_-]{1,80})$/.test(route)) return;
       event.preventDefault();
       parent.postMessage({type:"bdsg-os-launch-route", route}, location.origin);
     });
@@ -66,6 +66,7 @@
   }
   window.BDSGReadBroker = window.BDSGOSState.createReadBroker({getIdentity:()=>state.user?.id || "guest", maxConcurrent:2});
   const apps = [
+    {id:"system", title:"Máy chủ", route:"#system", icon:"activity", color:"gray", description:"TH01, tài nguyên và phục hồi dữ liệu"},
     {id:"work", title:"Agent BDSG", route:"#work", icon:"spark", color:"blue", description:"Giao mục tiêu, theo dõi kết quả AI"},
     {id:"office", title:"Văn phòng", route:"#office", icon:"briefcase", color:"orange", description:"Tài liệu, bảng tính và trình chiếu"},
     {id:"projects", title:"Dự án", route:"#projects", icon:"home", color:"indigo", description:"Ngữ cảnh và tài liệu công việc"},

@@ -35,6 +35,8 @@ from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
 from ket_noi_chatgpt import KetNoiChatGPT
 from van_hanh_may_chu import VanHanhMayChu, MayChuCoGioiHan
+from thiet_bi_may_chu import ThietBiMayChu
+from kiem_tra_khoi_phuc import read_status
 from tich_hop_viet_nam import TichHopVietNam
 from vn_dong_bo import DongBoVietNam
 
@@ -49,6 +51,7 @@ class UngDung:
             )["products"]
         )
         self.kho = Kho(data)
+        self.node = ThietBiMayChu(self.kho.root, node_id=os.environ.get("BDSG_NODE_ID"))
         self.customer_support = HoTroKhach(self.catalogue)
         self.chatgpt_connection = KetNoiChatGPT(self.kho)
         self.core = DieuPhoi(self.kho, self.catalogue, ghi, connections)
@@ -102,6 +105,12 @@ class UngDung:
         )
         self.core.dang_ky_mo_rong(self)
         self.operations = VanHanhMayChu(self)
+
+    def node_report(self, actor):
+        if not actor or actor.get("role") != "quan-tri":
+            raise PermissionError("Chỉ chủ quản xem máy chủ")
+        return {"node": self.node.snapshot(), "operations": self.operations.report(),
+                "recovery": read_status(os.environ.get("BDSG_RECOVERY_STATUS_FILE"))}
 
     def configure_ai(self, actor, args):
         # Giữ cùng khóa với tạo/tiếp tục tác vụ để đổi nhà cung cấp không cắt lượt đang chạy.
@@ -234,13 +243,14 @@ def tao_may_chu(app, port=8766):
                 state = app.operations.readiness()
                 return self.send(200 if state["status"] == "ready" else 503,
                                  {"status": state["status"]})
-            if path == "/api/system":
+            if path in ("/api/system", "/api/node"):
                 actor = self.actor()
                 if not actor:
                     return self.send(401, {"error": "Cần đăng nhập"})
                 if actor["role"] != "quan-tri":
                     return self.send(403, {"error": "Chỉ chủ quản xem vận hành"})
-                return self.send(200, app.operations.report())
+                return self.send(200, app.node_report(actor) if path == "/api/node"
+                                 else app.operations.report())
             if app.operations.draining.is_set() and path != "/api/suc-khoe":
                 return self.send(503, {"error": "Đang dừng dịch vụ; thử lại sau"}, headers={"Retry-After": "5"})
             if path == "/api/google/callback":

@@ -633,6 +633,9 @@ class DieuPhoi:
         integer = {"type": "integer"}
         actor = lambda: self.actor.get()
         declarations = {
+            "thiet_bi": [
+                ("trang_thai", lambda a: app.node_report(actor()), False, {}, []),
+            ],
             "mo_hinh": [
                 ("danh_sach", lambda a: app.ai.catalogue(), False, {}, []),
                 ("han_muc", lambda a: app.ai.quota(actor()), False, {}, []),
@@ -926,7 +929,7 @@ class DieuPhoi:
                         and name == "duyet"
                     ):
                         continue
-                    if role != "quan-tri" and namespace in ("nguoi_dung", "tich_hop_vn"):
+                    if role != "quan-tri" and namespace in ("nguoi_dung", "tich_hop_vn", "thiet_bi"):
                         continue
                     if namespace == "mo_hinh" and (role == "agent" or (role != "quan-tri" and name in ("cau_hinh","luu"))):
                         continue

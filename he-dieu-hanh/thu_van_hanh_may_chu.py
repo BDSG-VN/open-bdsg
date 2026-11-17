@@ -11,6 +11,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from contextlib import closing
 from pathlib import Path
 
@@ -20,6 +21,32 @@ from van_hanh_may_chu import MayChuCoGioiHan
 
 
 class ThuVanHanh(unittest.TestCase):
+    def test_node_authorization_before_collection(self):
+        with patch.object(self.app.node, "snapshot", return_value={"fixture": True}) as collect:
+            self.assertEqual(self.request("/api/node")[0], 401)
+            collect.assert_not_called()
+            token, _ = self.app.kho.dang_nhap("chu-quan", "chi-dung-kiem-thu", "node-test")
+            status, report, _ = self.request("/api/node", cookie="bdsg_session=" + token)
+            self.assertEqual(status, 200)
+            self.assertEqual(report["node"], {"fixture": True})
+            self.assertNotIn(str(self.root), json.dumps(report))
+            collect.assert_called_once()
+            collect.reset_mock()
+            for role in ("operator", "agent"):
+                actor = {"id": "test-policy", "name": "Fixture", "role": role}
+                names = [entry["ten"] for entry in self.app.core.nhan.danh_sach_cong_cu(self.app.core.danh_tinh(actor))]
+                self.assertNotIn("thiet_bi.trang_thai", names)
+                with self.assertRaises(PermissionError):
+                    self.app.node_report(actor)
+            collect.assert_not_called()
+            names = [entry["ten"] for entry in self.app.core.nhan.danh_sach_cong_cu(self.app.core.danh_tinh({"id":"chu-quan","name":"Fixture","role":"quan-tri"}))]
+            self.assertIn("thiet_bi.trang_thai", names)
+
+    def test_release_metadata_is_explicit_and_bounded(self):
+        for value, expected in (("20261117-v28", "20261117-v28"), ("", "unknown"), ("/private/path", "unknown"), ("x" * 81, "unknown")):
+            with patch.dict(os.environ, {"BDSG_RELEASE_ID": value}):
+                self.assertEqual(self.app.operations.report()["release"], expected)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)

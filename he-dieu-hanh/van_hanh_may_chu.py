@@ -1,6 +1,8 @@
 """Giám sát lõi không trả dữ liệu nghiệp vụ hoặc cấu hình bí mật."""
 
 import shutil
+import os
+import re
 import sqlite3
 import threading
 import time
@@ -43,7 +45,7 @@ class VanHanhMayChu:
     def report(self):
         result = self.readiness()
         result.update(
-            {"release": "V20", "uptime_seconds": int(time.monotonic() - self.started)}
+            {"release": self.release(), "uptime_seconds": int(time.monotonic() - self.started)}
         )
         try:
             uri = self.app.kho.db.resolve().as_uri() + "?mode=ro"
@@ -69,6 +71,11 @@ class VanHanhMayChu:
         }
         # Cấu hình không chứng minh dịch vụ ngoài sẵn sàng; không gọi mạng ở probe.
         return result
+
+    @staticmethod
+    def release():
+        value = os.environ.get("BDSG_RELEASE_ID", "")
+        return value if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", value) else "unknown"
 
 
 class MayChuCoGioiHan(ThreadingHTTPServer):

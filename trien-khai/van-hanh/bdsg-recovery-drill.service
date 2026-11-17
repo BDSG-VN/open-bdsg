@@ -1,0 +1,22 @@
+[Unit]
+Description=BDSG daily local verified restore drill
+After=local-fs.target bdsg-backup.service
+
+[Service]
+Type=oneshot
+User=root
+Group=bdsg-thanhhoa
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/flock -n /var/backups/bdsg-thanhhoa/drills/.lock /usr/bin/python3 -B /srv/bdsg-thanhhoa/open-bdsg/current/source/trien-khai/van-hanh/v28_dien_tap_dinh_ky.py
+NoNewPrivileges=yes
+PrivateTmp=yes
+ReadOnlyPaths=/tmp /var/tmp
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/backups/bdsg-thanhhoa/drills /var/lib/bdsg-thanhhoa-status
+InaccessiblePaths=/var/lib/bdsg-thanhhoa /etc/bdsg-thanhhoa
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=900
+LimitCORE=0
