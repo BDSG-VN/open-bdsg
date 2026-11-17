@@ -135,7 +135,7 @@
   $('logout').onclick = async () => { if (busy) return; lock(true); try { await api('/api/logout',{}); stop('Đã đăng xuất. Hãy bắt đầu kết nối lại bằng tài khoản anh muốn dùng.'); } catch (_) { message('Chưa đăng xuất được. Kiểm tra mạng rồi thử lại.',true); } finally { lock(false); } };
   $('retry').onclick = () => { if (bound) stop('Yêu cầu đã gắn với phiên duyệt. Hãy bắt đầu kết nối lại từ ứng dụng.'); else boot(); };
   window.addEventListener('bdsg-unit-changed',() => { if (bound && !unit.current(bound)) stop('Đơn vị hoặc quyền đã thay đổi. Hãy bắt đầu kết nối lại từ ứng dụng.'); });
-  window.addEventListener('focus',() => { verifyContext().catch(() => message('Chưa xác minh lại được phiên. Kiểm tra mạng trước khi chấp thuận.',true)); });
+  window.addEventListener('focus',() => { verifyContext().catch(() => { if (request) message('Chưa xác minh lại được phiên. Kiểm tra mạng trước khi chấp thuận.',true); }); });
   window.setInterval(() => { if (request && expires && Date.now() >= expires*1000) stop('Yêu cầu đã hết hạn. Hãy bắt đầu kết nối lại từ ứng dụng.'); },1000);
   boot();
 })();
