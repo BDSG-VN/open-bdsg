@@ -40,6 +40,7 @@ from thiet_bi_may_chu import ThietBiMayChu
 from kiem_tra_khoi_phuc import read_status
 from tinh_trang_offsite import read_offsite_status
 from phien_web import PhienWeb
+from don_vi import assert_unscoped_store
 from tich_hop_viet_nam import TichHopVietNam
 from vn_dong_bo import DongBoVietNam
 
@@ -54,6 +55,10 @@ class UngDung:
             )["products"]
         )
         self.kho = Kho(data)
+        # Chưa lắp mọi đường HTTP/MCP/worker với phạm vi đơn vị: không khởi
+        # động gateway toàn cổng trên kho đã chuyển rồi rơi về quyền cũ.
+        with self.kho.ket_noi() as db:
+            assert_unscoped_store(db)
         self.web_sessions = PhienWeb(self.kho)
         self.node = ThietBiMayChu(self.kho.root, node_id=os.environ.get("BDSG_NODE_ID"))
         self.customer_support = HoTroKhach(self.catalogue)

@@ -30,8 +30,8 @@ class TaiLieu:
                 "CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY,project_id TEXT,owner TEXT,name TEXT,version INTEGER,sha256 TEXT,size INTEGER,text TEXT,truncated INTEGER,created REAL,UNIQUE(project_id,name,version))"
             )
 
-    def _project(self, actor, pid, write=False):
-        p = self.projects._get(actor, pid, write=write)
+    def _project(self, actor, pid, write=False, db=None):
+        p = self.projects.authorize(actor, pid, write=write, db=db)
         if write and p["archived"]:
             raise ValueError("Khôi phục dự án trước khi thêm tài liệu")
         return p
@@ -104,6 +104,7 @@ class TaiLieu:
             with self.kho.ket_noi() as db:
                 # Serialize allocation, including quota and immutable version number.
                 db.execute("BEGIN IMMEDIATE")
+                self._project(actor, pid, True, db=db)
                 count, total = db.execute(
                     "SELECT count(*),coalesce(sum(size),0) FROM documents WHERE project_id=?",
                     (pid,),
@@ -141,20 +142,22 @@ class TaiLieu:
 
     def get(self, actor, identifier, content=True):
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
             row = db.execute(
                 "SELECT * FROM documents WHERE id=?", (identifier,)
             ).fetchone()
-        if not row:
-            raise ValueError("Tài liệu không tồn tại trong phạm vi quyền")
-        self._project(actor, row["project_id"])
+            if not row:
+                raise ValueError("Tài liệu không tồn tại trong phạm vi quyền")
+            self._project(actor, row["project_id"], db=db)
         value = dict(row)
         if not content:
             value.pop("text")
         return value
 
     def list(self, actor, pid):
-        self._project(actor, pid)
         with self.kho.ket_noi() as db:
+            db.execute("BEGIN")
+            self._project(actor, pid, db=db)
             return {
                 "documents": [
                     dict(r)
@@ -196,4 +199,6 @@ class TaiLieu:
         if hashlib.sha256(raw).hexdigest() != doc["sha256"]:
             raise ValueError("Tệp không khớp dấu kiểm")
         self.scanner.scan(raw)
+        # Scan có thể chạy lâu; quyền phải còn hiệu lực trước khi trả byte.
+        self.get(actor, identifier, False)
         return doc, raw

@@ -83,15 +83,11 @@ class VanPhong:
     def status(self, actor, args):
         with self.kho.ket_noi() as db:
             project = self._project(actor, args.get("project_id"), db)
-            member = db.execute(
-                "SELECT role FROM du_an_members WHERE project_id=? AND identity=?",
-                (project["id"], actor["id"]),
-            ).fetchone()
-            can_write = not project["archived"] and (
-                actor["role"] == "quan-tri"
-                or project["owner"] == actor["id"]
-                or (member and member["role"] == "editor")
-            )
+            try:
+                self.projects.authorize(actor, project["id"], write=True, db=db)
+                can_write = not project["archived"]
+            except ValueError:
+                can_write = False
             files = db.execute(
                 "SELECT count(*) FROM office_files WHERE project_id=?", (project["id"],)
             ).fetchone()[0]
