@@ -367,6 +367,7 @@ class SoanThaoOffice:
             ).encode()
         ).hexdigest()
         with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
             committed = db.execute(
                 "SELECT fingerprint FROM office_editor_callbacks WHERE key=? AND status=? AND request=?",
                 (key, status, request),
