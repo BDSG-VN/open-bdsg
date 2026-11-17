@@ -22,6 +22,9 @@ callback đã đăng ký. Context thay đổi chấm dứt biểu mẫu và cầ
 
 FORM: Code-led, một cột đọc theo thứ tự quyết định. Không có comp được duyệt
 hoặc seed mới cho phần mở rộng này; pin/thế giới đã chốt ở webos-v27.
+Tham chiếu roll gốc `seed:dc2c02cf28665d7e` (assignment index3), lưu ở
+`.impeccable/questions/roll.json`, mode operate. Đây là provenance kế thừa;
+pin iOS của chủ quản vẫn là quyết định thị giác, không chọn lại các world.
 
 THESIS: Người dùng nhìn đúng tài khoản/đơn vị/client rồi tự chọn công cụ và
 dự án trước khi cấp quyền có thời hạn. Không chọn sẵn hoặc ngầm cấp tất cả.
