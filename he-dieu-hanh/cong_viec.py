@@ -12,6 +12,7 @@ from mo_hinh_bdsg import MoHinhBDSG, LoiMoHinhBDSG
 from nhan_su import NhanSu
 from doi_ngu import DoiNgu
 from don_vi import assert_unscoped_store
+from quyen_tac_vu import task_reference
 
 
 TEMPLATES = {"de-xuat-giai-phap", "kiem-tra-ket-noi", "tong-quan", "nhan-su-chuyen-mon"}
@@ -53,9 +54,10 @@ def kiem_han_ket_qua(hien_co, bo_sung):
 class CongViec:
     """Hai worker, hàng đợi có giới hạn; chỉ gọi các công cụ đọc đã định trước."""
 
-    def __init__(self, kho, core, *, units=None):
+    def __init__(self, kho, core, *, units=None, scoped_ai=None):
         self.kho, self.core = kho, core
         self.units = units
+        self.scoped_ai = scoped_ai
         self.lock = threading.RLock()
         self.closed = False
         self.context_override = contextvars.ContextVar(
@@ -209,11 +211,7 @@ class CongViec:
             return task
 
     def _binding(self, db, task):
-        row = db.execute('''SELECT t.owner,s.unit_id,s.epoch,s.revision FROM cong_viec_tasks t
-            JOIN cong_viec_units s ON s.task_id=t.id WHERE t.id=?''',(task['id'],)).fetchone()
-        if not row or row['owner'] != task['owner'] or row['unit_id'] != task.get('unit_id'):
-            raise ValueError('Không tìm thấy tác vụ trong phạm vi quyền')
-        return {'identity':row['owner'],'unit_id':row['unit_id'],'epoch':row['epoch'],'revision':row['revision']}
+        return task_reference(db,task)
 
     def _check_generation(self, task):
         execution = self.execution.get()
@@ -381,13 +379,19 @@ class CongViec:
         if creating and own >= 100:
             raise ValueError("Không gian đã đạt giới hạn 100 tác vụ cho danh tính này")
 
+    def _model_for(self, actor):
+        if self.units is not None and self.scoped_ai is not None:
+            return self.scoped_ai.bind(actor)
+        return self.model
+
     def create(self, actor, args):
         self._auth(actor, True)
-        if self.model.configuration_error:
-            raise ValueError(self.model.configuration_error)
+        model = self._model_for(actor)
+        if model.configuration_error:
+            raise ValueError(model.configuration_error)
         if not isinstance(args, dict):
             raise ValueError("Thông tin tác vụ không hợp lệ")
-        if self.units is not None and (self.model.configured or any(args.get(key) for key in (
+        if self.units is not None and ((self.scoped_ai is None and model.configured) or any(args.get(key) for key in (
                 'allow_python','allow_action_drafts','allow_delegation','allow_module_reads','browser_hosts'))):
             raise PermissionError('Chưa có cấu hình công cụ và mô hình riêng theo đơn vị')
         prompt = _text(args.get("prompt"), 10)
@@ -434,8 +438,8 @@ class CongViec:
         model_selection = args.get("model_selection","auto")
         if not isinstance(model_selection,str):
             raise ValueError("Mô hình được chọn chưa hợp lệ")
-        hub = getattr(self,"ai",None)
-        if model_selection != "auto" and (self.model is not hub or model_selection not in {m["id"] for m in hub.catalogue()["models"]}):
+        hub = model if self.units is not None and self.scoped_ai is not None else getattr(self,"ai",None)
+        if model_selection != "auto" and (model is not hub or model_selection not in {m["id"] for m in hub.catalogue()["models"]}):
             raise ValueError("Mô hình không nằm trong danh mục đang hoạt động")
         ids = args.get("module_ids", [])
         valid = {p["id"] for p in self.core.catalogue}
@@ -455,7 +459,7 @@ class CongViec:
                 raise PermissionError(
                     "Chỉ chủ quản được cấp quyền đọc dữ liệu mô-đun cho tác vụ"
                 )
-            if not ids or not self.model.configured:
+            if not ids or not model.configured:
                 raise ValueError(
                     "Cần chọn mô-đun cụ thể và cấu hình mô hình trước khi cho đọc dữ liệu"
                 )
@@ -473,7 +477,7 @@ class CongViec:
             "status": "queued",
             "created": now,
             "updated": now,
-            "mode": self.model.public_status()["mode"],
+            "mode": model.public_status()["mode"],
             "template": template,
             "model_selection": model_selection,
             "module_ids": ids,
@@ -499,13 +503,12 @@ class CongViec:
             "Đã nhận tác vụ. "
             + (
                 "Dùng API mô hình đã cấu hình."
-                if self.model.configured
+                if model.configured
                 else "Chạy quy trình có kịch bản, không phải mô hình AI tự suy luận."
             ),
         )
         with self.lock:
             self._capacity(actor, True)
-            model = self.model
             reference = None
             task["mode"] = model.public_status()["mode"]
             with self.kho.ket_noi() as db:
@@ -516,8 +519,11 @@ class CongViec:
                     task['unit_id'] = scope.unit_id
                     if project_id:
                         self.projects.authorize(actor,project_id,db=db)
-                if self.model is hub and hub.configured:
-                    hub.admit(db,actor,task["id"],task["run"],model_selection)
+                if model is hub and hub.configured:
+                    if self.units is not None:
+                        hub.admit(db,actor,task["id"],task["run"],model_selection,project_id=project_id)
+                    else:
+                        hub.admit(db,actor,task["id"],task["run"],model_selection)
                 db.execute(
                     "INSERT INTO cong_viec_tasks VALUES (?,?,?,?,?,?)",
                     (
@@ -591,10 +597,11 @@ class CongViec:
 
     def followup(self, actor, task_id, text):
         self._auth(actor, True)
-        if self.units is not None and self.model.configured:
+        model = self._model_for(actor)
+        if self.units is not None and self.scoped_ai is None and model.configured:
             raise PermissionError('Chưa có mô hình riêng theo đơn vị')
-        if self.model.configuration_error:
-            raise ValueError(self.model.configuration_error)
+        if model.configuration_error:
+            raise ValueError(model.configuration_error)
         text = _text(text, 10)
         with self.lock:
             task = self.detail(actor, task_id)
@@ -608,7 +615,7 @@ class CongViec:
                 task.setdefault("team_history", []).append(task.pop("team"))
                 task["team_history"] = task["team_history"][-9:]
             task["run"] += 1
-            task["mode"] = self.model.public_status()["mode"]
+            task["mode"] = model.public_status()["mode"]
             task["messages"].append(
                 {"role": "user", "content": text, "created": time.time()}
             )
@@ -618,7 +625,9 @@ class CongViec:
             )
             hub = getattr(self,"ai",None)
             reference = None
-            if self.model is hub and hub.configured:
+            if self.units is not None and self.scoped_ai is not None and model.configured:
+                reference = self._renew_scoped_ai(actor,task,model)
+            elif model is hub and hub.configured:
                 task["updated"] = time.time()
                 with self.kho.ket_noi() as db:
                     db.execute("BEGIN IMMEDIATE")
@@ -628,8 +637,28 @@ class CongViec:
                                (task["updated"],task["status"],json.dumps(task,ensure_ascii=False),task_id))
             else:
                 reference = self._save(task,actor=actor,renew=True)
-            self.pool.submit(self._run, dict(actor), task_id, self.model, task['run'], reference)
+            self.pool.submit(self._run, dict(actor), task_id, model, task['run'], reference)
             return task
+
+    def _renew_scoped_ai(self, actor, task, model):
+        # Nhận lượt và gia hạn tư cách cùng giao dịch; lỗi hạn mức không để lại lượt nửa chừng.
+        task['updated'] = time.time()
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self._save_generation(db,task,renew=True)
+            self._binding(db,task)
+            scope = self.units.require(actor,db)
+            if scope.identity != task['owner'] or scope.unit_id != task['unit_id']:
+                raise PermissionError('Phạm vi tác vụ không khớp')
+            if task.get('project_id'):
+                self.projects.authorize(actor,task['project_id'],db=db)
+            model.admit(db,actor,task['id'],task['run'],task.get('model_selection','auto'),
+                        project_id=task.get('project_id',''))
+            db.execute('UPDATE cong_viec_units SET epoch=?,revision=? WHERE task_id=?',
+                       (scope.epoch,scope.revision,task['id']))
+            db.execute('UPDATE cong_viec_tasks SET updated=?,status=?,document=? WHERE id=?',
+                       (task['updated'],task['status'],json.dumps(task,ensure_ascii=False),task['id']))
+            return self.units.reference(actor,db)
 
     def cancel(self, actor, task_id):
         self._auth(actor, True)
@@ -909,6 +938,7 @@ class CongViec:
                     "project": task.get("project"),
                     "documents": task.get("documents", []),
                     "task_id": task["id"],
+                    "run": task["run"],
                     "project_id": task.get("project_id",""),
                     "execution_scope": {
                         "python": task.get("allow_python", False),
@@ -922,7 +952,7 @@ class CongViec:
                     "template": task["template"],
                     "model_selection": task.get("model_selection","auto"),
                 }
-                if model is getattr(self,"ai",None):
+                if model is getattr(self,"ai",None) or (self.units is not None and self.scoped_ai is not None):
                     context["available_models"] = model.catalogue()["models"]
                 context["module_scope"] = {
                     "allow_reads": task.get("allow_module_reads", False),
@@ -935,7 +965,7 @@ class CongViec:
                         current = self._load(task_id)
                         if self.closed or current['cancel_requested']:
                             raise RuntimeError('Tác vụ đã được yêu cầu dừng')
-                        if kind == "model-reserve" and model is not getattr(self,"ai",None):
+                        if kind == "model-reserve" and self.units is None and model is not getattr(self,"ai",None):
                             self.reserve_model(actor, task.get("project_id", ""))
                         if kind == "team-state":
                             snapshot = extra.pop("team")
@@ -983,7 +1013,8 @@ class CongViec:
                         prompt,
                         context,
                         lambda p, c, event, stop: model.run(
-                            p, c, self.core, actor, event, stop
+                            p, {**c,"task_id":task["id"],"run":task["run"],
+                                "project_id":task.get("project_id", "")}, self.core, actor, event, stop
                         ),
                         on_event,
                         cancelled,

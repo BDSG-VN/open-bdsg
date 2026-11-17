@@ -637,9 +637,9 @@ class DieuPhoi:
                 ("trang_thai", lambda a: app.node_report(actor()), False, {}, []),
             ],
             "mo_hinh": [
-                ("danh_sach", lambda a: app.ai.catalogue(), False, {}, []),
-                ("han_muc", lambda a: app.ai.quota(actor()), False, {}, []),
-                ("cau_hinh", lambda a: app.ai.admin(actor()), False, {}, []),
+                ("danh_sach", lambda a: app.ai_catalogue(actor()), False, {}, []),
+                ("han_muc", lambda a: app.ai_quota(actor()), False, {}, []),
+                ("cau_hinh", lambda a: app.ai_admin(actor()), False, {}, []),
                 ("luu", lambda a: app.configure_ai(actor(),a), True,
                  {"enabled":boolean,"default_model":{"type":["string","null"]},
                   "models":{"type":"array","items":obj},"policy":obj},

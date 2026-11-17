@@ -36,6 +36,150 @@ SKILL_CAPABILITIES = {
 }
 
 
+def validate_catalogue(data, previous):
+    if not isinstance(data, dict) or set(data) != {
+        "enabled",
+        "default_model",
+        "models",
+        "policy",
+    }:
+        raise ValueError("Cấu hình trung tâm AI chưa đúng cấu trúc")
+    if (
+        type(data["enabled"]) is not bool
+        or not isinstance(data["models"], list)
+        or len(data["models"]) > 16
+    ):
+        raise ValueError("Chọn tối đa 16 mô hình trong danh mục được duyệt")
+    policy = validate_policy(data["policy"])
+    old = {model["id"]: model for model in previous["models"]}
+    models, seen = [], set()
+    for incoming in data["models"]:
+        if (
+            not isinstance(incoming, dict)
+            or set(incoming)
+            - {
+                "id",
+                "label",
+                "upstream_model",
+                "api_key",
+                "capabilities",
+                "skills",
+                "prices",
+            }
+            or not {
+                "id",
+                "label",
+                "upstream_model",
+                "capabilities",
+                "skills",
+                "prices",
+            }
+            <= set(incoming)
+        ):
+            raise ValueError("Hồ sơ mô hình có trường không được hỗ trợ")
+        item = copy.deepcopy(incoming)
+        identifier = item["id"]
+        if (
+            not isinstance(identifier, str)
+            or not ID.fullmatch(identifier)
+            or identifier in seen
+        ):
+            raise ValueError("Mã mô hình phải duy nhất, chữ thường không dấu")
+        seen.add(identifier)
+        if (
+            not isinstance(item["label"], str)
+            or not 1 <= len(item["label"]) <= 80
+        ):
+            raise ValueError("Tên hiển thị mô hình chưa hợp lệ")
+        upstream = item["upstream_model"]
+        if (
+            not isinstance(upstream, str)
+            or not re.fullmatch(r"[A-Za-z0-9_./:-]{3,180}", upstream)
+            or upstream.split("/")[0] not in PROVIDERS
+        ):
+            raise ValueError("Nhà cung cấp hoặc tên mô hình chưa được hỗ trợ")
+        for key, allowed, maximum in (
+            ("capabilities", CAPABILITIES, 6),
+            ("skills", None, 38),
+        ):
+            values = item[key]
+            if (
+                not isinstance(values, list)
+                or len(values) > maximum
+                or any(not isinstance(v, str) for v in values)
+                or len(set(values)) != len(values)
+                or (allowed and any(v not in allowed for v in values))
+                or (
+                    key == "skills" and any(not ID.fullmatch(v) for v in values)
+                )
+            ):
+                raise ValueError("Nhóm năng lực hoặc mã chuyên môn chưa hợp lệ")
+        if not isinstance(item["prices"], dict) or set(item["prices"]) != {
+            "input_per_million",
+            "output_per_million",
+        }:
+            raise ValueError(
+                "Nhập giá input/output USD trên một triệu token để giữ ngân sách"
+            )
+        item["prices"] = {
+            key: str(money(value, 1000))
+            for key, value in item["prices"].items()
+        }
+        key = item.get("api_key") or old.get(identifier, {}).get("api_key")
+        if (
+            not isinstance(key, str)
+            or not 10 <= len(key) <= 4096
+            or any(ord(c) < 32 for c in key)
+        ):
+            raise ValueError(
+                "Cần khóa API hợp lệ; không dán khóa vào cuộc trò chuyện"
+            )
+        if (
+            item.get("api_key") in (None, "")
+            and old.get(identifier, {}).get("upstream_model") != upstream
+        ):
+            raise ValueError(
+                "Đổi nhà cung cấp/mô hình cần nhập lại khóa để tránh gửi nhầm chứng thư"
+            )
+        item["api_key"] = key
+        models.append(item)
+    if data["default_model"] not in seen and (
+        models or data["default_model"] is not None
+    ):
+        raise ValueError("Mô hình mặc định phải nằm trong danh mục")
+    if data["enabled"] and not models:
+        raise ValueError("Cần ít nhất một mô hình trước khi bật")
+    return {"enabled": data["enabled"], "models": models,
+            "default_model": data["default_model"], "policy": policy}
+
+
+def choose_catalogue(data, context):
+    if not data["enabled"] or not data["models"]:
+        raise LoiMoHinhBDSG("Trung tâm AI chưa có mô hình được chủ quản cấu hình")
+    models = {model["id"]: model for model in data["models"]}
+    selected = context.get("model_selection", "auto")
+    if selected != "auto":
+        if not isinstance(selected, str) or selected not in models:
+            raise LoiMoHinhBDSG(
+                "Mô hình đã chọn không còn trong danh mục được duyệt"
+            )
+        reason = "Lựa chọn cụ thể của tác vụ hoặc Agent tổng"
+    else:
+        skill = context.get("assignment", {}).get("skill_id")
+        candidates = [
+            model for model in data["models"] if skill and skill in model["skills"]
+        ]
+        capability = SKILL_CAPABILITIES.get(skill, "general")
+        if "workforce_catalogue" in context or "workforce_results" in context:
+            capability = "reasoning"
+        candidates = candidates or [
+            model for model in data["models"] if capability in model["capabilities"]
+        ]
+        selected = candidates[0]["id"] if candidates else data["default_model"]
+        reason = "Chính sách chuyên môn " + (skill or capability)
+    return models[selected], data, reason
+
+
 class MoHinhLiteLLM(MoHinhBDSG):
     MAX_OUTPUT_TOKENS = 8192
     MAX_REQUEST_SECONDS = 60
@@ -181,119 +325,9 @@ class TrungTamAI:
         return result
 
     def _save_guarded(self, actor, data):
-        if not isinstance(data, dict) or set(data) != {
-            "enabled",
-            "default_model",
-            "models",
-            "policy",
-        }:
-            raise ValueError("Cấu hình trung tâm AI chưa đúng cấu trúc")
-        if (
-            type(data["enabled"]) is not bool
-            or not isinstance(data["models"], list)
-            or len(data["models"]) > 16
-        ):
-            raise ValueError("Chọn tối đa 16 mô hình trong danh mục được duyệt")
-        policy = validate_policy(data["policy"])
         with self.lock:
-            old = {model["id"]: model for model in self.data["models"]}
-            models, seen = [], set()
-            for incoming in data["models"]:
-                if (
-                    not isinstance(incoming, dict)
-                    or set(incoming)
-                    - {
-                        "id",
-                        "label",
-                        "upstream_model",
-                        "api_key",
-                        "capabilities",
-                        "skills",
-                        "prices",
-                    }
-                    or not {
-                        "id",
-                        "label",
-                        "upstream_model",
-                        "capabilities",
-                        "skills",
-                        "prices",
-                    }
-                    <= set(incoming)
-                ):
-                    raise ValueError("Hồ sơ mô hình có trường không được hỗ trợ")
-                item = copy.deepcopy(incoming)
-                identifier = item["id"]
-                if (
-                    not isinstance(identifier, str)
-                    or not ID.fullmatch(identifier)
-                    or identifier in seen
-                ):
-                    raise ValueError("Mã mô hình phải duy nhất, chữ thường không dấu")
-                seen.add(identifier)
-                if (
-                    not isinstance(item["label"], str)
-                    or not 1 <= len(item["label"]) <= 80
-                ):
-                    raise ValueError("Tên hiển thị mô hình chưa hợp lệ")
-                upstream = item["upstream_model"]
-                if (
-                    not isinstance(upstream, str)
-                    or not re.fullmatch(r"[A-Za-z0-9_./:-]{3,180}", upstream)
-                    or upstream.split("/")[0] not in PROVIDERS
-                ):
-                    raise ValueError("Nhà cung cấp hoặc tên mô hình chưa được hỗ trợ")
-                for key, allowed, maximum in (
-                    ("capabilities", CAPABILITIES, 6),
-                    ("skills", None, 38),
-                ):
-                    values = item[key]
-                    if (
-                        not isinstance(values, list)
-                        or len(values) > maximum
-                        or any(not isinstance(v, str) for v in values)
-                        or len(set(values)) != len(values)
-                        or (allowed and any(v not in allowed for v in values))
-                        or (
-                            key == "skills" and any(not ID.fullmatch(v) for v in values)
-                        )
-                    ):
-                        raise ValueError("Nhóm năng lực hoặc mã chuyên môn chưa hợp lệ")
-                if not isinstance(item["prices"], dict) or set(item["prices"]) != {
-                    "input_per_million",
-                    "output_per_million",
-                }:
-                    raise ValueError(
-                        "Nhập giá input/output USD trên một triệu token để giữ ngân sách"
-                    )
-                item["prices"] = {
-                    key: str(money(value, 1000))
-                    for key, value in item["prices"].items()
-                }
-                key = item.get("api_key") or old.get(identifier, {}).get("api_key")
-                if (
-                    not isinstance(key, str)
-                    or not 10 <= len(key) <= 4096
-                    or any(ord(c) < 32 for c in key)
-                ):
-                    raise ValueError(
-                        "Cần khóa API hợp lệ; không dán khóa vào cuộc trò chuyện"
-                    )
-                if (
-                    item.get("api_key") in (None, "")
-                    and old.get(identifier, {}).get("upstream_model") != upstream
-                ):
-                    raise ValueError(
-                        "Đổi nhà cung cấp/mô hình cần nhập lại khóa để tránh gửi nhầm chứng thư"
-                    )
-                item["api_key"] = key
-                models.append(item)
-            if data["default_model"] not in seen and (
-                models or data["default_model"] is not None
-            ):
-                raise ValueError("Mô hình mặc định phải nằm trong danh mục")
-            if data["enabled"] and not models:
-                raise ValueError("Cần ít nhất một mô hình trước khi bật")
+            validated = validate_catalogue(data, self.data)
+            models, policy = validated["models"], validated["policy"]
             revision = secrets.token_hex(6)
             candidate = {
                 "enabled": data["enabled"],
@@ -374,30 +408,7 @@ class TrungTamAI:
     def choose(self, context):
         with self.lock:
             data = copy.deepcopy(self.data)
-        if not data["enabled"] or not data["models"]:
-            raise LoiMoHinhBDSG("Trung tâm AI chưa có mô hình được chủ quản cấu hình")
-        models = {model["id"]: model for model in data["models"]}
-        selected = context.get("model_selection", "auto")
-        if selected != "auto":
-            if not isinstance(selected, str) or selected not in models:
-                raise LoiMoHinhBDSG(
-                    "Mô hình đã chọn không còn trong danh mục được duyệt"
-                )
-            reason = "Lựa chọn cụ thể của tác vụ hoặc Agent tổng"
-        else:
-            skill = context.get("assignment", {}).get("skill_id")
-            candidates = [
-                model for model in data["models"] if skill and skill in model["skills"]
-            ]
-            capability = SKILL_CAPABILITIES.get(skill, "general")
-            if "workforce_catalogue" in context or "workforce_results" in context:
-                capability = "reasoning"
-            candidates = candidates or [
-                model for model in data["models"] if capability in model["capabilities"]
-            ]
-            selected = candidates[0]["id"] if candidates else data["default_model"]
-            reason = "Chính sách chuyên môn " + (skill or capability)
-        return models[selected], data, reason
+        return choose_catalogue(data, context)
 
     def run(self, prompt, context, core, actor, on_event=None, cancelled=None):
         self.assert_ready()

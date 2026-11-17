@@ -21,6 +21,7 @@ from dieu_phoi import DieuPhoi, CongCu, BanKhaiCongCu
 from cong_viec import CongViec
 from cau_hinh_mo_hinh import CauHinhMoHinh
 from trung_tam_ai import TrungTamAI
+from ai_don_vi import AITheoDonVi
 from cau_hinh_ket_noi import CauHinhKetNoi
 from du_an import DuAn
 from tai_lieu import TaiLieu
@@ -46,6 +47,7 @@ from vn_dong_bo import DongBoVietNam
 
 
 PREVIEW_TOOLS = frozenset({
+    "mo_hinh.danh_sach", "mo_hinh.han_muc", "mo_hinh.cau_hinh", "mo_hinh.luu",
     'cong_viec.danh_sach','cong_viec.chi_tiet','cong_viec.tao','cong_viec.tiep_tuc','cong_viec.dung',
     "du_an.danh_sach", "du_an.tao", "du_an.cap_nhat", "du_an.luu_tru", "du_an.khoi_phuc",
     "cong_tac.thanh_vien", "cong_tac.chia_se",
@@ -59,7 +61,8 @@ PREVIEW_TOOLS = frozenset({
 
 
 class UngDung:
-    def __init__(self, data, origin, ghi=False, catalogue=None, connections=None, *, unit_preview=False):
+    def __init__(self, data, origin, ghi=False, catalogue=None, connections=None, *, unit_preview=False,
+                 unit_ai_probe=None, unit_ai_factory=None):
         self.unit_preview = unit_preview
         self.origin = origin.rstrip("/")
         self.catalogue = (
@@ -123,6 +126,10 @@ class UngDung:
         self.tasks.ai = self.ai
         if self.ai.path.exists():
             self.tasks.model = self.ai
+        self.unit_ai = AITheoDonVi(self.kho, self.units, self.projects,
+            probe=unit_ai_probe, adapter_factory=unit_ai_factory) if unit_preview else None
+        if self.unit_ai is not None:
+            self.tasks.scoped_ai = self.unit_ai
         self.connectors = CauHinhKetNoi(
             self.kho, self.core.connections, self.catalogue, self.origin
         )
@@ -151,9 +158,11 @@ class UngDung:
                     "id": "preview-policy", "name": "Preview", "role": role}))
                 tools = [tool for tool in tools if tool["ten"] in scoped_tools]
                 self.core.nhan.chinh_sach.khai_vai(role,
-                    doc=[tool["ten"] for tool in tools if not tool["ghi"]],
+                    doc=[tool["ten"] for tool in tools if not tool["ghi"]]
+                        + (["mo_hinh.cau_hinh"] if role == "operator" else []),
                     ghi=[tool["ten"] for tool in tools if tool["ghi"]]
-                        + (["don_vi.chia_se_du_an"] if role != "agent" else []))
+                        + (["don_vi.chia_se_du_an"] if role != "agent" else [])
+                        + (["mo_hinh.luu"] if role == "operator" else []))
         self.operations = VanHanhMayChu(self)
 
     def node_report(self, actor):
@@ -164,6 +173,8 @@ class UngDung:
                 "offsite": read_offsite_status(os.environ.get("BDSG_OFFSITE_STATUS_FILE"))}
 
     def configure_ai(self, actor, args):
+        if self.unit_ai is not None:
+            return self.unit_ai.save(actor, args)
         # Giữ cùng khóa với tạo/tiếp tục tác vụ để đổi nhà cung cấp không cắt lượt đang chạy.
         with self.tasks.lock:
             with self.kho.ket_noi() as db:
@@ -173,6 +184,15 @@ class UngDung:
             result = self.ai.save(actor,args)
             self.tasks.model = self.ai
             return result
+
+    def ai_catalogue(self, actor):
+        return self.unit_ai.catalogue(actor) if self.unit_ai is not None else self.ai.catalogue()
+
+    def ai_quota(self, actor):
+        return self.unit_ai.quota(actor) if self.unit_ai is not None else self.ai.quota(actor)
+
+    def ai_admin(self, actor):
+        return self.unit_ai.admin(actor) if self.unit_ai is not None else self.ai.admin(actor)
 
     def catalog(self):
         p = self.kho.root / "web-status.json"

@@ -87,25 +87,30 @@ def verify(bundle):
             raise ValueError("Dấu kiểm sao lưu không khớp")
     ai_settings = bundle / "data/ai-models-private.json"
     ai_proxy = bundle / "data/litellm-config.json"
-    if ai_settings.exists() or ai_proxy.exists():
-        from trung_tam_ai import TrungTamAI
-
-        if not (ai_settings.is_file() and ai_proxy.is_file()):
-            raise ValueError("Bản sao thiếu một trong hai tệp cấu hình Trung tâm AI")
-        if TrungTamAI.proxy_config(
-            json.loads(ai_settings.read_text(encoding="utf-8"))
-        ) != json.loads(ai_proxy.read_text(encoding="utf-8")):
-            raise ValueError(
-                "Cấu hình AI đã đổi trong khi sao lưu; tạo bản sao mới trước khi phục hồi"
-            )
-    with closing(
-        sqlite3.connect(
+    with closing(sqlite3.connect(
             (bundle / "data/van-hanh.db").resolve().as_uri() + "?mode=ro&immutable=1",
-            uri=True,
-        )
-    ) as db:
+            uri=True)) as db:
         if db.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
             raise ValueError("Cơ sở dữ liệu sao lưu bị lỗi")
+        tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        unit_tables = {'ai_unit_configs', 'ai_unit_proxy'}
+        if tables & unit_tables and not unit_tables <= tables:
+            raise ValueError("Bản sao thiếu bảng nguồn cấu hình AI đơn vị")
+        unit_proxy = None
+        if unit_tables <= tables:
+            from ai_don_vi import unit_proxy_config
+            unit_proxy = unit_proxy_config(db)
+        if unit_proxy is not None:
+            if ai_settings.exists() or (bundle / 'data/model-private.json').exists():
+                raise ValueError("Bản sao trộn nguồn cấu hình AI cũ và đơn vị")
+            if not ai_proxy.is_file() or unit_proxy != json.loads(ai_proxy.read_text(encoding='utf-8')):
+                raise ValueError("Cấu hình AI đơn vị và proxy trong bản sao không khớp")
+        elif ai_settings.exists() or ai_proxy.exists():
+            from trung_tam_ai import TrungTamAI
+            if not (ai_settings.is_file() and ai_proxy.is_file()):
+                raise ValueError("Bản sao thiếu một trong hai tệp cấu hình Trung tâm AI")
+            if TrungTamAI.proxy_config(json.loads(ai_settings.read_text(encoding="utf-8"))) != json.loads(ai_proxy.read_text(encoding="utf-8")):
+                raise ValueError("Cấu hình AI đã đổi trong khi sao lưu; tạo bản sao mới trước khi phục hồi")
     return manifest
 
 

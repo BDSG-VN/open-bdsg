@@ -5,12 +5,12 @@ Giữ trước chi phí bảo thủ thay vì hứa quota miễn phí từ nhà c
 """
 
 import time
-import json
 from types import MappingProxyType
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
 
 from mo_hinh_bdsg import LoiMoHinhBDSG
 from don_vi import assert_unscoped_store
+from quyen_tac_vu import authorize_claim, authorize_run
 
 DEFAULT_POLICY = {
     "tasks_per_user": 5,
@@ -111,27 +111,9 @@ class NganSachAI:
             assert_unscoped_store(db)
         elif not db.in_transaction:
             raise RuntimeError("Cấp hạn mức cần giao dịch ghi của tác vụ")
-        if scope and db.execute("SELECT 1 FROM sqlite_master WHERE name='cong_viec_tasks' AND type='table'").fetchone():
-            task = db.execute("SELECT owner,document FROM cong_viec_tasks WHERE id=?",(task_id,)).fetchone()
-            if task:
-                if not db.execute("SELECT 1 FROM sqlite_master WHERE name='cong_viec_units' AND type='table'").fetchone():
-                    raise PermissionError("Tác vụ chưa có ràng buộc đơn vị")
-                binding = db.execute("SELECT unit_id FROM cong_viec_units WHERE task_id=?",(task_id,)).fetchone()
-                if task[0] != owner or not binding or binding[0] != scope.unit_id:
-                    raise PermissionError("Tác vụ không thuộc phạm vi này")
-                try:
-                    actual_project = json.loads(task[1]).get('project_id','')
-                except (ValueError,TypeError,AttributeError):
-                    raise PermissionError("Tác vụ chưa có ràng buộc hợp lệ") from None
-                if not isinstance(actual_project,str):
-                    raise PermissionError("Tác vụ chưa có ràng buộc dự án hợp lệ")
-                if project_id and actual_project != project_id:
-                    raise PermissionError("Dự án không khớp tác vụ")
-                project_id = actual_project
-        if scope and project_id:
-            if self.projects is None:
-                raise PermissionError("Cần kiểm quyền dự án trong phạm vi đơn vị")
-            self.projects.authorize(actor, project_id, db=db)
+        if scope:
+            scope, project_id = authorize_claim(
+                db,actor,task_id,self.units,self.projects,project_id)
         existing = db.execute("""SELECT c.owner,s.unit_id FROM ai_task_credits c
             LEFT JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
             WHERE c.task_id=? AND c.run=?""", (task_id,run)).fetchone()
@@ -178,11 +160,13 @@ class NganSachAI:
         policy,
         project_id="",
         run=None,
+        guard=None,
     ):
         """Giữ chi phí trước lời gọi; luồng đơn vị phải truyền đúng lượt chạy.
 
         Ràng buộc epoch/revision của lượt đã lưu ngăn scope vừa cấp lại dùng
-        quyền mới để gửi lời gọi còn sót từ lượt cũ.
+        quyền mới để gửi lời gọi còn sót từ lượt cũ. Callback guard(db) của
+        máy chủ chỉ chạy sau kiểm quyền trong cùng khóa ghi, trước giữ chi phí.
         """
         owner = self._owner(actor)
         if any(
@@ -202,7 +186,7 @@ class NganSachAI:
             day = self.day()
             if self.units is not None:
                 return self._reserve_scoped(db,actor,task_id,model_id,input_tokens,
-                    output_tokens,cost,policy,project_id,run,day)
+                    output_tokens,cost,policy,project_id,run,day,guard)
             assert_unscoped_store(db)
             legacy = self._legacy(db, owner, day, project_id)
             own = db.execute(
@@ -254,47 +238,18 @@ class NganSachAI:
             )
             return cursor.lastrowid
 
-    def _task_project(self, db, actor, scope, task_id, project_id, run):
-        if type(run) is not int or run < 1:
-            raise PermissionError("Cần lượt chạy cụ thể của tác vụ trong đơn vị")
-        tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        if not {'cong_viec_tasks','cong_viec_units'} <= tables:
-            raise PermissionError("Không tìm thấy tác vụ trong phạm vi")
-        row = db.execute("""SELECT t.owner,t.document,s.unit_id,t.status,s.epoch,s.revision FROM cong_viec_tasks t
-            JOIN cong_viec_units s ON s.task_id=t.id WHERE t.id=?""",(task_id,)).fetchone()
-        if (not row or row[0] != scope.identity or row[2] != scope.unit_id
-                or row[3] not in ('queued','running')
-                or row[4] != scope.epoch or row[5] != scope.revision):
-            raise PermissionError("Không tìm thấy tác vụ trong phạm vi")
-        try:
-            task = json.loads(row[1])
-            actual_project = task.get('project_id','')
-            actual_run = task['run']
-        except (ValueError,TypeError,KeyError,AttributeError):
-            raise PermissionError("Tác vụ chưa có ràng buộc hợp lệ") from None
-        if not isinstance(actual_project,str) or type(actual_run) is not int or actual_run < 1:
-            raise PermissionError("Tác vụ chưa có ràng buộc lượt chạy hợp lệ")
-        if (task.get('cancelled') or task.get('cancel_requested')
-                or task.get('owner') != scope.identity or task.get('unit_id') != scope.unit_id
-                or run != actual_run
-                or (project_id and project_id != actual_project)):
-            raise PermissionError("Tác vụ không thuộc phạm vi lượt chạy")
+    def _reserve_scoped(self,db,actor,task_id,model_id,input_tokens,output_tokens,
+                        cost,policy,project_id,run,day,guard):
+        scope, project_id = authorize_run(
+            db,actor,task_id,run,self.units,self.projects,project_id)
         credit = db.execute("""SELECT 1 FROM ai_task_credits c
             JOIN ai_task_credit_units s ON s.task_id=c.task_id AND s.run=c.run
             WHERE c.task_id=? AND c.run=? AND c.owner=? AND s.unit_id=?""",
-            (task_id,actual_run,scope.identity,scope.unit_id)).fetchone()
+            (task_id,run,scope.identity,scope.unit_id)).fetchone()
         if not credit:
             raise PermissionError("Lượt chạy chưa được cấp hạn mức trong đơn vị")
-        if actual_project:
-            if self.projects is None:
-                raise PermissionError("Cần kiểm quyền dự án trong phạm vi đơn vị")
-            self.projects.authorize(actor,actual_project,db=db)
-        return actual_project
-
-    def _reserve_scoped(self,db,actor,task_id,model_id,input_tokens,output_tokens,
-                        cost,policy,project_id,run,day):
-        scope = self.units.require(actor,db)
-        project_id = self._task_project(db,actor,scope,task_id,project_id,run)
+        if guard is not None:
+            guard(db)
         own = db.execute("""SELECT count(*),coalesce(sum(r.input_tokens),0),
             coalesce(sum(r.output_tokens),0),coalesce(sum(r.micro_usd),0)
             FROM ai_reservations r JOIN ai_reservation_units s ON s.reservation_id=r.id

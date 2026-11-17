@@ -51,6 +51,88 @@ class ThuNganSachDonVi(unittest.TestCase):
         kwargs.setdefault('run',1)
         return budget.reserve(actor,identifier,'synthetic-model',10,20,PRICES,self.policy,**kwargs)
 
+    def test_guard_tu_choi_khong_giu_chi_phi_va_khong_chay_truoc_kiem_quyen(self):
+        budget = self.budget()
+        self.task(budget,self.aa,'guard-task')
+        calls = []
+        def deny(db):
+            calls.append(db.in_transaction)
+            raise PermissionError('Cấu hình AI đã thay đổi')
+        with self.assertRaises(PermissionError):
+            self.reserve(budget,self.bb,'guard-task',guard=deny)
+        self.assertEqual(calls,[])
+        with self.assertRaises(PermissionError):
+            self.reserve(budget,self.aa,'guard-task',guard=deny)
+        self.assertEqual(calls,[True])
+        self.assertEqual(budget.status(self.aa,self.policy)['calls_used'],0)
+        self.reserve(budget,self.aa,'guard-task',guard=lambda db:None)
+        self.assertEqual(budget.status(self.aa,self.policy)['calls_used'],1)
+
+    def test_guard_va_reservation_cung_hoan_tac_khi_cau_hinh_bi_tu_choi(self):
+        budget = self.budget()
+        self.task(budget,self.aa,'guard-rollback')
+        with self.kho.ket_noi() as db:
+            db.execute('CREATE TABLE synthetic_ai_config(revision INTEGER)')
+            db.execute('INSERT INTO synthetic_ai_config VALUES(1)')
+        def deny(db):
+            db.execute('UPDATE synthetic_ai_config SET revision=2')
+            raise PermissionError('Cấu hình AI không còn hợp lệ')
+        with self.assertRaises(PermissionError):
+            self.reserve(budget,self.aa,'guard-rollback',guard=deny)
+        def accept_original(db):
+            self.assertEqual(db.execute('SELECT revision FROM synthetic_ai_config').fetchone()[0],1)
+        self.reserve(budget,self.aa,'guard-rollback',guard=accept_original)
+        self.assertEqual(budget.status(self.aa,self.policy)['calls_used'],1)
+
+    def test_writer_khong_doi_cau_hinh_giua_guard_va_giu_chi_phi(self):
+        budget = self.budget()
+        self.task(budget,self.aa,'guard-writer')
+        with self.kho.ket_noi() as db:
+            db.execute('CREATE TABLE synthetic_ai_config(revision INTEGER)')
+            db.execute('INSERT INTO synthetic_ai_config VALUES(1)')
+        started, finished = threading.Event(), threading.Event()
+        def update():
+            with self.kho.ket_noi() as db:
+                started.set()
+                db.execute('BEGIN IMMEDIATE')
+                db.execute('UPDATE synthetic_ai_config SET revision=2')
+            finished.set()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            writers = []
+            def guard(db):
+                self.assertTrue(db.in_transaction)
+                self.assertEqual(db.execute('SELECT revision FROM synthetic_ai_config').fetchone()[0],1)
+                writers.append(pool.submit(update))
+                self.assertTrue(started.wait(timeout=5))
+                self.assertFalse(finished.wait(timeout=0.15))
+            self.reserve(budget,self.aa,'guard-writer',guard=guard)
+            writers[0].result(timeout=5)
+        self.assertEqual(budget.status(self.aa,self.policy)['calls_used'],1)
+        def stale_config(db):
+            if db.execute('SELECT revision FROM synthetic_ai_config').fetchone()[0] != 1:
+                raise PermissionError('Cấu hình AI đã thay đổi')
+        with self.assertRaises(PermissionError):
+            self.reserve(budget,self.aa,'guard-writer',guard=stale_config)
+        self.assertEqual(budget.status(self.aa,self.policy)['calls_used'],1)
+
+    def test_tai_lieu_tac_vu_sai_chu_hoac_don_vi_khong_cap_luot_hay_chay_guard(self):
+        budget = self.budget()
+        self.task(budget,self.aa,'inconsistent-task')
+        for field,value in (('owner','other-owner'),('unit_id',self.b)):
+            with self.subTest(field=field):
+                with self.kho.ket_noi() as db:
+                    document = {'id':'inconsistent-task','owner':USER['id'],
+                                'unit_id':self.a,'run':1,'project_id':'',field:value}
+                    db.execute('UPDATE cong_viec_tasks SET document=? WHERE id=?',
+                               (json.dumps(document),'inconsistent-task'))
+                    with self.assertRaises(PermissionError):
+                        budget.claim_task(db,self.aa,'inconsistent-task',2,self.policy)
+                calls = []
+                with self.assertRaises(PermissionError):
+                    self.reserve(budget,self.aa,'inconsistent-task',guard=lambda db:calls.append(True))
+                self.assertEqual(calls,[])
+        self.assertEqual(budget.status(self.aa,self.policy)['calls_used'],0)
+
     def test_cung_danh_tinh_hai_don_vi_co_han_muc_doc_lap(self):
         budget = self.budget()
         self.task(budget,self.aa,'task-a')

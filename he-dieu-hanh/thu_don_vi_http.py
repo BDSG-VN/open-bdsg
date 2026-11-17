@@ -9,12 +9,21 @@ import time
 import unittest
 
 from may_chu import UngDung, tao_may_chu
+from ngan_sach_ai import DEFAULT_POLICY
+from trung_tam_ai import MoHinhLiteLLM
+from thu_mo_hinh_bdsg import Transport, answer
 
 
 class ThuDonViHTTP(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.app = UngDung(self.tmp.name, "https://preview.test", True, unit_preview=True)
+        self.provider_requests = []
+        def factory(alias, key):
+            transport = Transport([answer("Ket qua qua adapter thu " + alias)])
+            self.provider_requests.append((alias, transport))
+            return MoHinhLiteLLM(alias, key, opener=transport)
+        self.app = UngDung(self.tmp.name, "https://preview.test", True, unit_preview=True,
+            unit_ai_probe=lambda key, aliases: True, unit_ai_factory=factory)
         self.root = {"id": "chu-quan", "name": "Chu", "role": "quan-tri"}
         self.password = "mat-khau-tong-hop-test"
         self.app.kho.tao_chu(self.password)
@@ -170,7 +179,7 @@ class ThuDonViHTTP(unittest.TestCase):
             "identity": self.root["id"], "role": "member"})
         for actor in (self.root, {"id": "nguoi-a", "name": "nguoi-a", "role": "operator"}):
             scoped = self.app.units.bind(actor, self.units[0])
-            for name in ("mo_hinh.danh_sach", "mo_hinh.han_muc", "mo_hinh.cau_hinh",
+            for name in ("cau_hinh.mo_hinh", "cau_hinh.tat_mo_hinh",
                          "nen_tang.ket_noi", "nhat_ky.danh_sach"):
                 result = self.app.core.goi(scoped, name, {})
                 self.assertFalse(result["ok"], (actor["id"], name, result))
@@ -185,6 +194,57 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertEqual(self.request("/api/units/members", who="nguoi-b", unit=unit)[0], 403)
         self.assertEqual(self.request("/api/units/members", {"identity": "nguoi-b", "role": "revoke"}, "chu-quan", unit)[0], 200)
         self.assertEqual(self.tool("du_an.danh_sach", who="nguoi-b")[0], 403)
+
+    def test_cau_hinh_ai_qua_http_chi_thuoc_don_vi_va_khong_tra_khoa(self):
+        first, second = self.units
+        config = {"enabled": True, "default_model": "thu-model", "models": [{
+            "id": "thu-model", "label": "Mo hinh rieng don vi A",
+            "upstream_model": "openai/synthetic-test-model", "api_key": "synthetic-key-only-test",
+            "capabilities": ["general"], "skills": [],
+            "prices": {"input_per_million": "1", "output_per_million": "1"}}],
+            "policy": dict(DEFAULT_POLICY)}
+        saved = self.value(self.tool("mo_hinh.luu", config, unit=first))
+        self.assertEqual(saved["default_model"], "thu-model")
+        self.assertNotIn("synthetic-key-only-test", json.dumps(saved))
+        self.assertNotIn("api_key", saved["models"][0])
+        self.assertEqual(self.value(self.tool("mo_hinh.danh_sach", unit=second))["models"], [])
+        self.app.units.set_member(self.root, {"unit_id": first,
+            "identity": self.root["id"], "role": "member"})
+        self.assertFalse(self.tool("mo_hinh.luu", config, who="chu-quan", unit=first)[1]["ok"])
+        self.assertFalse(self.tool("mo_hinh.cau_hinh", who="chu-quan", unit=first)[1]["ok"])
+        self.assertEqual(self.request("/api/tools", {"name": "mo_hinh.danh_sach"}, "nguoi-a")[0], 403)
+
+    def test_ai_hai_don_vi_qua_http_chay_adapter_va_tinh_han_muc_rieng(self):
+        created = []
+        for unit, model_id in zip(self.units, ("mo-hinh-a", "mo-hinh-b")):
+            self.value(self.tool("mo_hinh.luu", {
+                "enabled": True, "default_model": model_id, "models": [{
+                    "id": model_id, "label": model_id, "upstream_model": "openai/synthetic-test-model",
+                    "api_key": "synthetic-key-only-test", "capabilities": ["general"], "skills": [],
+                    "prices": {"input_per_million": "1", "output_per_million": "1"}}],
+                "policy": dict(DEFAULT_POLICY)}, unit=unit))
+            created.append(self.value(self.tool("cong_viec.tao", {
+                "prompt": "Phan tich yeu cau kinh doanh tong hop cho don vi",
+                "template": "de-xuat-giai-phap", "model_selection": model_id}, unit=unit)))
+        for index, (unit, task) in enumerate(zip(self.units, created)):
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = self.value(self.request("/api/task?id=" + task["id"], who="nguoi-a", unit=unit))
+                if result["status"] in ("completed", "failed"):
+                    break
+                time.sleep(.01)
+            self.assertEqual(result["status"], "completed", result)
+            self.assertEqual(result["unit_id"], unit)
+            self.assertEqual(result["mode"], "mo-hinh-api")
+            self.assertIn("mo-hinh-" + ("a" if index == 0 else "b"), result["artifacts"][0]["content"])
+            self.assertNotIn("synthetic-key-only-test", json.dumps(result))
+            quota = self.value(self.tool("mo_hinh.han_muc", unit=unit))
+            self.assertEqual(quota["calls_used"], 1)
+            self.assertEqual(quota["tasks_used"], 1)
+        self.assertEqual(len(self.provider_requests), 2)
+        for alias, transport in self.provider_requests:
+            self.assertEqual(len(transport.requests), 1)
+            self.assertEqual(json.loads(transport.requests[0][0].data)["model"], alias)
 
     def test_tac_vu_quy_trinh_qua_kernel_http_giu_don_vi(self):
         one,two=self.units
