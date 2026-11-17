@@ -28,6 +28,17 @@ TZ=Etc/UTC
 
 Gateway dùng cùng bí mật trong `BDSG_OFFICE_JWT_SECRET`. Không đưa tệp môi
 trường vào web root, câu lệnh có bí mật hoặc bản mô tả Pull Request.
+
+Ngày 18/11/2026: gateway hỗ trợ `BDSG_OFFICE_INTERNAL_PORT` trong môi trường
+vận hành để tách engine thử riêng. Mặc định vẫn `8088`, host luôn
+`127.0.0.1`; không nhận host/cổng từ công cụ hoặc HTTP. Chỉ nhận số ASCII
+từ 1 đến 65535, cấu hình sai làm khởi tạo thất bại, không tự dùng mặc định.
+Command và tải kết quả dùng cùng cổng đã chụp lúc khởi tạo; đổi biến môi
+trường không đổi đối tượng đang chạy. URL callback loopback phải khớp cổng
+này; URL HTTPS cùng origin/prefix được tải qua đúng engine nội bộ đã chọn.
+Khi tách stage phải dùng container, secret, dữ liệu và proxy riêng; đặt cổng
+gateway không tự cấu hình hoặc tạo container. Chưa thay cấu hình production.
+
 Không bật `ALLOW_META_IP_ADDRESS`. Không tắt kiểm JWT để sửa lỗi kết nối.
 Docs phải tải được nguồn HTTPS chính thức và gửi callback về gateway; nếu
 dùng CDN, kiểm route origin phù hợp thay vì tắt bảo vệ toàn tên miền.

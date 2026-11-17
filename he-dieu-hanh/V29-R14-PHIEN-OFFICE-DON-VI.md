@@ -30,11 +30,17 @@ hỏng làm khởi tạo thất bại và không tự bị ghi đè; yêu cầu 
 tạo lại tệp bị mất. Đây chưa là nghiệm thu phục hồi engine hoặc toàn máy.
 
 Kiểm cục bộ qua phương thức công khai `SoanThaoOffice`, đo 18/11/2026:
-`thu_phien_office_don_vi.py` có 24 bài đạt về nguồn ký, hai đơn vị, rejoin,
+`thu_phien_office_don_vi.py` có 26 bài đạt về nguồn ký, hai đơn vị, rejoin,
 quyền đổi trong scan/fetch, callback lưu, participant khác mất quyền,
 restart/backup/restore, schema cũ, tệp thế hệ hỏng/bị mất và lệnh lưu bên dưới.
 `thu_office_tich_hop.py` có 13 bài legacy đạt. Tệp Office thật và chữ ký thật;
 scanner tổng hợp, fetch callback là đầu nối giả, chưa kiểm engine thật.
+
+Hai bài bổ sung ngày 18/11/2026 kiểm cổng engine riêng qua HTTP loopback
+thật và từ chối cấu hình sai khi khởi tạo. Máy chủ HTTP tổng hợp nhận lệnh
+có chữ ký, trả kết quả tệp, kiểm nội dung sau commit và routing qua URL
+HTTPS cùng origin. Callback trỏ nhầm cổng mặc định bị chặn trước tải tệp.
+Đây là kiểm transport, chưa dùng engine ONLYOFFICE thật hoặc thay production.
 
 ## Lệnh lưu và kết quả chưa rõ
 

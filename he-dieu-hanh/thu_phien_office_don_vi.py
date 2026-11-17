@@ -3,6 +3,11 @@ import tempfile
 import unittest
 import time
 import json
+import base64
+import os
+import threading
+import http.client
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch, Mock
 from urllib.parse import urlsplit, parse_qs
@@ -35,6 +40,61 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
 
     def actor(self,unit):
         return self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},unit)
+
+    def test_configured_engine_port_routes_command_and_snapshot_over_real_loopback_http(self):
+        requests=[];raw=changed_document('Tai lieu qua cong engine thu rieng')
+        class Engine(BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_POST(self):
+                body=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                claims=verify(body['token'],SECRET,'command')
+                requests.append(('POST',self.path,claims))
+                self.send_response(200);self.end_headers();self.wfile.write(b'{"error":0}')
+            def do_GET(self):
+                requests.append(('GET',self.path))
+                self.send_response(200);self.end_headers();self.wfile.write(raw)
+        server=ThreadingHTTPServer(('127.0.0.1',0),Engine)
+        self.addCleanup(server.server_close);self.addCleanup(server.shutdown)
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        with patch.dict(os.environ,{'BDSG_OFFICE_INTERNAL_PORT':str(server.server_port)}):
+            editor=SoanThaoOffice(self.app.office,self.app.origin)
+        editor.secret=SECRET
+        opened=editor.open(self.a,{'id':self.file['id']})
+        original=http.client.HTTPConnection
+        def connect(host,port,**kwargs):
+            self.assertEqual((host,port),('127.0.0.1',server.server_port))
+            return original(host,port,**kwargs)
+        with patch('soan_thao_office.http.client.HTTPConnection',side_effect=connect):
+            saved=editor.save(self.a,{'key':opened['key']})
+            self.assertEqual(saved['state'],'dang-luu')
+            payload={'key':opened['key'],'status':6,'userdata':saved['request_id'],
+                'url':'http://127.0.0.1:'+str(server.server_port)+'/cache/files/'+opened['key']+'/output.docx',
+                'exp':time.time()+60}
+            wrong={**payload,'url':'http://127.0.0.1:8088/cache/files/'+opened['key']+'/output.docx'}
+            with self.assertRaises(ValueError):
+                editor.callback({'token':sign(wrong,SECRET)},'')
+            self.assertEqual(len(requests),1)
+            self.assertEqual(editor.callback({'token':sign(payload,SECRET)},''),{'error':0})
+            another=editor.save(self.a,{'key':opened['key']})
+            proxied={**payload,'userdata':another['request_id'],
+                'url':self.app.origin+'/office-docs/cache/files/'+opened['key']+'/output.docx'}
+            self.assertEqual(editor.callback({'token':sign(proxied,SECRET)},''),{'error':0})
+        result=self.app.office.read(self.a,{'id':self.file['id']})
+        self.assertEqual(result['version'],2)
+        self.assertEqual(base64.b64decode(result['content_base64']),raw)
+        self.assertEqual([item[0] for item in requests],['POST','GET','POST','GET'])
+        self.assertEqual(requests[0][0:2],('POST','/command'))
+        self.assertEqual(requests[0][2]['key'],opened['key'])
+        self.assertEqual(requests[1],('GET','/cache/files/'+opened['key']+'/output.docx'))
+        self.assertEqual(editor.progress(self.a,{'key':opened['key'],
+            'request_id':saved['request_id']})['command_state'],'committed')
+
+    def test_invalid_engine_port_stops_initialization_without_default_fallback(self):
+        for value in ('','0','65536','-1','8088 ',' 8088','1.0','http://127.0.0.1:8088',
+                      '１２３４','8_088','999999999999999999999999999999'):
+            with self.subTest(value=value),patch.dict(os.environ,{'BDSG_OFFICE_INTERNAL_PORT':value}):
+                with self.assertRaises(ValueError):
+                    SoanThaoOffice(self.app.office,self.app.origin)
 
     def command_connection(self,code=0,during=None):
         connection,response=Mock(),Mock()

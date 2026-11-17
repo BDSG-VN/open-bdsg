@@ -24,6 +24,12 @@ class SoanThaoOffice:
     def __init__(self, office, origin):
         self.office, self.kho, self.origin = office, office.kho, origin
         self.secret = os.environ.get("BDSG_OFFICE_JWT_SECRET", "")
+        port = os.environ.get('BDSG_OFFICE_INTERNAL_PORT','8088')
+        if (not port.isascii() or not port.isdecimal() or len(port)>5
+                or not 1<=int(port)<=65535):
+            raise ValueError('Cổng engine Office nội bộ không hợp lệ')
+        # Cấu hình vận hành được chụp khi khởi tạo; client không chọn host/cổng.
+        self.engine_port = int(port)
         self.prefix = "/office-docs/"
         self.scopes = PhienOfficeDonVi(office)
         with self.kho.ket_noi() as db:
@@ -300,7 +306,7 @@ class SoanThaoOffice:
         return {'state':'dang-luu','request_id':request}
 
     def _command(self,payload):
-        connection=http.client.HTTPConnection('127.0.0.1',8088,timeout=10)
+        connection=http.client.HTTPConnection('127.0.0.1',self.engine_port,timeout=10)
         try:
             connection.request('POST','/command',json.dumps({'token':sign(payload,self.secret)}),
                                {'Content-Type':'application/json'})
@@ -485,7 +491,7 @@ class SoanThaoOffice:
             and parsed.path.startswith(self.prefix)
         ):
             path = parsed.path[len(self.prefix) - 1 :]
-        elif parsed.scheme == "http" and parsed.netloc == "127.0.0.1:8088":
+        elif parsed.scheme == "http" and parsed.netloc == f"127.0.0.1:{self.engine_port}":
             path = parsed.path
         else:
             raise ValueError("Nguồn kết quả không được phép")
@@ -500,7 +506,7 @@ class SoanThaoOffice:
             )
         ):
             raise ValueError("Đường dẫn kết quả không hợp lệ")
-        connection = http.client.HTTPConnection("127.0.0.1", 8088, timeout=12)
+        connection = http.client.HTTPConnection("127.0.0.1", self.engine_port, timeout=12)
         try:
             connection.request(
                 "GET", path + ("?" + parsed.query if parsed.query else "")
