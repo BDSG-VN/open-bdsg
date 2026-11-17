@@ -2,12 +2,13 @@
 import tempfile
 import unittest
 import time
+import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from urllib.parse import urlsplit, parse_qs
 
 from may_chu import UngDung
-from chu_ky_office import sign
+from chu_ky_office import sign, verify
 from thu_office_tich_hop import Scanner, SECRET, changed_document
 from sao_luu_he_thong import backup, restore
 from soan_thao_office import SoanThaoOffice
@@ -34,6 +35,25 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
 
     def actor(self,unit):
         return self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},unit)
+
+    def command_connection(self,code=0,during=None):
+        connection,response=Mock(),Mock()
+        payload={}
+        response.status=200;response.read.return_value=json.dumps({'error':code}).encode()
+        def posted(method,path,body,headers):
+            payload.update(verify(json.loads(body)['token'],SECRET,'command'))
+        def answered():
+            if during:during(payload)
+            return response
+        connection.request.side_effect=posted
+        connection.getresponse.side_effect=answered
+        return connection,payload
+
+    def callback(self,session,status=6,request=None):
+        payload={'key':session['key'],'status':status,'users':['nguoi-a'],
+                 'url':'https://unused.test/fixture','exp':time.time()+60}
+        if request is not None:payload['userdata']=request
+        return self.editor.callback({'token':sign(payload,SECRET)},'')
 
     def source(self,session,editor=None):
         url=session['config']['document']['url']
@@ -111,6 +131,187 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
         restarted.secret=SECRET
         with self.assertRaises(PermissionError):
             self.source(first,restarted)
+
+    def test_timeout_does_not_resend_after_pending_age_exceeds_120_seconds(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection=Mock()
+        connection.getresponse.side_effect=TimeoutError('Synthetic command timeout')
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            result=self.editor.save(self.a,{'key':opened['key']})
+            self.assertEqual(result['state'],'chua-ro-ket-qua')
+            later=time.time()+121
+            with patch('soan_thao_office.time.time',return_value=later):
+                again=self.editor.save(self.a,{'key':opened['key']})
+            self.assertEqual(again,result)
+            self.assertEqual(connection.request.call_count,1)
+            progress=self.editor.progress(self.a,{'key':opened['key']})
+            self.assertTrue(progress['pending'])
+            self.assertEqual(progress['command_state'],'unknown')
+
+    def test_accepted_command_requires_callback_receipt_and_no_change_is_separate(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection,_=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            accepted=self.editor.save(self.a,{'key':opened['key']})
+        self.assertEqual(accepted['state'],'dang-luu')
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['version'],1)
+        with patch.object(self.editor,'_fetch',return_value=changed_document('Da commit callback')):
+            self.assertEqual(self.callback(opened,request=accepted['request_id']),{'error':0})
+            self.assertEqual(self.callback(opened,request=accepted['request_id']),{'error':0})
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['version'],2)
+        progress=self.editor.progress(self.a,{'key':opened['key'],'request_id':accepted['request_id']})
+        self.assertFalse(progress['pending'])
+        self.assertEqual(progress['command_state'],'committed')
+        connection,_=self.command_connection(4)
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            unchanged=self.editor.save(self.a,{'key':opened['key']})
+        self.assertEqual(unchanged['state'],'khong-co-thay-doi')
+        self.assertEqual(self.editor.progress(self.a,{'key':opened['key']})['command_state'],'unchanged')
+
+    def test_committed_callback_wins_over_late_response_or_timeout(self):
+        for callback_status,outcome in ((s,o) for s in (2,6) for o in (0,4,'timeout')):
+            with self.subTest(callback_status=callback_status,outcome=outcome):
+                opened=self.editor.open(self.a,{'id':self.file['id']})
+                def during(payload):
+                    self.callback(opened,callback_status,payload['userdata'] if callback_status==6 else None)
+                    if outcome=='timeout':raise TimeoutError('Synthetic after commit')
+                connection,_=self.command_connection(0 if outcome=='timeout' else outcome,during)
+                with (patch('soan_thao_office.http.client.HTTPConnection',return_value=connection),
+                      patch.object(self.editor,'_fetch',return_value=changed_document('Ban luu '+str(callback_status)+str(outcome)))):
+                    result=self.editor.save(self.a,{'key':opened['key']})
+                self.assertEqual(result['state'],'da-luu')
+                progress=self.editor.progress(self.a,{'key':opened['key'],'request_id':result['request_id']})
+                self.assertEqual(progress['command_state'],'committed')
+                self.assertFalse(progress['pending'])
+
+    def test_explicit_abandon_revokes_key_without_claiming_save_or_late_commit(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection=Mock();connection.getresponse.side_effect=TimeoutError('Synthetic')
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            result=self.editor.save(self.a,{'key':opened['key']})
+        args={'key':opened['key'],'request_id':result['request_id']}
+        with self.assertRaises(ValueError):self.editor.reconcile_save(self.a,args)
+        self.assertTrue(self.source(opened).startswith(b'PK'))
+        args['acknowledge_unsaved_changes']=True
+        abandoned=self.editor.reconcile_save(self.a,args)
+        self.assertEqual(abandoned['state'],'da-bo-phien')
+        self.assertEqual(self.editor.reconcile_save(self.a,args),abandoned)
+        with self.assertRaises(PermissionError):self.source(opened)
+        with patch.object(self.editor,'_fetch') as fetch:
+            with self.assertRaises(PermissionError):self.callback(opened,request=result['request_id'])
+            fetch.assert_not_called()
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['version'],1)
+        fresh=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertNotEqual(fresh['key'],opened['key'])
+
+    def test_failure_callback_wins_over_late_command_acceptance(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection,_=self.command_connection(0,lambda p:self.callback(opened,7,p['userdata']))
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            result=self.editor.save(self.a,{'key':opened['key']})
+        self.assertEqual(result['state'],'loi-luu')
+        progress=self.editor.progress(self.a,{'key':opened['key'],'request_id':result['request_id']})
+        self.assertEqual(progress['command_state'],'failed')
+        self.assertTrue(progress['save_error'])
+        self.assertFalse(progress['pending'])
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['version'],1)
+
+    def test_regrant_during_command_response_never_returns_success(self):
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+        for code in (0,4):
+            actor=self.actor(self.units[0])
+            opened=self.editor.open(actor,{'id':self.file['id']})
+            def during(payload):
+                member={'unit_id':self.units[0],'identity':'nguoi-a'}
+                self.app.units.set_member(self.root,{**member,'role':'revoke'})
+                self.app.units.set_member(self.root,{**member,'role':'admin'})
+            connection,_=self.command_connection(code,during)
+            with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+                with self.assertRaises(PermissionError):self.editor.save(actor,{'key':opened['key']})
+            fresh=self.actor(self.units[0])
+            self.assertEqual(self.app.office.read(fresh,{'id':self.file['id']})['version'],1)
+
+    def test_bad_http_json_and_boolean_responses_remain_unknown(self):
+        for status,body in ((503,b'{}'),(200,b'not-json'),(200,b'{"error":false}'),(200,b'{"error":3}')):
+            opened=self.editor.open(self.a,{'id':self.file['id']})
+            connection,_=self.command_connection()
+            response=Mock();response.status=status;response.read.return_value=body
+            connection.getresponse.side_effect=None;connection.getresponse.return_value=response
+            with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+                result=self.editor.save(self.a,{'key':opened['key']})
+                self.assertEqual(result['state'],'chua-ro-ket-qua')
+                self.assertEqual(self.editor.save(self.a,{'key':opened['key']}),result)
+                self.assertEqual(connection.request.call_count,1)
+            self.editor.reconcile_save(self.a,{'key':opened['key'],'request_id':result['request_id'],
+                                             'acknowledge_unsaved_changes':True})
+
+    def test_command_status_and_abandon_cannot_borrow_another_key_or_root_role(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection,_=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            result=self.editor.save(self.a,{'key':opened['key']})
+        second_file=self.editor.create(self.a,{'name':'tep-khac.docx','project_id':self.project})
+        second=self.editor.open(self.a,{'id':second_file['id']})
+        args={'key':second['key'],'request_id':result['request_id']}
+        with self.assertRaises(PermissionError):self.editor.progress(self.a,args)
+        with self.assertRaises(PermissionError):self.editor.reconcile_save(self.a,{**args,'acknowledge_unsaved_changes':True})
+        with self.assertRaises(PermissionError):
+            self.editor.reconcile_save(self.root,{'key':opened['key'],'request_id':result['request_id'],
+                                                'acknowledge_unsaved_changes':True})
+
+    def test_editing_and_terminal_callbacks_set_command_state_without_false_commit(self):
+        for status,state,command_state in ((3,'error','failed'),(4,'closed','superseded')):
+            opened=self.editor.open(self.a,{'id':self.file['id']})
+            connection,_=self.command_connection()
+            with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+                result=self.editor.save(self.a,{'key':opened['key']})
+            self.assertEqual(self.callback(opened,1),{'error':0})
+            with self.assertRaises(ValueError):self.callback(opened,5)
+            self.assertTrue(self.editor.progress(self.a,{'key':opened['key']})['pending'])
+            self.assertEqual(self.callback(opened,status),{'error':0})
+            progress=self.editor.progress(self.a,{'key':opened['key'],'request_id':result['request_id']})
+            self.assertEqual(progress['state'],state)
+            self.assertEqual(progress['command_state'],command_state)
+            self.assertFalse(progress['pending'])
+            self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['version'],1)
+
+    def test_old_pending_command_is_unknown_until_signed_callback(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        request='a'*32
+        # Dữ liệu đầu vào từ schema trước command ledger, không dùng DB làm
+        # assertion; mọi kết luận bên dưới qua save/progress/callback thật.
+        with self.app.kho.ket_noi() as db:
+            db.execute('DROP TABLE office_editor_commands')
+            db.execute('INSERT INTO office_editor_requests VALUES(?,?,?,?)',(request,opened['key'],'nguoi-a','operator'))
+            db.execute('UPDATE office_editors SET pending=?,pending_at=? WHERE key=?',(request,time.time()-180,opened['key']))
+        self.editor=SoanThaoOffice(self.app.office,'https://office-scope.test');self.editor.secret=SECRET
+        with patch('soan_thao_office.http.client.HTTPConnection') as transport:
+            result=self.editor.save(self.a,{'key':opened['key']})
+            self.assertEqual(result,{'state':'chua-ro-ket-qua','request_id':request})
+            transport.assert_not_called()
+        self.assertEqual(self.editor.progress(self.a,{'key':opened['key']})['command_state'],'unknown')
+        with patch.object(self.editor,'_fetch',return_value=changed_document('Luu lenh truoc nang cap')):
+            self.callback(opened,request=request)
+        self.assertEqual(self.editor.progress(self.a,{'key':opened['key'],'request_id':request})['command_state'],'committed')
+
+    def test_late_no_change_reply_does_not_clear_newer_pending_request(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        newer={}
+        second_connection,_=self.command_connection()
+        def during(payload):
+            self.callback(opened,request=payload['userdata'])
+            with patch('soan_thao_office.http.client.HTTPConnection',return_value=second_connection):
+                newer.update(self.editor.save(self.a,{'key':opened['key']}))
+        connection,_=self.command_connection(4,during)
+        with (patch('soan_thao_office.http.client.HTTPConnection',return_value=connection),
+              patch.object(self.editor,'_fetch',return_value=changed_document('Ban luu truoc lenh moi'))):
+            older=self.editor.save(self.a,{'key':opened['key']})
+        self.assertEqual(older['state'],'da-luu')
+        self.assertNotEqual(older['request_id'],newer['request_id'])
+        progress=self.editor.progress(self.a,{'key':opened['key']})
+        self.assertTrue(progress['pending'])
+        self.assertEqual(progress['pending_request_id'],newer['request_id'])
+        self.assertEqual(progress['command_state'],'accepted')
 
     def test_source_restores_scope_but_cross_unit_session_does_not_reuse_key(self):
         self.app.projects.share(self.a,{'id':self.project,'unit_id':self.units[1],'identity':'nguoi-a','role':'editor'})

@@ -45,6 +45,10 @@ class SoanThaoOffice:
                 CREATE TABLE IF NOT EXISTS office_editor_failures(
                     key TEXT PRIMARY KEY,request TEXT NOT NULL,created REAL NOT NULL);
             """)
+            if self.scopes.units is not None:
+                db.execute('''CREATE TABLE IF NOT EXISTS office_editor_commands(
+                    id TEXT PRIMARY KEY REFERENCES office_editor_requests(id),
+                    state TEXT NOT NULL,updated REAL NOT NULL)''')
 
     def status(self):
         return {
@@ -223,6 +227,8 @@ class SoanThaoOffice:
         return True
 
     def save(self, actor, args):
+        if self.scopes.units is not None:
+            return self._save_scoped(actor,args)
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             session = self._row(db, args.get("key"))
@@ -257,28 +263,150 @@ class SoanThaoOffice:
             "iat": int(time.time()),
             "exp": int(time.time()) + 60,
         }
-        connection = http.client.HTTPConnection("127.0.0.1", 8088, timeout=10)
+        if self._command(payload)==4:
+            with self.kho.ket_noi() as db:
+                db.execute("UPDATE office_editors SET pending=NULL WHERE key=? AND pending=?",
+                           (session['key'],request))
+            return {'state':'khong-co-thay-doi'}
+        return {'state':'dang-luu','request_id':request}
+
+    def _command(self,payload):
+        connection=http.client.HTTPConnection('127.0.0.1',8088,timeout=10)
         try:
-            connection.request(
-                "POST",
-                "/command",
-                json.dumps({"token": sign(payload, self.secret)}),
-                {"Content-Type": "application/json"},
-            )
-            response = connection.getresponse()
-            value = json.loads(response.read(8192))
-            if response.status != 200 or value.get("error") not in (0, 4):
-                raise ValueError("Bộ soạn thảo chưa nhận lệnh lưu")
-            if value["error"] == 4:
-                with self.kho.ket_noi() as db:
-                    db.execute(
-                        "UPDATE office_editors SET pending=NULL WHERE key=? AND pending=?",
-                        (session["key"], request),
-                    )
-                return {"state": "khong-co-thay-doi"}
-            return {"state": "dang-luu", "request_id": request}
+            connection.request('POST','/command',json.dumps({'token':sign(payload,self.secret)}),
+                               {'Content-Type':'application/json'})
+            response=connection.getresponse()
+            value=json.loads(response.read(8192))
+            if response.status!=200 or value.get('error') not in (0,4):
+                raise ValueError('Bộ soạn thảo chưa nhận lệnh lưu')
+            return value['error']
         finally:
             connection.close()
+
+    def _save_session(self,db,actor,key):
+        session=self._row(db,key)
+        if self.scopes.units is not None:
+            self.scopes.actor(key,actor['id'],db,current=actor)
+        file=self.office._file(actor,session['file_id'],db,True)
+        self.office._check_revision(file,session['revision'])
+        return session
+
+    def _command_record(self,db,key,request=None):
+        sql='''SELECT r.id,COALESCE(c.state,'unknown') AS state,c.updated
+            FROM office_editor_requests r LEFT JOIN office_editor_commands c
+            ON r.id=c.id WHERE r.key=?'''
+        values=[key]
+        if request is not None:
+            if not isinstance(request,str) or not 1<=len(request)<=128:
+                raise ValueError('Mã lệnh lưu không hợp lệ')
+            sql+=' AND r.id=?';values.append(request)
+        row=db.execute(sql+' ORDER BY c.updated DESC,r.id DESC LIMIT 1',values).fetchone()
+        if request is not None and row is None:
+            raise PermissionError('Lệnh lưu không thuộc phiên này')
+        return row
+
+    def _settle_command(self,db,session,state):
+        if self.scopes.units is None or not session['pending']:return
+        db.execute('''INSERT INTO office_editor_commands(id,state,updated)
+            SELECT id,?,? FROM office_editor_requests WHERE id=? AND key=?
+            ON CONFLICT(id) DO UPDATE SET state=excluded.state,updated=excluded.updated
+            WHERE office_editor_commands.state NOT IN ('committed','unchanged','superseded','abandoned')''',
+            (state,time.time(),session['pending'],session['key']))
+
+    def _save_receipt(self,db,key,request):
+        if db.execute('SELECT 1 FROM office_editor_callbacks WHERE key=? AND status=6 AND request=?',(key,request)).fetchone():
+            return {'state':'da-luu','request_id':request}
+        command=self._command_record(db,key,request)
+        if command['state']=='committed':
+            return {'state':'da-luu','request_id':request}
+        if command['state']=='failed':
+            return {'state':'loi-luu','request_id':request}
+        return None
+
+    def _result_session(self,db,actor,key):
+        # Receipt vẫn đọc được sau callback đóng key, nhưng không được dùng
+        # receipt để bỏ kiểm quyền của participant hoặc phạm vi hiện tại.
+        session=db.execute('SELECT * FROM office_editors WHERE key=?',(key,)).fetchone()
+        if session is None:raise PermissionError('Không có quyền xem kết quả lưu')
+        self.scopes.actor(key,actor['id'],db,current=actor)
+        self.office._file(actor,session['file_id'],db,True)
+        return session
+
+    def _save_scoped(self,actor,args):
+        key=args.get('key')
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            session=self._save_session(db,actor,key)
+            if session['pending']:
+                command=db.execute('SELECT state FROM office_editor_commands WHERE id=?',(session['pending'],)).fetchone()
+                state='dang-luu' if command and command['state']=='accepted' else 'chua-ro-ket-qua'
+                return {'state':state,'request_id':session['pending']}
+            request=secrets.token_hex(16)
+            db.execute('DELETE FROM office_editor_failures WHERE key=?',(key,))
+            db.execute('UPDATE office_editors SET pending=?,pending_at=? WHERE key=?',(request,time.time(),key))
+            db.execute('INSERT INTO office_editor_requests VALUES(?,?,?,?)',(request,key,actor['id'],actor['role']))
+            db.execute('INSERT INTO office_editor_commands VALUES(?,?,?)',(request,'prepared',time.time()))
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            latest=self._save_session(db,actor,key)
+            if latest['pending']!=request:
+                raise LoiXungDotVanPhong('Lệnh lưu đã bị thay thế trước khi gửi')
+            if db.execute("UPDATE office_editor_commands SET state='dispatched',updated=? WHERE id=? AND state='prepared'",(time.time(),request)).rowcount!=1:
+                raise LoiXungDotVanPhong('Trạng thái lệnh lưu đã thay đổi trước khi gửi')
+        payload={'c':'forcesave','key':key,'userdata':request,'operation':'command',
+                 'iat':int(time.time()),'exp':int(time.time())+60}
+        try:
+            code=self._command(payload)
+            if type(code) is not int or code not in (0,4):
+                raise ValueError('Phản hồi lệnh lưu không hợp lệ')
+        except Exception:
+            # Kể cả engine đã nhận lệnh, callback có thể tới sau timeout.
+            # Không bỏ pending hoặc phát lại khi chưa có biên nhận xác định.
+            with self.kho.ket_noi() as db:
+                db.execute('BEGIN IMMEDIATE')
+                db.execute("UPDATE office_editor_commands SET state='unknown',updated=? WHERE id=? AND state='dispatched'",(time.time(),request))
+                self._result_session(db,actor,key)
+                receipt=self._save_receipt(db,key,request)
+                if receipt:return receipt
+            return {'state':'chua-ro-ket-qua','request_id':request}
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self._result_session(db,actor,key)
+            receipt=self._save_receipt(db,key,request)
+            if receipt:return receipt
+            latest=self._save_session(db,actor,key)
+            if latest['pending']!=request:
+                raise LoiXungDotVanPhong('Lệnh lưu đã có kết quả khác; cần đọc tiến trình')
+            if code==4:
+                db.execute('UPDATE office_editors SET pending=NULL WHERE key=? AND pending=?',(key,request))
+            db.execute('UPDATE office_editor_commands SET state=?,updated=? WHERE id=?',
+                       ('unchanged' if code==4 else 'accepted',time.time(),request))
+        return {'state':'khong-co-thay-doi' if code==4 else 'dang-luu','request_id':request}
+
+    def reconcile_save(self,actor,args):
+        if self.scopes.units is None:
+            raise PermissionError('Đối soát này cần phạm vi đơn vị')
+        if (not isinstance(args,dict) or set(args)-{'key','request_id','acknowledge_unsaved_changes'}
+                or args.get('acknowledge_unsaved_changes') is not True):
+            raise ValueError('Cần xác nhận có thể mất thay đổi chưa lưu trước khi bỏ phiên')
+        key,request=args.get('key'),args.get('request_id')
+        if not isinstance(request,str) or not request:
+            raise ValueError('Cần mã lệnh lưu cụ thể')
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            session=db.execute('SELECT * FROM office_editors WHERE key=?',(key,)).fetchone()
+            if session is None:raise PermissionError('Không có quyền đối soát phiên')
+            self.scopes.actor(key,actor['id'],db,current=actor)
+            self.office._file(actor,session['file_id'],db,True)
+            command=self._command_record(db,key,request)
+            if session['state']=='revoked' and command['state']=='abandoned':
+                return {'state':'da-bo-phien','request_id':request}
+            if session['state']!='active' or session['pending']!=request:
+                raise LoiXungDotVanPhong('Lệnh lưu không còn là lệnh đang chờ của phiên')
+            self._settle_command(db,session,'abandoned')
+            db.execute("UPDATE office_editors SET state='revoked',pending=NULL WHERE key=?",(key,))
+            self.office._audit(db,actor,'office-editor-abandon',key)
+        return {'state':'da-bo-phien','request_id':request}
 
     def progress(self, actor, args):
         with self.kho.ket_noi() as db:
@@ -297,7 +425,7 @@ class SoanThaoOffice:
             file = self.office._file(actor, row["file_id"], db)
             if self.scopes.units is not None:
                 self.scopes.actor(row['key'],actor['id'],db,current=actor)
-            return {
+            result = {
                 "state": row["state"],
                 "pending": bool(row["pending"]),
                 "pending_at": row["pending_at"],
@@ -310,6 +438,13 @@ class SoanThaoOffice:
                     ).fetchone()
                 ),
             }
+            if self.scopes.units is not None:
+                request=args['request_id'] if 'request_id' in args else row['pending']
+                command=self._command_record(db,row['key'],request)
+                result.update(request_id=command['id'] if command else row['pending'],
+                    pending_request_id=row['pending'],
+                    command_state=command['state'] if command else ('unknown' if row['pending'] else None))
+            return result
 
     def _fetch(self, url, key):
         parsed = urlsplit(url)
@@ -354,7 +489,7 @@ class SoanThaoOffice:
         key, status = payload.get("key"), payload.get("status")
         if type(status) is not int:
             raise ValueError("Thiếu trạng thái callback")
-        request = payload.get("userdata", "") if status == 6 else ""
+        request = payload.get("userdata", "") if status in (6,7) else ""
         if not isinstance(request, str) or len(request) > 128:
             raise ValueError("Mã callback không hợp lệ")
         fingerprint = hashlib.sha256(
@@ -455,6 +590,7 @@ class SoanThaoOffice:
                         key,
                     ),
                 )
+                self._settle_command(db,latest,'committed')
                 self.office._audit(db, actor, "office-editor-save", current["id"])
                 db.execute(
                     "INSERT INTO office_editor_callbacks VALUES (?,?,?,?,?)",
@@ -463,8 +599,9 @@ class SoanThaoOffice:
         elif status == 7:
             with self.kho.ket_noi() as db:
                 db.execute("BEGIN IMMEDIATE")
-                latest = self._row(db, key)
+                latest = self._save_session(db,actor,key)
                 if latest["pending"] and payload.get("userdata") == latest["pending"]:
+                    self._settle_command(db,latest,'failed')
                     db.execute(
                         "UPDATE office_editors SET pending=NULL WHERE key=? AND pending=?",
                         (key, latest["pending"]),
@@ -475,12 +612,18 @@ class SoanThaoOffice:
                     )
         elif status == 3:
             with self.kho.ket_noi() as db:
+                db.execute('BEGIN IMMEDIATE')
+                latest=self._save_session(db,actor,key)
+                self._settle_command(db,latest,'failed')
                 db.execute(
                     "UPDATE office_editors SET state='error',pending=NULL WHERE key=?",
                     (key,),
                 )
         elif status == 4:
             with self.kho.ket_noi() as db:
+                db.execute('BEGIN IMMEDIATE')
+                latest=self._save_session(db,actor,key)
+                self._settle_command(db,latest,'superseded')
                 db.execute(
                     "UPDATE office_editors SET state='closed',pending=NULL WHERE key=?",
                     (key,),
