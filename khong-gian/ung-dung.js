@@ -362,6 +362,7 @@ function messageMarkup() {
       );
 }
 function agentsPage() {
+  if(state.user&&window.BDSGUnit?.snapshot().mode==='units') return window.BDSGMail?.open();
   if (!state.user)
     return locked(
       "Cùng agent làm việc có ngữ cảnh.",
@@ -415,6 +416,7 @@ function activityPage() {
     `<section class="panel"><div class="panel-head"><h2>Hoạt động gần đây</h2><span class="mini-tag">${state.events.length} bản ghi gần nhất</span></div><div class="activity-list">${state.events.length ? state.events.map((e) => `<div class="event"><span class="event-dot"></span><div><strong>${esc(eventNames[e.action] || e.action)}</strong><small>${esc(e.actor)}${e.target ? " · " + esc(e.target) : ""}</small></div><time>${date(e.created)}</time></div>`).join("") : empty("Chưa có hoạt động", "Các thao tác mới sẽ được ghi nhận tại đây.", "activity")}</div></section>`;
 }
 function render() {
+  window.BDSGMail?.leave();
   window.BDSGConnections?.reset();
   window.BDSGSessions?.leave();
   window.BDSGNode?.leave();
@@ -766,6 +768,7 @@ $("#profile").addEventListener("click", async () => {
   }
 });
 function clearUnitState() {
+  window.BDSGMail?.reset();
   for (const controller of activeUnitRequests) controller.abort();
   activeUnitRequests.clear();
   window.BDSGSessions?.reset();
@@ -828,6 +831,7 @@ setInterval(async () => {
   )
     return;
   try {
+    if(window.BDSGUnit?.snapshot().mode==='units') {window.BDSGMail?.poll();return;}
     const r = await api("/api/messages");
     if (r.ok) {
       state.messages = r.ket_qua.messages;

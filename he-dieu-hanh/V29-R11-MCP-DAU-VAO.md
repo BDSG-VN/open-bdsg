@@ -2,10 +2,11 @@
 
 Ngày 17/11/2026, tiếp [R10](V29-R10-PHE-DUYET-GHI-DON-VI.md). Đây là chặng
 nền grant/credential, worker và HTTP MCP trong chế độ đơn vị thử nghiệm.
-Đến ngày 18/11/2026, backend/HTTP OAuth, authorize/consent, quản lý quyền và
-SDK/browser đã qua kiểm thử trên dữ liệu tổng hợp. Chưa chuyển dữ liệu
-production; R11d đang kiểm đường vận hành/phục hồi trước phát hành, chưa
-triển khai thay đổi này lên website.
+Ngày 18/11/2026, mã R11 đã phát hành trên website ở chế độ legacy hiện hành.
+Backend/HTTP OAuth, authorize/consent, quản lý quyền và SDK/browser đã qua
+kiểm thử trên dữ liệu tổng hợp; pilot CLI và phục hồi gateway Linux đạt.
+Chưa bật đơn vị công khai hoặc chuyển dữ liệu production. Phát hành mã
+không đồng nghĩa OAuth theo đơn vị đang dùng công khai trên website.
 
 ## Danh tính và phạm vi
 

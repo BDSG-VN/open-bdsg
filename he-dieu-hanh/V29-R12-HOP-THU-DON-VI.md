@@ -37,7 +37,21 @@ ngoài đơn vị/ngừng hoạt động, revoke/rejoin cả hai phía, đổi v
 gate ghi đóng và snapshot/restore. HTTP dùng cookie/Origin/unit thật có
 luồng gửi–nhận và từ chối thiếu phạm vi/sai origin.
 
-Ứng dụng thông điệp chưa nằm trong `PREVIEW_APPS`: còn cần nối dữ liệu và
-kiểm clear/late/error/stale ở giao diện; chưa công khai chế độ đơn vị. Chưa
+Đã nối giao diện thông điệp vào `PREVIEW_APPS` của gateway pilot; danh bạ,
+đọc và gửi dùng ba công cụ có scope, không gọi alias toàn cổng. Chưa công
+khai chế độ đơn vị. Chưa
 hoàn tất lịch/workflow/runtime, Google/editor, audit/export/retention hoặc
 toàn V29. Chưa triển khai R12 lên website.
+
+Ngày18/11/2026:28 tình huống Chrome HTTPS đạt ở1440/390 trên gateway/SQLite/
+cookie thật: gửi–nhận, escape nội dung, danh tính/nội dung dài, loading,
+readerror xóa thư cũ, gateclosed giữ bản nháp, mất phản hồi sau commit không
+tự retry, phản hồi đọc/gửi cũ sau đổi unit bị bỏ, ẩn/mở cửa sổ OS thực,
+membership revoke và account change clear. Bộ kiểm dùng giới hạn operator
+riêng để chạy nhanh, không đổi hạn mức production; không API trả phí.
+
+Đã sửa lỗi thứ tự listener khi cửa sổ mở lại: chờ task kế tiếp để trạng
+thái hiển thị OS được cập nhật trước khi xác minh/tải hộp thư mới. Giao diện
+giữ bản nháp theo người đối thoại trong cùng scope, xóa khi scope đổi hoặc
+ẩn app. Lỗi gửi chưa rõ kết quả khóa gửi đến khi người dùng đọc lại hộp thư;
+không coi hủy request là rút lại thư đã commit.

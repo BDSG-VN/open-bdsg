@@ -73,7 +73,7 @@ PREVIEW_TOOLS = frozenset({
 
 
 PREVIEW_APPS = ("account", "work", "tasks", "projects", "office", "ai-settings",
-                "browser", "modules", "staff", "integrations", "studio")
+                "browser", "modules", "staff", "integrations", "studio", "agents")
 
 
 class UngDung:
