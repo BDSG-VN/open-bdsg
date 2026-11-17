@@ -140,6 +140,9 @@ dữ liệu đang vận hành.
 Nền đầu nối riêng theo đơn vị, truyền tải HTTPS ghim IP và giới hạn còn lại:
 [V29 R8](V29-R8-DAU-NOI-DON-VI.md).
 
+Giao diện quản trị đầu nối theo membership và cấp đọc MCP cho từng tác vụ:
+[V29 R9](V29-R9-TAC-VU-MCP-DON-VI.md).
+
 Đóng gói web theo danh sách cho phép, giữ source và dữ liệu ngoài docroot.
 Chạy dưới tài khoản dịch vụ không đăng nhập, filesystem chỉ đọc trừ thư mục
 dữ liệu, giới hạn tài nguyên và không cấp sudo. Giữ bản phát hành trước;

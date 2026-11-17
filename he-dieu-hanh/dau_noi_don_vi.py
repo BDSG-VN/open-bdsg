@@ -198,7 +198,7 @@ class DauNoiDonVi:
                     for key, item in value.items()}
         return value
 
-    def call(self, actor, platform_id, tool, arguments, ghi=False):
+    def call(self, actor, platform_id, tool, arguments, ghi=False, *, expected_revision=None, guard=None):
         if ghi:
             raise PermissionError("Chưa mở công cụ ghi khi phê duyệt đơn vị chưa sẵn sàng")
         if not isinstance(tool, str) or not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,128}", tool):
@@ -206,7 +206,13 @@ class DauNoiDonVi:
         if not isinstance(arguments, dict) or len(json.dumps(arguments, allow_nan=False).encode()) > 48*1024:
             raise ValueError("Tham số công cụ phải là object giới hạn 48 KiB")
         scope, config = self._capture(actor, platform_id, tool=tool)
-        guard = self._guard(actor, scope, config)
+        if expected_revision is not None and expected_revision != config['revision']:
+            raise PermissionError('Cấu hình đầu nối khác bản đã giao cho tác vụ')
+        connector_guard = self._guard(actor, scope, config)
+        task_guard = guard
+        def guard():
+            if task_guard is not None: task_guard()
+            connector_guard()
         try:
             result = self._send(config, "tools/call", {"name": tool, "arguments": arguments}, guard)
         except Exception:

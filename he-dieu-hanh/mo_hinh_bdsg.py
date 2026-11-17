@@ -289,9 +289,16 @@ class MoHinhBDSG:
             ) from None
 
     @staticmethod
-    def module_read_tools(core, actor, selected_ids, allowed=None):
+    def module_read_tools(core, actor, selected_ids, allowed=None, revisions=None):
         """Chỉ trả tên công cụ; cấu hình và chứng thư không đi vào ngữ cảnh mô hình."""
-        if actor.get("role") != "quan-tri":
+        connectors = getattr(core, 'scoped_connectors', None)
+        if connectors is not None:
+            return {item['platform_id']: [name for name in item['read_tools']
+                        if allowed is None or name in allowed.get(item['platform_id'], [])]
+                    for item in connectors.summary(actor)
+                    if item['platform_id'] in selected_ids and item['read_tools']
+                    and (revisions is None or item['revision'] == revisions.get(item['platform_id']))}
+        if actor.get('unit_scope') is not None or actor.get("role") != "quan-tri":
             return {}
         result = {}
         for connection in getattr(getattr(core, "connections", None), "config", []):
@@ -341,7 +348,8 @@ class MoHinhBDSG:
 
         def current_scope():
             return (
-                self.module_read_tools(core, actor, selected, allowed)
+                self.module_read_tools(core, actor, selected, allowed,
+                    scope.get('connector_revisions') if getattr(core, 'scoped_connectors', None) is not None else None)
                 if opted_in
                 else {}
             )

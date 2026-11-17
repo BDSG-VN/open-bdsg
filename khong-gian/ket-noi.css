@@ -34,6 +34,22 @@
   font-size: 14px;
   min-width: 0;
 }
+.connector-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.connector-form .connector-read-roles { margin: 20px 0; }
+.connector-read-roles legend { font-size: 14px; font-weight: 600; }
+.connector-form .connector-read-roles label { display: flex; align-items: center; gap: 12px; min-height: 44px; margin: 4px 0; }
+.connector-form .connector-read-roles input { width: 20px; height: 20px; min-height: 20px; margin: 0; flex: 0 0 auto; }
+.connector-unit p, .connector-unit label, .connector-unit summary, .connector-unit code,
+.connector-unit pre, .connector-unit .connector-feedback { font-size: 14px; line-height: 1.6; }
+.connector-unit .connector-form h2, .connector-unit .connector-list h2 { font-size: 16px; }
+.connector-unit input, .connector-unit select, .connector-unit textarea { font-size: 16px; min-height: 44px; }
+.connector-unit .connector-actions .button { min-height: 44px; font-size: 14px; }
+.connector-unit .connector-read-roles input { min-height: 20px; }
+.connector-unit .connector-row p, .connector-unit .connector-row summary,
+.connector-unit .connector-row code, .connector-unit .connector-row pre { font-size: 14px; line-height: 1.6; }
+.connector-unit .mini-tag { font-size: 14px; line-height: 1.4; color: var(--text); padding: 4px 8px; }
+.connector-unit .error-state { background: var(--surface); border-color: var(--line); color: var(--ink); }
+.connector-unit .error-state p { color: var(--muted); }
 .connector-form textarea {
   resize: vertical;
 }

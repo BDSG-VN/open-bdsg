@@ -65,7 +65,7 @@ PREVIEW_TOOLS = frozenset({
 
 
 PREVIEW_APPS = ("account", "work", "tasks", "projects", "office", "ai-settings",
-                "browser", "modules", "staff")
+                "browser", "modules", "staff", "integrations")
 
 
 class UngDung:
@@ -146,6 +146,7 @@ class UngDung:
         self.connectors = (DauNoiDonVi(self.kho, self.units, self.catalogue, origin=self.origin)
             if unit_preview else CauHinhKetNoi(self.kho, self.core.connections, self.catalogue, self.origin))
         if unit_preview:
+            self.tasks.scoped_connectors = self.connectors
             self.core.connection_call = self.connectors.call
             self.core.connection_summary = self.connectors.summary
         self.core.dang_ky_cong_viec(

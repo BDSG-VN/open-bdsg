@@ -1,6 +1,7 @@
 "use strict";
 (() => {
   const unitMode = () => window.BDSGUnit?.snapshot().mode === "units";
+  const canReadMcp = () => unitMode() ? !!window.BDSGUnit.snapshot().selected : state.user?.role === "quan-tri";
   const draft = {
     prompt: "",
     module_ids: [],
@@ -186,8 +187,7 @@
     draft.allow_module_reads = false;
   }
   function scopePicker() {
-    if (unitMode()) return `<div class="bdsg-project-scope"><label>Dự án công việc<select id="bdsg-task-project"><option value="">Công việc độc lập</option>${projects.map((p) => `<option value="${esc(p.id)}" ${p.id === draft.project_id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><a href="#projects">Quản lý dự án →</a></div>`;
-    return `<div class="bdsg-project-scope"><label>Dự án công việc<select id="bdsg-task-project"><option value="">Công việc độc lập</option>${projects.map((p) => `<option value="${esc(p.id)}" ${draft.project_id === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><a href="#projects">Quản lý dự án →</a><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-reads" disabled><span>Cho phép agent đọc MCP từ những mô-đun đã chọn. Nội dung đọc được có thể gửi tới nhà cung cấp AI đã cấu hình.</span></label><small id="bdsg-read-note"></small></div>`;
+    return `<div class="bdsg-project-scope ${unitMode() ? "bdsg-unit-read-scope" : ""}"><label>Dự án công việc<select id="bdsg-task-project"><option value="">Công việc độc lập</option>${projects.map((p) => `<option value="${esc(p.id)}" ${draft.project_id === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><a href="#projects">Quản lý dự án →</a><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-reads" disabled><span>Cho phép agent đọc MCP từ những mô-đun đã chọn. Nội dung đọc được có thể gửi tới nhà cung cấp AI đã cấu hình.</span></label><small id="bdsg-read-note"></small></div>`;
   }
   function refreshConsent() {
     const box = $("#bdsg-allow-reads"),
@@ -200,18 +200,18 @@
         m.mcp?.read_tools?.length,
     );
     box.disabled = !(
-      state.user?.role === "quan-tri" &&
+      canReadMcp() &&
       latestModel.configured &&
       granted
     );
     if (box.disabled) draft.allow_module_reads = false;
     box.checked = draft.allow_module_reads;
     note.textContent = box.disabled
-      ? "Cần chủ quản, mô hình AI và mô-đun có công cụ đọc MCP đã xác minh. Mặc định không đọc dữ liệu bên ngoài."
+      ? (unitMode() ? "Cần AI của đơn vị và mô-đun đã chọn có công cụ đọc được cấp cho bạn. Mặc định không đọc dữ liệu bên ngoài." : "Cần chủ quản, mô hình AI và mô-đun có công cụ đọc MCP đã xác minh. Mặc định không đọc dữ liệu bên ngoài.")
       : "Chỉ cấp cho tác vụ này; không cấp công cụ ghi. Quyền được kiểm lại trước mỗi lần gọi.";
   }
   function executionPicker() {
-    if (unitMode()) return '<div class="bdsg-project-scope"><div id="bdsg-task-documents"></div><p>AI dùng cấu hình và hạn mức của đơn vị đang chọn. Công cụ ngoài, Python và điều phối tác vụ con chưa mở trong chế độ đơn vị.</p></div>';
+    if (unitMode()) return '<div class="bdsg-project-scope"><div id="bdsg-task-documents"></div><p>AI dùng cấu hình và hạn mức của đơn vị đang chọn. Chỉ đọc MCP khi bạn cấp riêng cho tác vụ. Python, công cụ ghi và điều phối tác vụ con chưa mở theo đơn vị.</p></div>';
     return `<div class="bdsg-project-scope"><div id="bdsg-task-documents"></div><details><summary>Công cụ và quyền cho công việc</summary><div class="bdsg-execution-options"><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-python" ${draft.allow_python ? "checked" : ""}><span>Cho phép xử lý dữ liệu bằng Python trong vùng riêng, tạo tệp kết quả. Không có mạng hoặc quyền vào máy chủ.</span></label><label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-drafts" ${draft.allow_action_drafts ? "checked" : ""}><span>Cho agent chuẩn bị dự thảo hành động. Chủ quản vẫn cần duyệt nội dung trước khi thực hiện.</span></label><label>Tên miền cho trình duyệt (tùy chọn)<input id="bdsg-browser-hosts" maxlength="1000" value="${esc(draft.browser_hosts.join(", "))}" placeholder="Ví dụ: example.com, crm.bdsg.vn"></label><small>Chỉ HTTPS, đúng tên miền đã nhập. Agent chỉ đọc và mở liên kết; bạn tiếp quản thao tác biểu mẫu. Phiên tự đóng sau 15 phút. Nội dung được đọc có thể gửi tới nhà cung cấp AI đã chọn.</small>${state.user?.role === "quan-tri" ? `<label class="bdsg-read-consent"><input type="checkbox" id="bdsg-allow-delegation" ${draft.allow_delegation ? "checked" : ""}><span>Cho phép điều phối tối đa ba tác vụ con cho agent vận hành đang được cấp quyền dự án.</span></label>` : ""}<a href="#studio">Mở xưởng công việc →</a></div></details></div>`;
   }
   async function refreshDocuments() {
@@ -484,7 +484,7 @@
       rows
         .map(
           (m) =>
-            `<article class="bdsg-module-card"><div class="bdsg-module-card-top"><span>${icon("grid")}</span><small>${esc(m.group || "Nền tảng")}</small></div><h2>${esc(m.name)}</h2><p>${esc(m.purpose || "Mô-đun trong hệ sinh thái BDSG")}</p><div class="bdsg-module-capabilities"><span>${icon("external")}Mở ứng dụng</span><span>${icon("link")}${m.mcp?.state === "can-xac-thuc" ? "Đăng nhập xem MCP" : m.kind === "mcp-declared" ? "MCP đã khai báo" : "MCP chưa khai báo"}</span></div><div class="bdsg-module-card-actions"><a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Mở nền tảng ${icon("external")}</a><button class="button small" type="button" data-bdsg-select-module="${esc(m.id)}">Dùng trong việc ${icon("plus")}</button></div>${state.user?.role === "quan-tri" && (m.mcp?.read_tools || []).length ? `<details class="bdsg-module-tools"><summary>Công cụ đọc được cấp quyền (${m.mcp.read_tools.length})</summary><form class="bdsg-module-call" data-bdsg-module-call="${esc(m.id)}"><label>Công cụ<select name="tool">${m.mcp.read_tools.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select></label><label>Tham số JSON<textarea name="arguments" rows="3" spellcheck="false">{}</textarea></label><button type="submit" class="button">Gọi công cụ đọc</button><pre role="status"></pre></form></details>` : ""}</article>`,
+            `<article class="bdsg-module-card"><div class="bdsg-module-card-top"><span>${icon("grid")}</span><small>${esc(m.group || "Nền tảng")}</small></div><h2>${esc(m.name)}</h2><p>${esc(m.purpose || "Mô-đun trong hệ sinh thái BDSG")}</p><div class="bdsg-module-capabilities"><span>${icon("external")}Mở ứng dụng</span><span>${icon("link")}${m.mcp?.state === "can-xac-thuc" ? "Đăng nhập xem MCP" : m.kind === "mcp-declared" ? "MCP đã khai báo" : "MCP chưa khai báo"}</span></div><div class="bdsg-module-card-actions"><a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Mở nền tảng ${icon("external")}</a><button class="button small" type="button" data-bdsg-select-module="${esc(m.id)}">Dùng trong việc ${icon("plus")}</button></div>${canReadMcp() && (m.mcp?.read_tools || []).length ? `<details class="bdsg-module-tools"><summary>Công cụ đọc được cấp quyền (${m.mcp.read_tools.length})</summary><form class="bdsg-module-call" data-bdsg-module-call="${esc(m.id)}"><label>Công cụ<select name="tool">${m.mcp.read_tools.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select></label><label>Tham số JSON<textarea name="arguments" rows="3" spellcheck="false">{}</textarea></label><button type="submit" class="button">Gọi công cụ đọc</button><pre role="status"></pre></form></details>` : ""}</article>`,
         )
         .join("") ||
       empty("Chưa có mô-đun phù hợp.", "Thử tên nền tảng hoặc lĩnh vực khác.")

@@ -195,6 +195,7 @@ class DieuPhoi:
         self.kho = kho
         self.catalogue = catalogue
         self.actor = contextvars.ContextVar("bdsg_actor", default=None)
+        self.connection_guard = contextvars.ContextVar('bdsg_connection_guard', default=None)
         self.lock = threading.RLock()
         self.verify_actor = None
         self.connections = CongMCP(connections, catalogue)
@@ -352,25 +353,13 @@ class DieuPhoi:
                 [
                     BanKhaiCongCu(
                         "doc",
-                        lambda a: self.connection_call(
-                            self.actor.get(),
-                            a.get("platform_id"),
-                            a.get("tool"),
-                            a.get("arguments"),
-                            False,
-                        ),
+                        lambda a: self._connection_request(a, False),
                         mo_ta="Gọi công cụ đọc trong danh sách cho phép của đầu nối đã cấu hình.",
                         luoc_do=external,
                     ),
                     BanKhaiCongCu(
                         "ghi",
-                        lambda a: self.connection_call(
-                            self.actor.get(),
-                            a.get("platform_id"),
-                            a.get("tool"),
-                            a.get("arguments"),
-                            True,
-                        ),
+                        lambda a: self._connection_request(a, True),
                         ghi=True,
                         mo_ta="Gọi công cụ ghi được chủ quản cho phép; yêu cầu quyền ghi và cổng ghi mở.",
                         luoc_do=external,
@@ -988,7 +977,19 @@ class DieuPhoi:
             nguon="cong-thanhhoa",
         )
 
-    def goi(self, actor, name, args):
+    def _connection_request(self, args, ghi):
+        if set(args) != {'platform_id', 'tool', 'arguments'}:
+            raise ValueError('Tham số đầu nối không hợp lệ')
+        actor = self.actor.get()
+        platform, tool, arguments = args['platform_id'], args['tool'], args['arguments']
+        trusted = self.connection_guard.get()
+        if trusted is not None:
+            guard, revision = trusted
+            return self.connection_call(actor, platform, tool, arguments, ghi,
+                                        guard=guard, expected_revision=revision)
+        return self.connection_call(actor, platform, tool, arguments, ghi)
+
+    def goi(self, actor, name, args, *, tool_guard=None, expected_revision=None):
         if self.verify_actor and not self.verify_actor(actor):
             return {
                 "ok": False,
@@ -996,6 +997,7 @@ class DieuPhoi:
                 "loai_loi": "xac-thuc",
             }
         token = self.actor.set(actor)
+        guard_token = self.connection_guard.set((tool_guard, expected_revision) if tool_guard is not None else None)
         try:
             result = self.nhan.goi(self.danh_tinh(actor), name, args).thanh_dict()
             if self.verify_actor and not self.verify_actor(actor):
@@ -1006,6 +1008,7 @@ class DieuPhoi:
                 }
             return result
         finally:
+            self.connection_guard.reset(guard_token)
             self.actor.reset(token)
 
     def mcp(self, actor, payload):

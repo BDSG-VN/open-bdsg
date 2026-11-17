@@ -23,6 +23,30 @@ class _StaleRun(RuntimeError):
     """Worker cũ thoát mà không sửa hoặc dừng lượt mới."""
 
 
+class _NhanTacVu:
+    """Giữ guard ngoài JSON/ngữ cảnh mô hình, vẫn định tuyến qua nhân thật."""
+    def __init__(self, core, connectors, guard, tools, revisions):
+        self.core, self.scoped_connectors, self.guard = core, connectors, guard
+        self.tools, self.revisions = tools, revisions
+
+    def __getattr__(self, name):
+        return getattr(self.core, name)
+
+    def goi(self, actor, name, args):
+        self.guard()
+        if name == 'ket_noi.doc':
+            platform = args.get('platform_id')
+            if args.get('tool') not in self.tools.get(platform, []) or platform not in self.revisions:
+                raise PermissionError('Công cụ ngoài phạm vi tác vụ đã giao')
+            result = self.core.goi(actor, name, args, tool_guard=self.guard,
+                                   expected_revision=self.revisions[platform])
+            self.guard()
+            if not result.get('ok'):
+                raise PermissionError('Đầu nối từ chối phạm vi tác vụ; không nhận kết quả cũ')
+            return result
+        return self.core.goi(actor, name, args)
+
+
 def _text(value, minimum=1, maximum=4000):
     if not isinstance(value, str) or not minimum <= len(value.strip()) <= maximum:
         raise ValueError("Nội dung không hợp lệ hoặc vượt giới hạn")
@@ -58,6 +82,7 @@ class CongViec:
         self.kho, self.core = kho, core
         self.units = units
         self.scoped_ai = scoped_ai
+        self.scoped_connectors = None
         self.lock = threading.RLock()
         self.closed = False
         self.context_override = contextvars.ContextVar(
@@ -397,7 +422,7 @@ class CongViec:
         if not isinstance(args, dict):
             raise ValueError("Thông tin tác vụ không hợp lệ")
         if self.units is not None and ((self.scoped_ai is None and model.configured) or any(args.get(key) for key in (
-                'allow_python','allow_action_drafts','allow_delegation','allow_module_reads','browser_hosts'))):
+                'allow_python','allow_action_drafts','allow_delegation','browser_hosts'))):
             raise PermissionError('Chưa có cấu hình công cụ và mô hình riêng theo đơn vị')
         prompt = _text(args.get("prompt"), 10)
         project_id = args.get("project_id", "")
@@ -460,8 +485,11 @@ class CongViec:
         if not isinstance(allow_reads, bool):
             raise ValueError("Quyền đọc mô-đun phải là giá trị bật hoặc tắt")
         allowed_tools = {}
+        connector_revisions = {}
         if allow_reads:
-            if actor["role"] != "quan-tri":
+            if self.units is not None and (self.scoped_ai is None or self.scoped_connectors is None):
+                raise PermissionError('Chưa có đầu nối và AI riêng theo đơn vị')
+            if self.units is None and actor["role"] != "quan-tri":
                 raise PermissionError(
                     "Chỉ chủ quản được cấp quyền đọc dữ liệu mô-đun cho tác vụ"
                 )
@@ -469,7 +497,14 @@ class CongViec:
                 raise ValueError(
                     "Cần chọn mô-đun cụ thể và cấu hình mô hình trước khi cho đọc dữ liệu"
                 )
-            allowed_tools = MoHinhBDSG.module_read_tools(self.core, actor, ids)
+            if self.units is not None:
+                for connection in self.scoped_connectors.summary(actor):
+                    platform = connection['platform_id']
+                    if platform in ids and connection['read_tools']:
+                        allowed_tools[platform] = list(connection['read_tools'])
+                        connector_revisions[platform] = connection['revision']
+            else:
+                allowed_tools = MoHinhBDSG.module_read_tools(self.core, actor, ids)
             if not allowed_tools:
                 raise ValueError(
                     "Mô-đun đã chọn chưa có công cụ đọc được xác minh và cấp quyền"
@@ -496,6 +531,7 @@ class CongViec:
             "allow_delegation": allow_delegation,
             "allow_module_reads": allow_reads,
             "allowed_module_tools": allowed_tools,
+            "module_connector_revisions": connector_revisions,
             "run": 1,
             "steps": [],
             "events": [],
@@ -965,6 +1001,7 @@ class CongViec:
                     "allow_reads": task.get("allow_module_reads", False),
                     "selected_ids": task["module_ids"],
                     "read_tools": task.get("allowed_module_tools", {}),
+                    "connector_revisions": task.get("module_connector_revisions", {}),
                 }
 
                 def on_event(kind, message, **extra):
@@ -1015,20 +1052,35 @@ class CongViec:
                 on_event = self._bind_execution(on_event)
                 cancelled = self._bind_execution(cancelled)
 
+                task_core = self.core
+                if self.units is not None:
+                    def guard_tools():
+                        with self.lock:
+                            current = self._load(task_id)
+                            if (self.closed or current['cancel_requested'] or current['run'] != task['run']
+                                    or current['status'] != 'running'):
+                                raise PermissionError('Lượt chạy đã dừng hoặc thay đổi')
+                            self._auth(self._worker_actor(task_id))
+                            if not model.configured:
+                                raise PermissionError('Mô hình của lượt chạy không còn hiệu lực')
+                    task_core = _NhanTacVu(self.core, self.scoped_connectors,
+                        self._bind_execution(guard_tools), task.get('allowed_module_tools', {}),
+                        task.get('module_connector_revisions', {}))
+
                 if task["template"] == "nhan-su-chuyen-mon":
                     content = self.workforce.run(
                         prompt,
                         context,
                         lambda p, c, event, stop: model.run(
                             p, {**c,"task_id":task["id"],"run":task["run"],
-                                "project_id":task.get("project_id", "")}, self.core, actor, event, stop
+                                "project_id":task.get("project_id", "")}, task_core, actor, event, stop
                         ),
                         on_event,
                         cancelled,
                     )
                 else:
                     content = model.run(
-                        prompt, context, self.core, actor, on_event, cancelled
+                        prompt, context, task_core, actor, on_event, cancelled
                     )
                 if cancelled():
                     raise RuntimeError("Tác vụ đã được yêu cầu dừng")
