@@ -502,6 +502,8 @@ class CongViec:
         scoped_connections = (self.scoped_connectors.summary(actor)
             if self.units is not None and self.scoped_connectors is not None and (allow_reads or allow_drafts) else [])
         if self.units is not None and allow_drafts:
+            if self.scoped_connectors is None or self.scoped_ai is None:
+                raise PermissionError('Chưa có đầu nối và AI riêng để cấp dự thảo theo đơn vị')
             if not model.configured or not ids or self.scoped_ai is None:
                 raise ValueError('Cần AI đơn vị và mô-đun có công cụ ghi được cấp để lập dự thảo')
             for connection in scoped_connections:

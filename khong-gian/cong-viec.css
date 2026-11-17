@@ -67,6 +67,8 @@
 .bdsg-unit-read-scope #bdsg-read-note { font-size: 14px; line-height: 1.6; }
 .bdsg-unit-read-scope .bdsg-read-consent { min-height: 44px; align-items: flex-start; }
 .bdsg-unit-read-scope .bdsg-read-consent input { width: 20px; height: 20px; margin-top: 3px; flex-shrink: 0; }
+.bdsg-unit-read-scope.bdsg-project-scope small, .bdsg-unit-read-scope.bdsg-project-scope p,
+.bdsg-unit-read-scope.bdsg-project-scope a { font-size: 14px; line-height: 1.6; }
 .bdsg-unit-read-scope.bdsg-project-scope select { font-size: 16px; min-height: 44px; }
 .bdsg-run-button {
   border: 0;

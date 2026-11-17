@@ -60,6 +60,7 @@
       <div class="unit-action-heading"><h3>${esc(platformName(call.platform_id))}</h3><span class="mini-tag">${esc(status)}</span></div>
       <p><strong>Công cụ:</strong> <code>${esc(call.tool)}</code></p>
       <p>Người đề xuất: ${esc(action.owner)} · Lượt ${esc(payload.run)} · Hạn ${esc(date(action.expires))}</p>
+      <p>Tác vụ: <code>${esc(action.task_id)}</code>${payload.project_id ? ` · Dự án: <code>${esc(payload.project_id)}</code>` : " · Công việc độc lập"}</p>
       <h4>Nội dung được đề xuất</h4><pre>${esc(JSON.stringify(call.arguments, null, 2))}</pre>
       <details><summary>Mã xác nhận nội dung</summary><code class="unit-action-digest">${esc(action.digest)}</code></details>
       ${action.status === "unknown" ? `<p class="unit-action-warning">Chưa rõ yêu cầu đã tác động hay chưa. Công cụ này bị chặn gửi tiếp trong doanh nghiệp cho đến khi quản trị đối soát nền tảng gốc.</p>` : ""}

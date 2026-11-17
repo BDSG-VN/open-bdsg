@@ -182,3 +182,5 @@
   margin-top: 4px;
   flex: 0 0 auto;
 }
+.connector-unit .connector-write-consent { min-height: 44px; font-size: 14px; cursor: pointer; }
+.connector-unit .connector-write-consent input { width: 20px; height: 20px; min-height: 20px; margin-top: 3px; }
