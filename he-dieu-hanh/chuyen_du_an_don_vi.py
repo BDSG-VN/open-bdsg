@@ -1,5 +1,6 @@
 """Chuyển quan hệ dự án cũ trên bản sao; chưa phải cutover đa đơn vị toàn cổng."""
 import time
+import secrets
 
 
 def migrate_legacy(projects, actor):
@@ -32,13 +33,16 @@ def migrate_legacy(projects, actor):
         db.execute("INSERT INTO don_vi VALUES(?,?,1,?)", (unit_id, "Không gian hiện tại — chưa phân loại", time.time()))
         for person, active in identities.items():
             db.execute("INSERT INTO don_vi_members(unit_id,identity,role,active,epoch) VALUES(?,?,?,?,1)", (unit_id, person, 'admin' if person=='chu-quan' else 'member', int(bool(active))))
-        db.executemany("INSERT INTO du_an_units VALUES(?,?)", ((pid, unit_id) for pid in project_ids))
-        db.executemany("INSERT INTO du_an_unit_grants VALUES(?,?,?,?,1)",
-            ((row[0], unit_id, row[1], row[2]) for row in grants))
+        db.executemany("INSERT INTO du_an_units(project_id,unit_id,revision) VALUES(?,?,?)",
+                       ((pid, unit_id, secrets.token_hex(16)) for pid in project_ids))
+        db.executemany("INSERT INTO du_an_unit_grants(project_id,unit_id,identity,role,epoch,revision) VALUES(?,?,?,?,1,?)",
+            ((row[0], unit_id, row[1], row[2], secrets.token_hex(16)) for row in grants))
         # Quyền toàn cổng của chủ quản trước migration được ghi rõ trên từng
         # project legacy; không biến thành bypass đối với các đơn vị mới.
-        db.executemany("""INSERT INTO du_an_unit_grants VALUES(?,?,'chu-quan','manager',1)
-            ON CONFLICT(project_id,unit_id,identity) DO UPDATE SET role='manager'""", ((pid, unit_id) for pid in project_ids))
+        db.executemany("""INSERT INTO du_an_unit_grants(project_id,unit_id,identity,role,epoch,revision)
+            VALUES(?,?,'chu-quan','manager',1,?) ON CONFLICT(project_id,unit_id,identity)
+            DO UPDATE SET role='manager',revision=excluded.revision""",
+            ((pid, unit_id, secrets.token_hex(16)) for pid in project_ids))
         db.execute("INSERT INTO don_vi_migrations VALUES('projects-v1',?,?)", (unit_id, time.time()))
         db.execute("INSERT INTO su_kien(actor,action,target,created) VALUES(?,?,?,?)", (identity, 'chuyen-du-an-don-vi', unit_id, time.time()))
         return {"unit_id": unit_id, "changed": True, "projects": len(project_ids), "source_grants": len(grants)}

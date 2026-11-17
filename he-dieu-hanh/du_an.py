@@ -32,6 +32,12 @@ class DuAn:
                         role TEXT NOT NULL CHECK(role IN ('viewer','editor','manager')),
                         epoch INTEGER NOT NULL,PRIMARY KEY(project_id,unit_id,identity));
                 """)
+                db.execute('BEGIN IMMEDIATE')
+                for table in ('du_an_units', 'du_an_unit_grants'):
+                    if 'revision' not in {row[1] for row in db.execute('PRAGMA table_info('+table+')')}:
+                        db.execute("ALTER TABLE "+table+" ADD COLUMN revision TEXT NOT NULL DEFAULT ''")
+                    for row in db.execute("SELECT rowid FROM "+table+" WHERE revision=''").fetchall():
+                        db.execute('UPDATE '+table+' SET revision=? WHERE rowid=?', (secrets.token_hex(16), row[0]))
 
     @staticmethod
     def _auth(actor):
@@ -160,7 +166,8 @@ class DuAn:
                 ),
             )
             if scope:
-                db.execute("INSERT INTO du_an_units VALUES(?,?)", (identifier, scope.unit_id))
+                db.execute("INSERT INTO du_an_units(project_id,unit_id,revision) VALUES(?,?,?)",
+                           (identifier, scope.unit_id, secrets.token_hex(16)))
         self.kho.su_kien(actor["id"], "tao-du-an", identifier)
         return self._get(actor, identifier)
 
@@ -192,6 +199,9 @@ class DuAn:
                 "UPDATE du_an SET archived=?,updated=? WHERE id=?",
                 (int(archived), time.time(), project["id"]),
             )
+            if self.units is not None and bool(archived) != project['archived']:
+                db.execute('UPDATE du_an_units SET revision=? WHERE project_id=?',
+                           (secrets.token_hex(16), project['id']))
             keys = khoa_phien(db, project_id=project["id"]) if archived else []
         ngat_phien(keys)
         self.kho.su_kien(
@@ -278,11 +288,33 @@ class DuAn:
                 target_actor = {"id": identity, "role": "quan-tri" if identity == "chu-quan" else "operator"}
                 target = self.units.bind(target_actor, unit_id)
                 scope = self.units.require(target, db)
-                db.execute("""INSERT INTO du_an_unit_grants VALUES(?,?,?,?,?)
-                    ON CONFLICT(project_id,unit_id,identity) DO UPDATE SET role=excluded.role,epoch=excluded.epoch""",
-                    (project["id"], unit_id, identity, role, scope.epoch))
+                db.execute("""INSERT INTO du_an_unit_grants(project_id,unit_id,identity,role,epoch,revision) VALUES(?,?,?,?,?,?)
+                    ON CONFLICT(project_id,unit_id,identity) DO UPDATE SET
+                    role=excluded.role,epoch=excluded.epoch,revision=excluded.revision""",
+                    (project["id"], unit_id, identity, role, scope.epoch, secrets.token_hex(16)))
             db.execute("INSERT INTO su_kien(actor,action,target,created) VALUES(?,?,?,?)",
                        (actor["id"], "doi-quyen-du-an-don-vi", project["id"] + ":" + unit_id + ":" + identity + ":" + role, time.time()))
         # Participant grant của editor/callback chưa mang unit; không dùng thao
         # tác đóng theo identity để vô tình ngắt một quyền ở đơn vị khác.
         return self.members(actor, project["id"])
+
+    def authorization_reference(self, actor, identifier, db):
+        """Chụp thế hệ quyền, không để cấp lại cùng vai hồi sinh context cũ."""
+        if self.units is None:
+            raise PermissionError('Tham chiếu quyền cần phạm vi đơn vị')
+        project = self.authorize(actor, identifier, db=db)
+        if project['archived']:
+            raise PermissionError('Dự án đã lưu trữ')
+        scope = self.units.require(actor, db)
+        version = db.execute('SELECT revision FROM du_an_units WHERE project_id=?', (identifier,)).fetchone()[0]
+        if not version:
+            raise PermissionError('Dự án chưa có thế hệ quyền hợp lệ')
+        reference = {'project_id': identifier, 'project_revision': version, 'source_unit_id': project['unit_id']}
+        if project['owner'] == scope.identity and project['unit_id'] == scope.unit_id:
+            return {**reference, 'kind': 'owner'}
+        grant = db.execute('''SELECT role,epoch,revision FROM du_an_unit_grants
+            WHERE project_id=? AND unit_id=? AND identity=? AND epoch=?''',
+            (identifier, scope.unit_id, scope.identity, scope.epoch)).fetchone()
+        if not grant or not grant['revision']:
+            raise PermissionError('Quyền chia sẻ không còn hiệu lực')
+        return {**reference, 'kind': 'grant', 'grant_revision': grant['revision'], 'role': grant['role']}

@@ -41,6 +41,25 @@ class ThuDuAnDonVi(unittest.TestCase):
     def create(self, actor, name="Dự án thử nghiệm"):
         return self.projects.create(actor, {"name":name, "context":"Nội dung tổng hợp"})
 
+    def test_nang_schema_quyen_cu_giu_du_lieu_va_the_he_qua_restart(self):
+        project = self.create(self.a1)
+        self.projects.share(self.a1, {'id': project['id'], 'identity': B['id'], 'unit_id': self.two, 'role': 'viewer'})
+        # Fixture trước R11 không có revision; tái tạo đúng schema cũ trên DB tạm.
+        with self.kho.ket_noi() as db:
+            for table in ('du_an_units', 'du_an_unit_grants'):
+                db.execute('ALTER TABLE '+table+' DROP COLUMN revision')
+        upgraded = DuAn(self.kho, units=self.units)
+        with self.kho.ket_noi() as db:
+            owner_ref = upgraded.authorization_reference(self.a1, project['id'], db)
+            shared_ref = upgraded.authorization_reference(self.b2, project['id'], db)
+        self.assertTrue(owner_ref['project_revision'])
+        self.assertTrue(shared_ref['grant_revision'])
+        restarted = DuAn(self.kho, units=self.units)
+        with self.kho.ket_noi() as db:
+            self.assertEqual(owner_ref, restarted.authorization_reference(self.a1, project['id'], db))
+            self.assertEqual(shared_ref, restarted.authorization_reference(self.b2, project['id'], db))
+        self.assertEqual(restarted.context_for(self.b2, project['id'])['context'], 'Nội dung tổng hợp')
+
     def test_cung_danh_tinh_o_hai_don_vi_khong_lan_du_an_va_tep(self):
         one = self.create(self.a1, "Dự án A")
         two = self.create(self.a2, "Dự án B")

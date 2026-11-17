@@ -13,6 +13,12 @@ Mỗi grant giữ membership epoch/revision, audience `/mcp`, expiry và revisio
 riêng. Chỉ trả credential một lần; SQLite lưu hash, metadata không có raw
 credential/hash/epoch hoặc project IDs của người khác.
 
+Grant chụp riêng thế hệ quyền của từng dự án/chia sẻ. Thu hồi rồi cấp lại
+cùng vai, đổi vai, hoặc lưu trữ rồi khôi phục dự án không hồi sinh khóa cũ
+hay kết quả đang chờ. Sửa nội dung hoặc đổi quyền người khác không đổi thế
+hệ quyền của người đang kết nối. Schema cũ được bổ sung thế hệ trong giao
+dịch; restart giữ nguyên các tham chiếu đã tạo.
+
 Chặng nền chỉ có sáu công cụ đọc danh mục/mô-đun/dự án/tác vụ. Không wildcard
 hoặc all-project ngầm định. Phạm vi `""` chỉ cho tác vụ độc lập, không phải mọi
 dự án. Danh sách dự án/tác vụ được lọc và chi tiết tác vụ kiểm scope trước khi
@@ -42,10 +48,12 @@ phục hồi toàn host phải xử lý epoch/thu hồi trước khi mở traffi
 
 ## Kiểm chứng và phần còn lại
 
-Ngày 17/11/2026: 16 bài kiểm module qua gateway/nhân/SQLite thật đạt, dùng
+Ngày 17/11/2026: 20 bài kiểm module qua gateway/nhân/SQLite thật đạt, dùng
 dữ liệu tổng hợp. Kiểm hai đơn vị cùng identity chạy xen kẽ, project scope,
 root-member, extra args/wildcard/JSON giả provenance, audience/client, expiry,
-revoke/rejoin, project revoke giữa đọc, restart và snapshot restore. Không gọi
+revoke/rejoin, project revoke/cấp lại và archive/restore giữa đọc, đổi vai,
+restart và snapshot restore. Bài kiểm dự án riêng xác minh nâng schema cũ
+giữ nội dung và tham chiếu qua restart. Không gọi
 provider/endpoint nghiệp vụ thật hoặc API trả phí.
 
 ```sh

@@ -75,11 +75,8 @@ class UyQuyenMCPDonVi:
         return self.units.require(actor, db)
 
     def _project_scope(self, actor, project_ids, db):
-        for identifier in project_ids:
-            if identifier:
-                project = self.projects.authorize(actor, identifier, db=db)
-                if project['archived']:
-                    raise PermissionError('Dự án được ủy quyền đã lưu trữ')
+        return {identifier: self.projects.authorization_reference(actor, identifier, db)
+                if identifier else {'kind': 'standalone'} for identifier in project_ids}
 
     def _public(self, document, *, own):
         result = {key: document[key] for key in (
@@ -115,7 +112,7 @@ class UyQuyenMCPDonVi:
         with self.kho.ket_noi() as db:
             db.execute('BEGIN IMMEDIATE')
             scope = self._web_scope(actor, db)
-            self._project_scope(actor, project_ids, db)
+            project_refs = self._project_scope(actor, project_ids, db)
             declarations = {item['ten'] for item in self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh(actor))
                             if not item['ghi']}
             if not set(tools) <= declarations:
@@ -131,7 +128,7 @@ class UyQuyenMCPDonVi:
             document = {'id': identifier, 'revision': revision, 'name': name.strip(), 'client_id': client,
                         'unit_id': scope.unit_id, 'owner': scope.identity,
                         'owner_scope': self.units.reference(actor, db), 'tools': list(tools),
-                        'project_ids': list(project_ids), 'resource': self.resource,
+                        'project_ids': list(project_ids), 'project_refs': project_refs, 'resource': self.resource,
                         'issuer_epoch': self._epoch, 'created': now, 'expires': now+duration, 'enabled': True}
             db.execute('INSERT INTO unit_mcp_grants VALUES(?,?,?,?,?,?)',
                        (identifier, scope.unit_id, scope.identity, hashlib.sha256(credential.encode()).hexdigest(),
@@ -178,7 +175,8 @@ class UyQuyenMCPDonVi:
                     or document['issuer_epoch'] != self._epoch
                     or self.units.reference(actor, db) != document['owner_scope']):
                 raise PermissionError()
-            self._project_scope(actor, document['project_ids'], db)
+            if self._project_scope(actor, document['project_ids'], db) != document.get('project_refs'):
+                raise PermissionError('Thế hệ quyền dự án đã thay đổi')
             return document
         except (ValueError, PermissionError, KeyError):
             raise LoiChungThuMCP('Credential MCP đã hết hạn, bị thu hồi hoặc mất phạm vi') from None

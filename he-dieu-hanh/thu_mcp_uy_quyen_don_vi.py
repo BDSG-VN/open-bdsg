@@ -196,6 +196,60 @@ class ThuUyQuyenMCPDonVi(unittest.TestCase):
         finally:
             restarted.tasks.close(); restarted.core.audit.close()
 
+    def test_thu_hoi_cap_lai_project_khong_hoi_sinh_token_va_ket_qua_dang_doc(self):
+        grant = {'id': self.project, 'identity': MEMBER['id']}
+        self.app.projects.share(self.actor, {**grant, 'role': 'viewer'})
+        issued = self.grant(self.member)
+        actor = self.service.authenticate(issued['credential'])
+        original = self.app.projects.list
+        def read_then_regrant(current):
+            response = original(current)
+            self.app.projects.share(self.actor, {**grant, 'role': 'revoke'})
+            self.app.projects.share(self.actor, {**grant, 'role': 'viewer'})
+            return response
+        self.app.projects.list = read_then_regrant
+        response = self.app.core.goi(actor, 'du_an.danh_sach', {})
+        self.assertFalse(response['ok'])
+        self.assertNotIn('ONLY-GRANTED-CONTEXT', json.dumps(response))
+        with self.assertRaises(LoiChungThuMCP): self.service.authenticate(issued['credential'])
+        self.app.projects.list = original
+        fresh = self.service.authenticate(self.grant(self.member)['credential'])
+        self.assertTrue(self.service.call(fresh, 'du_an.danh_sach', {})['ok'])
+
+    def test_luu_tru_khoi_phuc_project_chan_token_chu_va_ket_qua_dang_doc(self):
+        issued = self.grant()
+        actor = self.service.authenticate(issued['credential'])
+        original = self.app.projects.list
+        def read_then_restore(current):
+            response = original(current)
+            self.app.projects.archive(self.actor, self.project, True)
+            self.app.projects.archive(self.actor, self.project, False)
+            return response
+        self.app.projects.list = read_then_restore
+        response = self.app.core.goi(actor, 'du_an.danh_sach', {})
+        self.assertFalse(response['ok'])
+        self.assertNotIn('ONLY-GRANTED-CONTEXT', json.dumps(response))
+        with self.assertRaises(LoiChungThuMCP): self.service.authenticate(issued['credential'])
+
+    def test_doi_vai_project_can_credential_moi(self):
+        grant = {'id': self.project, 'identity': MEMBER['id']}
+        self.app.projects.share(self.actor, {**grant, 'role': 'viewer'})
+        issued = self.grant(self.member)
+        self.app.projects.share(self.actor, {**grant, 'role': 'editor'})
+        with self.assertRaises(LoiChungThuMCP): self.service.authenticate(issued['credential'])
+        fresh = self.service.authenticate(self.grant(self.member)['credential'])
+        self.assertTrue(self.service.call(fresh, 'du_an.danh_sach', {})['ok'])
+
+    def test_doi_noi_dung_va_quyen_nguoi_khac_khong_huy_credential(self):
+        issued = self.grant()
+        self.app.projects.share(self.actor, {'id': self.project, 'identity': MEMBER['id'], 'role': 'viewer'})
+        self.app.projects.share(self.actor, {'id': self.project, 'identity': MEMBER['id'], 'role': 'revoke'})
+        self.app.projects.update(self.actor, {'id': self.project, 'name': 'Du an doi noi dung', 'context': 'UPDATED-CONTEXT'})
+        actor = self.service.authenticate(issued['credential'])
+        response = self.service.call(actor, 'du_an.danh_sach', {})
+        self.assertTrue(response['ok'])
+        self.assertIn('UPDATED-CONTEXT', json.dumps(response))
+
     def test_restore_khong_lam_song_lai_token_snapshot_cu(self):
         issued = self.grant()
         with tempfile.TemporaryDirectory() as directory:
