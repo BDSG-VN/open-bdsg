@@ -66,8 +66,9 @@ class HopThu:
                                       (recipient=? AND recipient_epoch=?))'''
             values = [scope.unit_id, scope.identity, scope.epoch, scope.identity, scope.epoch]
             if peer:
-                sql += ' AND (sender=? OR recipient=?)'
-                values += [peer, peer]
+                # Cặp đích danh cũng phân biệt ghi chú cho mình với toàn hộp thư.
+                sql += ' AND ((sender=? AND recipient=?) OR (sender=? AND recipient=?))'
+                values += [scope.identity, peer, peer, scope.identity]
             rows = db.execute(sql+' ORDER BY created DESC,id DESC LIMIT 100', values).fetchall()
             return [dict(row) for row in reversed(rows)]
 

@@ -107,6 +107,13 @@ class ThuHopThuDonVi(unittest.TestCase):
                 other.tasks.close()
                 other.core.audit.close()
 
+    def test_self_conversation_does_not_mix_other_conversations(self):
+        a = self.actor('nguoi-a')
+        own = self.value(a, 'agent.gui_tin', {'recipient':'nguoi-a','body':'Ghi chu cho chinh minh'})
+        self.value(a, 'agent.gui_tin', {'recipient':'nguoi-b','body':'Trao doi voi dong nghiep'})
+        selected = self.value(a, 'agent.doc_hop_thu', {'peer':'nguoi-a'})['messages']
+        self.assertEqual([row['id'] for row in selected], [own['id']])
+
 
 if __name__ == '__main__':
     unittest.main()
