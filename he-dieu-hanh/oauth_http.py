@@ -5,9 +5,14 @@ from urllib.parse import parse_qsl
 from oauth_mcp_don_vi import LoiOAuth
 
 
-def read_request(headers, read, *, form=False):
-    for key in ('Content-Type', 'Content-Length', 'Transfer-Encoding', 'Origin', 'Authorization', 'Cookie'):
+def validate_headers(headers):
+    for key in ('Content-Type', 'Content-Length', 'Transfer-Encoding', 'Origin', 'Authorization', 'Cookie',
+                'X-BDSG-Actor', 'X-BDSG-Unit', 'X-BDSG-Unit-Epoch', 'X-BDSG-Unit-Revision'):
         if len(headers.get_all(key, [])) > 1: raise LoiOAuth('invalid_request')
+
+
+def read_request(headers, read, *, form=False):
+    validate_headers(headers)
     expected = 'application/x-www-form-urlencoded' if form else 'application/json'
     length = headers.get('Content-Length', '')
     if (headers.get('Content-Type', '').split(';', 1)[0].strip().lower() != expected

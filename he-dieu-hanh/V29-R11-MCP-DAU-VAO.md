@@ -231,10 +231,11 @@ các snapshot session/unit/role hiện có; header actor cũ bị409. Grant tr�
 một lần, list không trả lại. Cổng ghi đóng vẫn cho thu hồi/ngắt/từ chối;
 không cho cấp thêm hoặc đổi code. Draining chặn nhận thao tác mới.
 
-Ngày17/11/2026: tám bài socket/cookie thật đạt: approve→form exchange→MCP,
+Ngày17/11/2026: chín bài socket/cookie thật đạt: approve→form exchange→MCP,
 cookie/header tài khoản khác không đổi subject, quyền client control plane,
 đổi unit/actor/Origin, deny/revoke khi cổng ghi đóng, replay/clientdisable,
-giới hạn/parser và draining. Start request trong fixture vẫn qua backend;
+giới hạn/parser, header actor/unit/epoch/revision trùng bị chặn trước bind
+và draining. Start request trong fixture vẫn qua backend;
 chưa có GET authorize/trang consent hoặc SDK OAuth end-to-end.
 
 ```sh

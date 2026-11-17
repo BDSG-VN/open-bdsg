@@ -37,7 +37,7 @@ from hanh_dong_don_vi import HanhDongDonVi
 from mcp_uy_quyen_don_vi import UyQuyenMCPDonVi
 from mcp_http_don_vi import MCPHTTPDonVi
 from oauth_mcp_don_vi import OAuthMCPDonVi, LoiOAuth
-from oauth_http import read_request as read_oauth_request
+from oauth_http import read_request as read_oauth_request, validate_headers as validate_oauth_headers
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -475,8 +475,7 @@ def tao_may_chu(app, port=8766):
                 return False
             self.connection.settimeout(12)
             try:
-                if any(len(self.headers.get_all(key, [])) > 1 for key in ('Origin', 'Cookie', 'Authorization')):
-                    raise LoiOAuth('invalid_request')
+                validate_oauth_headers(self.headers)
                 if not self.origin_ok(required=method == 'POST' and path != '/oauth/token'):
                     self.send(403, {'error': 'access_denied'})
                     return True

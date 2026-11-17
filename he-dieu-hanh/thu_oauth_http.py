@@ -96,6 +96,27 @@ class ThuOAuthHTTP(unittest.TestCase):
         self.assertEqual(parse_qs(urlsplit(body['redirect_uri']).query)['error'], ['access_denied'])
         self.assertNotIn('code=', body['redirect_uri'])
 
+    def test_duplicate_context_headers_are_rejected_before_binding(self):
+        request = self.pending()
+        raw = json.dumps({'request': request}).encode()
+        for key, first, second in (('X-BDSG-Actor', 'nguoi-a', 'nguoi-b'),
+                                   ('X-BDSG-Unit', self.units[0], self.units[1]),
+                                   ('X-BDSG-Unit-Epoch', '1', '2'), ('X-BDSG-Unit-Revision', '1', '2')):
+            with self.subTest(header=key):
+                fields = {'Origin': self.app.origin, 'Content-Type': 'application/json',
+                          'Content-Length': str(len(raw)), 'Cookie': self.cookies['nguoi-a'],
+                          'X-BDSG-Unit': self.units[0], key: first}
+                conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
+                conn.putrequest('POST', '/api/oauth/bind')
+                for name, value in fields.items(): conn.putheader(name, value)
+                conn.putheader(key, second)
+                conn.endheaders(raw)
+                response = conn.getresponse()
+                self.assertEqual(response.status, 400)
+                self.assertEqual(json.loads(response.read())['error'], 'invalid_request')
+                conn.close()
+        self.assertEqual(self.request('/api/oauth/bind', {'request': request}, 'nguoi-a', self.units[0])[0], 200)
+
     def test_token_mismatch_replay_and_client_disable(self):
         code = self.approved()
         self.assertEqual(self.token(code, extra={'resource': 'https://other.test/mcp'})[0], 400)
