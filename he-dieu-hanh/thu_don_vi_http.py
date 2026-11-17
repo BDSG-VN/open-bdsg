@@ -105,7 +105,7 @@ class ThuDonViHTTP(unittest.TestCase):
         self.assertEqual(set(me["user"]), {"id", "name", "role"})
         self.assertFalse(me["workspace"]["system_admin"])
         self.assertEqual(me["workspace"]["apps"], ["account", "work", "tasks", "projects",
-            "office", "ai-settings", "browser", "modules", "staff"])
+            "office", "ai-settings", "browser", "modules", "staff", "integrations"])
         rows = self.request("/api/units", who="nguoi-a")[1]["units"]
         self.assertEqual({row["id"] for row in rows}, set(self.units))
         for row in rows:
