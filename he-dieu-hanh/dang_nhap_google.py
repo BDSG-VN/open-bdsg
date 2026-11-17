@@ -1,4 +1,4 @@
-"""Đăng nhập Google theo lời mời; không cấp quyền quản trị hoặc quyền Drive."""
+"""Đăng nhập Google công khai hoặc theo lời mời; chỉ cấp quyền người dùng."""
 
 import base64
 import hashlib
@@ -44,18 +44,30 @@ class DangNhapGoogle:
         self.verify = verify or xac_minh_id_token
         self.config = None
         self.invites = set()
+        self.registration = 'invite-only'
+        self.max_accounts = 100
         env = os.environ if environ is None else environ
         try:
             settings = json.loads(Path(env['BDSG_GOOGLE_LOGIN_FILE']).read_text())
             client = json.loads(Path(env['BDSG_GOOGLE_CLIENT_FILE']).read_text())
+            if not isinstance(settings, dict) or not isinstance(client, dict):
+                raise ValueError()
             client = client.get('web', client)
-            emails = settings['allowed_emails']
+            if not isinstance(client, dict):
+                raise ValueError()
+            mode = settings.get('registration', 'invite-only')
+            emails = settings.get('allowed_emails', [])
+            capacity = settings.get('max_accounts', 1000 if mode == 'public' else 100)
             if (
-                set(settings) != {'allowed_emails'}
-                or not isinstance(emails, list) or not 1 <= len(emails) <= 100
+                set(settings) - {'allowed_emails', 'registration', 'max_accounts'}
+                or mode not in ('invite-only', 'public')
+                or type(capacity) is not int or not 1 <= capacity <= 100000
+                or not isinstance(emails, list) or len(emails) > 100
+                or (mode == 'invite-only' and not emails)
                 or any(not isinstance(e, str) or not re.fullmatch(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', e) for e in emails)
+                or not isinstance(client.get('client_id'), str)
                 or not client['client_id'].endswith('.apps.googleusercontent.com')
-                or not client['client_secret']
+                or not isinstance(client.get('client_secret'), str) or not client['client_secret']
                 or self.redirect not in client['redirect_uris']
             ):
                 raise ValueError()
@@ -64,6 +76,8 @@ class DangNhapGoogle:
                 import google.auth.transport.requests  # noqa: F401
             self.config = client
             self.invites = {e.lower() for e in emails}
+            self.registration = mode
+            self.max_accounts = capacity
         except (KeyError, OSError, TypeError, ValueError, ImportError):
             pass
         with kho.ket_noi() as db:
@@ -77,7 +91,7 @@ class DangNhapGoogle:
             ''')
 
     def status(self):
-        return {'available': self.config is not None, 'registration': 'invite-only'}
+        return {'available': self.config is not None, 'registration': self.registration}
 
     def start(self, ip):
         if not self.config:
@@ -150,15 +164,16 @@ class DangNhapGoogle:
                     or type(claims.get('exp')) is not int or claims['exp'] <= time.time()
                     or type(claims.get('iat')) is not int or not time.time()-720 <= claims['iat'] <= time.time()+30
                     or not isinstance(subject, str) or not re.fullmatch(r'[\x21-\x7e]{1,255}', subject)
-                    or not isinstance(email, str) or len(email) > 254
+                    or not isinstance(email, str) or not 3 <= len(email) <= 254 or '@' not in email
                     or claims.get('email_verified') is not True
-                    or email.lower() not in self.invites
-                    or (not email.lower().endswith('@gmail.com') and not claims.get('hd'))
+                    or (self.registration == 'invite-only' and (
+                        email.lower() not in self.invites
+                        or (not email.lower().endswith('@gmail.com') and not claims.get('hd'))))
                     or not isinstance(claims.get('nonce'), str)
                     or not hmac.compare_digest(bam(claims['nonce']), row['nonce'])):
                 raise ValueError()
         except Exception:
-            raise LoiDangNhapGoogle('Không xác nhận được tài khoản Google hoặc tài khoản chưa được mời') from None
+            raise LoiDangNhapGoogle('Không xác nhận được tài khoản Google hoặc tài khoản không được phép đăng nhập') from None
         issuer = 'https://accounts.google.com'
         now = time.time()
         with self.kho.ket_noi() as db:
@@ -172,7 +187,7 @@ class DangNhapGoogle:
                     raise LoiDangNhapGoogle('Tài khoản BDSG đã bị thu hồi')
             else:
                 actor = 'google-' + hashlib.sha256((issuer+'|'+subject).encode()).hexdigest()[:32]
-                if db.execute('SELECT count(*) FROM google_login_identities').fetchone()[0] >= 100:
+                if db.execute('SELECT count(*) FROM google_login_identities').fetchone()[0] >= self.max_accounts:
                     raise LoiDangNhapGoogle('Chưa thể tạo thêm tài khoản Google')
                 name = claims.get('name', 'Người dùng Google')
                 if not isinstance(name, str):

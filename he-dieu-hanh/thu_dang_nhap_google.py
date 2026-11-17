@@ -86,6 +86,68 @@ class ThuDangNhapGoogle(unittest.TestCase):
         with self.assertRaises(LoiDangNhapGoogle):self.finish(query,binding)
         self.assertEqual(self.exchange.call_count,1)
 
+    def test_public_signup_without_invitation_only_creates_operator(self):
+        Path(self.environ['BDSG_GOOGLE_LOGIN_FILE']).write_text(json.dumps({
+            'registration':'public','allowed_emails':[]}))
+        self.login = DangNhapGoogle(self.kho,'https://thanhhoa.bdsg.vn',self.environ,self.exchange,self.verify)
+        self.assertEqual(self.login.status(),{'available':True,'registration':'public'})
+        query,binding=self.begin()
+        self.verify.return_value.update(email='new-person@external.example',hd=None,sub='new-public-google-subject')
+        actor=self.kho.tu_phien(self.finish(query,binding))
+        self.assertEqual(actor['role'],'operator')
+        self.assertNotEqual(actor['id'],'chu-quan')
+        query,binding=self.begin()
+        self.verify.return_value.update(email='new-person@external.example',hd=None,sub='new-public-google-subject')
+        self.assertEqual(self.kho.tu_phien(self.finish(query,binding))['id'],actor['id'])
+
+    def test_public_capacity_unverified_email_and_revocation_are_enforced(self):
+        Path(self.environ['BDSG_GOOGLE_LOGIN_FILE']).write_text(json.dumps({
+            'registration':'public','max_accounts':1}))
+        self.login = DangNhapGoogle(self.kho,'https://thanhhoa.bdsg.vn',self.environ,self.exchange,self.verify)
+        query,binding=self.begin()
+        actor=self.kho.tu_phien(self.finish(query,binding))
+        query,binding=self.begin()
+        self.verify.return_value['sub']='another-public-subject'
+        with self.assertRaises(LoiDangNhapGoogle):self.finish(query,binding)
+        query,binding=self.begin()
+        self.verify.return_value['email_verified']=False
+        with self.assertRaises(LoiDangNhapGoogle):self.finish(query,binding)
+        self.kho.thu_hoi_agent(actor['id'])
+        query,binding=self.begin()
+        with self.assertRaises(LoiDangNhapGoogle):self.finish(query,binding)
+
+    def test_google_user_directory_and_projects_do_not_expose_other_users(self):
+        app=UngDung(str(self.kho.root),'https://thanhhoa.bdsg.vn',True)
+        self.addCleanup(app.core.audit.close)
+        self.addCleanup(app.tasks.close)
+        app.kho.tao_agent('internal-staff','Nhân viên nội bộ tổng hợp','operator')
+        app.kho.tao_agent('platform-agent','Trợ lý tổng hợp','agent')
+        staff={'id':'internal-staff','role':'operator','name':'Nhân viên nội bộ tổng hợp'}
+        project=app.projects.create(staff,{'name':'Dự án riêng của nhân viên'})
+        query,binding=self.begin()
+        user=self.kho.tu_phien(self.finish(query,binding))
+        result=app.core.goi(user,'agent.danh_sach',{})
+        self.assertTrue(result['ok'],result)
+        self.assertEqual({a['id'] for a in result['ket_qua']['agents']},{user['id'],'platform-agent'})
+        staff_directory=app.core.goi(staff,'agent.danh_sach',{})
+        self.assertIn('internal-staff',{a['id'] for a in staff_directory['ket_qua']['agents']})
+        projects=app.core.goi(user,'du_an.danh_sach',{})
+        self.assertTrue(projects['ok'],projects)
+        self.assertNotIn(project['id'],[p['id'] for p in projects['ket_qua']['projects']])
+        self.assertFalse(app.core.goi(user,'mo_hinh.cau_hinh',{})['ok'])
+
+    def test_invalid_public_registration_policy_stays_disabled(self):
+        for policy in [{'registration':'typo'}, {'registration':True},
+                       {'registration':'public','max_accounts':False},
+                       {'registration':'public','max_accounts':0},
+                       {'registration':'public','unknown':True},
+                       {'allowed_emails':[]}]:
+            with self.subTest(policy=policy):
+                Path(self.environ['BDSG_GOOGLE_LOGIN_FILE']).write_text(json.dumps(policy))
+                login= DangNhapGoogle(self.kho,'https://thanhhoa.bdsg.vn',self.environ,self.exchange,self.verify)
+                self.assertFalse(login.status()['available'])
+                with self.assertRaises(LoiDangNhapGoogle):login.start('127.0.0.1')
+
     def test_wrong_browser_does_not_consume_real_state(self):
         query,binding=self.begin()
         with self.assertRaises(LoiDangNhapGoogle):self.finish(query,'wrong-binding-at-least-twenty')

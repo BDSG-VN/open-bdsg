@@ -441,7 +441,12 @@ function auth(callback) {
   $("#google-login-error").hidden = true;
   $("#login-dialog").showModal();
   api('/api/auth/google')
-    .then(data => { $('#google-login-option').hidden = !data.available; })
+    .then(data => {
+      $('#google-login-option').hidden = !data.available;
+      $('#google-login-note').textContent = data.registration === 'public'
+        ? 'Đăng nhập hoặc tạo tài khoản bằng Google. Không yêu cầu quyền Drive.'
+        : 'Dùng tài khoản Google đã được mời. Không yêu cầu quyền Drive.';
+    })
     .catch(() => { $('#google-login-option').hidden = true; });
 }
 function newRequest(sector) {
@@ -766,7 +771,7 @@ refresh().then(() => {
   } else {
     auth();
     const error = $('#google-login-error');
-    error.textContent = 'Chưa đăng nhập được bằng Google. Hãy thử lại và chọn tài khoản đã được mời.';
+    error.textContent = 'Chưa đăng nhập được bằng Google. Hãy thử lại; nếu vẫn lỗi, vui lòng liên hệ người quản trị.';
     error.hidden = false;
     error.focus();
   }

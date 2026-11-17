@@ -246,7 +246,7 @@ class DieuPhoi:
                 [
                     BanKhaiCongCu(
                         "danh_sach",
-                        lambda a: {"agents": self.kho.agents()},
+                        lambda a: {"agents": self.kho.agents(self.actor.get())},
                         mo_ta="Danh sách hộp thư agent được đăng ký, không hàm ý đã có mô hình AI.",
                         luoc_do=schema(),
                     ),

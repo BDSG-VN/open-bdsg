@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V25 — đăng nhập Google công khai](V25-GOOGLE-CONG-KHAI.md).
+
 [V24 — đăng nhập Google theo lời mời](V24-DANG-NHAP-GOOGLE.md).
 
 [V23 — Trung tâm AI và LiteLLM](V23-TRUNG-TAM-AI.md).

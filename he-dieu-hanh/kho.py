@@ -193,8 +193,17 @@ class Kho:
             {"id": row["ma"], "name": row["ten"], "role": row["role"]} if row else None
         )
 
-    def agents(self):
+    def agents(self, viewer=None):
         with self.ket_noi() as c:
+            # Người dùng Google chỉ xem trợ lý và chính mình, không lộ hồ sơ nhân viên.
+            google_user = (
+                viewer and viewer.get('role') != 'quan-tri'
+                and c.execute("SELECT 1 FROM sqlite_master WHERE name='google_login_identities' AND type='table'").fetchone()
+                and c.execute('SELECT 1 FROM google_login_identities WHERE actor=?', (viewer['id'],)).fetchone()
+            )
+            query = 'SELECT ma AS id,ten AS name,role,active FROM agents'
+            if google_user:
+                return [dict(r) for r in c.execute(query + " WHERE ma=? OR (role='agent' AND active=1) ORDER BY ma", (viewer['id'],))]
             return [
                 dict(r)
                 for r in c.execute(
