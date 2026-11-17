@@ -76,6 +76,14 @@ Nguồn, callback và công cụ mở editor vẫn đóng trong bản thử. Đ�
 nghiệm thu proxy nginx, cache/service-worker hay WebSocket của engine thật,
 và chưa triển khai R14 lên máy chủ.
 
+Đọc artifact service-worker của engine đang cài ngày 18/11/2026 cho thấy
+nó có cache động tài liệu và trả cache trước khi gọi mạng. Profile thử
+nghiệm vì vậy chặn đăng ký service-worker; cần thiết kế và kiểm vòng đời
+cache theo danh tính/thu hồi quyền trước khi bật. Chặn yêu cầu đăng ký mới
+không tự xóa worker hoặc cache đã tồn tại trong trình duyệt. Query được
+kiểm sau giải mã cho cả tài nguyên chung và tài liệu; chưa có bằng chứng
+khai thác thực của các dạng query bị từ chối trong kiểm thử tổng hợp.
+
 Còn kiểm force-save/callback/reconnect với engine thật và forcesave tự động
 không do request BDSG; phục hồi/vòng đời engine/cache bên ngoài gateway;
 proxy engine/cookie và cache/WebSocket theo phạm vi;

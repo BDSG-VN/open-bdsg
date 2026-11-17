@@ -352,13 +352,19 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
         key=opened['key'];other='bdsg-'+'f'*32
         base='/office-docs/cache/files/'+key+'_1/output.docx'
         self.assertTrue(self.editor.engine_access(actor,base+'?shardkey='+key+'&expires=1&md5=synthetic'))
-        bad=[None,13,'https://elsewhere.test'+base,base+'#fragment',
+        bad=[None,13,'https://elsewhere.test'+base,base+'#fragment',base+'#',
              '/office-docs/web-apps/../cache/files/'+key+'/output.docx',
              '/office-docs/web-apps/%2e%2e/cache/files/'+key+'/output.docx',
              '/office-docs/web-apps/%252e%252e/cache/files/'+key+'/output.docx',
              '/office-docs//cache/files/'+key+'/output.docx',base+'?docid='+other,
              base+'?shardkey='+other,base+'?key='+key+'&key='+key,
              base+'?%256bey='+other,base+'?WOPISrc=https://unused.test',
+             base+'?token=%252e%252e%252f',
+             '/office-docs/sdkjs/app.js?x=%252e%252e%252f',
+             '/office-docs/sdkjs/app.js?shardkey='+other,
+             '/office-docs/document_editor_service_worker.js',
+             '/office-docs/10.0.0-1/document_editor_service_worker.js',
+             '/office-docs/sdkjs/common/serviceworker/document_editor_service_worker.js',
              '/office-docs/cache/files/'+key+'/'+other+'/output.docx',
              '/office-docs/doc/'+key+'_1/c/websocket',
              '/office-docs/cache/files/not-issued/output.docx',
