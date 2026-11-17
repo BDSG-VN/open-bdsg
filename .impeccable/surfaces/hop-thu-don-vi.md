@@ -35,8 +35,10 @@ assignment index3, mode Operate; đây là seed kế thừa, không roll mới. 
 iOS do chủ quản chọn giữ toàn quyền. Không comp, raster hoặc DESIGN change.
 
 FINISH: Chrome HTTPS gateway/SQLite/cookie thật, dữ liệu tổng hợp1440/390.
-28 tình huống gồm loading/empty/readerror/gateclosed/unknownsend/late read/
+32 tình huống gồm loading/empty/readerror/gateclosed/unknownsend/late read/
 late send/membership revoked/account changed/actualOS hide-resume/longcopy.
+Hội thoại với người không còn trong danh bạ được giữ chỉ đọc. DOM theo mã
+thư/người đối thoại giữ focus và vị trí đọc qua chu kỳ poll10giây thực.
 Fixture tăng giới hạn operator để chạy nhanh nhiều tình huống; production
 giữ giới hạn cũ. Detector một lần:18px off-ramp đã sửa16px, không chạy lại.
 App được mở trong PREVIEW_APPS của pilot, không phải cutover production.

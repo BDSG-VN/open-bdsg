@@ -43,7 +43,7 @@ khai chế độ đơn vị. Chưa
 hoàn tất lịch/workflow/runtime, Google/editor, audit/export/retention hoặc
 toàn V29. Chưa triển khai R12 lên website.
 
-Ngày18/11/2026:28 tình huống Chrome HTTPS đạt ở1440/390 trên gateway/SQLite/
+Ngày18/11/2026:32 tình huống Chrome HTTPS đạt ở1440/390 trên gateway/SQLite/
 cookie thật: gửi–nhận, escape nội dung, danh tính/nội dung dài, loading,
 readerror xóa thư cũ, gateclosed giữ bản nháp, mất phản hồi sau commit không
 tự retry, phản hồi đọc/gửi cũ sau đổi unit bị bỏ, ẩn/mở cửa sổ OS thực,
@@ -55,3 +55,11 @@ thái hiển thị OS được cập nhật trước khi xác minh/tải hộp t
 giữ bản nháp theo người đối thoại trong cùng scope, xóa khi scope đổi hoặc
 ẩn app. Lỗi gửi chưa rõ kết quả khóa gửi đến khi người dùng đọc lại hộp thư;
 không coi hủy request là rút lại thư đã commit.
+
+Rà soát tìm hai P2: đường mở lịch sử với người đã rời đơn vị bị mất và
+DOM bị dựng lại khi poll. Đã giữ người đối thoại từ lịch sử được phép đọc,
+đánh dấu chỉ xem lịch sử/khóa gửi khi không còn trong danh bạ. Không dùng
+profile toàn cổng để suy ra tên lịch sử. Danh bạ và thông điệp cập nhật theo
+mã ổn định; nút/khối thư giữ DOM, focus và vị trí cuộn. Kiểm bàn phím/thư
+vượt420px qua chu kỳ poll10giây thực đạt. Nội dung log không bị thay toàn
+bộ khi kết quả đọc không đổi.

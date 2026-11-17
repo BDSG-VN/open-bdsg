@@ -12,30 +12,70 @@
     version++; contacts=[];messages=[];drafts.clear();peer='';status='idle';
     reading=sending=unknown=false;notice='';host?.replaceChildren();host=null;
   }
+  const text=(element,value)=>{if(element.textContent!==value)element.textContent=value;};
+  function syncRows(parent,rows,make,update){
+    const existing=new Map([...parent.children].map(node=>[node.dataset.rowId,node]));
+    let cursor=parent.firstElementChild;
+    for(const row of rows){
+      const node=existing.get(row.id)||make(row);node.dataset.rowId=row.id;update(node,row);
+      if(node!==cursor)parent.insertBefore(node,cursor);
+      cursor=node.nextElementSibling;existing.delete(row.id);
+    }
+    for(const node of existing.values())node.remove();
+  }
   function paint(){
     if(!host?.isConnected)return;
-    const active=document.activeElement, editing=active?.id==='unit-mail-draft';
-    const selection=editing?[active.selectionStart,active.selectionEnd]:null;
-    const target=contacts.find(r=>r.id===peer);
-    const rows=messages.filter(r=>(r.sender===own()&&r.recipient===peer)||(r.sender===peer&&r.recipient===own()));
-    host.innerHTML=`<header class="unit-mail-heading"><div><h1>Thông điệp</h1><p>Trao đổi riêng với thành viên trong đơn vị đang chọn.</p></div><button class="button secondary" id="unit-mail-refresh" ${reading?'disabled':''}>Làm mới hộp thư</button></header>
-      ${notice?`<p class="unit-mail-notice" role="status">${esc(notice)}</p>`:''}
-      <div class="unit-mail-layout"><section class="unit-mail-people" aria-label="Thành viên đơn vị"><h2>Người đối thoại</h2>
-      ${status==='loading'?'<p role="status">Đang đọc danh bạ và thông điệp…</p>':status==='error'?'<p>Chưa đọc được hộp thư. Hãy làm mới để thử lại.</p>':contacts.map(r=>`<button type="button" data-mail-peer="${esc(r.id)}" aria-pressed="${r.id===peer}"><strong>${esc(r.id===own()?'Ghi chú cho mình':r.name)}</strong><small>${r.id===own()?'Chỉ mình bạn đọc':'Thành viên đơn vị'}</small></button>`).join('')||'<p>Chưa có người đối thoại trong đơn vị này.</p>'}</section>
-      <section class="unit-mail-conversation" aria-label="Nội dung trao đổi"><h2>${esc(target?.id===own()?'Ghi chú cho mình':target?.name||'Chọn người đối thoại')}</h2>
-      <div id="unit-mail-messages" class="unit-mail-messages" role="log" aria-live="polite" aria-label="Thông điệp gần đây">
-      ${status==='ready'&&target?rows.map(r=>`<article class="unit-mail-message ${r.sender===own()?'unit-mail-mine':''}"><small>${esc(r.sender===own()?'Bạn':target.name)} · <time datetime="${new Date(r.created*1000).toISOString()}">${esc(when(r.created))}</time></small><p>${esc(r.body)}</p></article>`).join('')||'<p class="unit-mail-empty">Chưa có thông điệp. Viết lời nhắn đầu tiên bên dưới.</p>':'<p class="unit-mail-empty">Thông điệp sẽ hiện sau khi xác minh hộp thư.</p>'}</div>
-      <form id="unit-mail-form"><label for="unit-mail-draft">${peer===own()?'Nội dung ghi chú':'Nội dung thông điệp'}</label><textarea id="unit-mail-draft" rows="3" maxlength="4000" required ${status!=='ready'||!target||sending||unknown?'disabled':''}>${esc(drafts.get(peer)||'')}</textarea><div class="unit-mail-send"><p>Chỉ bên gửi và bên nhận đọc được trong đơn vị này.</p><button class="button" type="submit" ${status!=='ready'||!target||sending||unknown?'disabled':''}>${sending?'Đang gửi…':'Gửi thông điệp'}</button></div></form></section></div>`;
-    host.querySelector('#unit-mail-refresh').onclick=()=>load(true);
-    host.querySelectorAll('[data-mail-peer]').forEach(b=>b.onclick=()=>{
-      if(sending||unknown){notice='Hãy làm mới và kiểm tra lần gửi vừa rồi trước khi chuyển người đối thoại.';paint();return;}
-      peer=b.dataset.mailPeer;notice='';paint();
-    });
-    host.querySelector('#unit-mail-draft').oninput=e=>drafts.set(peer,e.target.value);
-    host.querySelector('#unit-mail-form').onsubmit=send;
-    if(editing&&!host.querySelector('#unit-mail-draft').disabled){
-      const field=host.querySelector('#unit-mail-draft');field.focus({preventScroll:true});field.setSelectionRange(...selection);
+    if(!host.childElementCount){
+      host.innerHTML=`<header class="unit-mail-heading"><div><h1>Thông điệp</h1><p>Trao đổi riêng với thành viên trong đơn vị đang chọn.</p></div><button class="button secondary" id="unit-mail-refresh">Làm mới hộp thư</button></header>
+        <p class="unit-mail-notice" id="unit-mail-notice" role="status" hidden></p>
+        <div class="unit-mail-layout"><section class="unit-mail-people" aria-label="Thành viên đơn vị"><h2>Người đối thoại</h2><p id="unit-mail-directory-state" role="status" hidden></p><div id="unit-mail-choices"></div></section>
+        <section class="unit-mail-conversation" aria-label="Nội dung trao đổi"><h2 id="unit-mail-person"></h2><p class="unit-mail-notice" id="unit-mail-history-note" hidden>Người này không còn trong danh bạ hoạt động. Bạn chỉ có thể đọc lịch sử.</p>
+        <div id="unit-mail-messages" class="unit-mail-messages" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Thông điệp gần đây"><p class="unit-mail-empty" id="unit-mail-empty"></p><div id="unit-mail-rows"></div></div>
+        <form id="unit-mail-form"><label for="unit-mail-draft" id="unit-mail-label"></label><textarea id="unit-mail-draft" rows="3" maxlength="4000" required></textarea><div class="unit-mail-send"><p>Chỉ bên gửi và bên nhận đọc được trong đơn vị này.</p><button class="button" type="submit">Gửi thông điệp</button></div></form></section></div>`;
+      host.querySelector('#unit-mail-refresh').onclick=()=>load(true);
+      host.querySelector('#unit-mail-draft').oninput=e=>drafts.set(peer,e.target.value);
+      host.querySelector('#unit-mail-form').onsubmit=send;
     }
+    const people=host.querySelector('.unit-mail-people'),log=host.querySelector('#unit-mail-messages');
+    const peopleTop=people.scrollTop,logTop=log.scrollTop,atEnd=log.scrollHeight-log.scrollTop-log.clientHeight<60;
+    const switched=host.dataset.mailConversation!==peer;
+    const target=contacts.find(r=>r.id===peer);
+    const rows=status==='ready'&&target?messages.filter(r=>(r.sender===own()&&r.recipient===peer)||(r.sender===peer&&r.recipient===own())):[];
+    const feedback=host.querySelector('#unit-mail-notice');text(feedback,notice);feedback.hidden=!notice;
+    const directoryState=host.querySelector('#unit-mail-directory-state');
+    const directoryText=status==='loading'?'Đang đọc danh bạ và thông điệp…':status==='error'?'Chưa đọc được hộp thư. Hãy làm mới để thử lại.':!contacts.length?'Chưa có người đối thoại trong đơn vị này.':'';
+    text(directoryState,directoryText);directoryState.hidden=!directoryText;
+    syncRows(host.querySelector('#unit-mail-choices'),contacts,()=>{
+      const button=document.createElement('button');button.type='button';button.innerHTML='<strong></strong><small></small>';
+      button.onclick=()=>{
+        if(sending||unknown){notice='Hãy làm mới và kiểm tra lần gửi vừa rồi trước khi chuyển người đối thoại.';paint();return;}
+        peer=button.dataset.mailPeer;notice='';paint();
+      };return button;
+    },(button,row)=>{
+      button.dataset.mailPeer=row.id;button.setAttribute('aria-pressed',String(row.id===peer));
+      text(button.querySelector('strong'),row.id===own()?'Ghi chú cho mình':row.name);
+      text(button.querySelector('small'),!row.active?'Chỉ xem lịch sử':row.id===own()?'Chỉ mình bạn đọc':'Thành viên đơn vị');
+    });
+    text(host.querySelector('#unit-mail-person'),target?.id===own()?'Ghi chú cho mình':target?.name||'Chọn người đối thoại');
+    host.querySelector('#unit-mail-history-note').hidden=!target||!!target.active;
+    const empty=host.querySelector('#unit-mail-empty');empty.hidden=rows.length>0;
+    text(empty,status==='ready'&&target?'Chưa có thông điệp. Viết lời nhắn đầu tiên bên dưới.':'Thông điệp sẽ hiện sau khi xác minh hộp thư.');
+    syncRows(host.querySelector('#unit-mail-rows'),rows,()=>{
+      const article=document.createElement('article');article.className='unit-mail-message';article.innerHTML='<small><span></span> · <time></time></small><p></p>';return article;
+    },(article,row)=>{
+      article.classList.toggle('unit-mail-mine',row.sender===own());
+      text(article.querySelector('span'),row.sender===own()?'Bạn':target.name);
+      const time=article.querySelector('time');text(time,when(row.created));time.dateTime=new Date(row.created*1000).toISOString();
+      text(article.querySelector('p'),row.body);
+    });
+    const locked=status!=='ready'||!target?.active||sending||unknown;
+    const field=host.querySelector('#unit-mail-draft'),draft=drafts.get(peer)||'';
+    if(field.value!==draft)field.value=draft;field.disabled=locked;
+    text(host.querySelector('#unit-mail-label'),peer===own()?'Nội dung ghi chú':'Nội dung thông điệp');
+    const submit=host.querySelector('#unit-mail-form button');submit.disabled=locked;text(submit,sending?'Đang gửi…':'Gửi thông điệp');
+    host.querySelector('#unit-mail-refresh').disabled=reading||sending;
+    people.scrollTop=peopleTop;
+    log.scrollTop=switched||atEnd?log.scrollHeight:logTop;host.dataset.mailConversation=peer;
   }
   async function invoke(name,args={}){
     const r=await api('/api/tools',{method:'POST',body:JSON.stringify({name,arguments:args})});
@@ -49,7 +89,13 @@
     try{
       const [directory,inbox]=await Promise.all([invoke('agent.danh_sach'),invoke('agent.doc_hop_thu')]);
       if(!current(token))return;
-      contacts=directory.agents;messages=inbox.messages;
+      messages=inbox.messages;
+      const peers=new Map(directory.agents.map(row=>[row.id,{...row,active:row.active===true||row.active===1}]));
+      for(const message of messages){
+        const other=message.sender===own()?message.recipient:message.sender;
+        if(!peers.has(other))peers.set(other,{id:other,name:other,active:false});
+      }
+      contacts=[...peers.values()];
       if(!contacts.some(r=>r.id===peer)){drafts.clear();peer=contacts.find(r=>r.id!==own())?.id||contacts[0]?.id||'';}
       status='ready';if(manual){unknown=false;notice='Đã đọc hộp thư mới nhất. Kiểm tra nội dung trước khi gửi lại.';}
     }catch(error){
@@ -59,7 +105,7 @@
   }
   async function send(event){
     event.preventDefault();
-    if(sending||unknown||status!=='ready'||!peer||!visible())return;
+    if(sending||unknown||status!=='ready'||!contacts.find(row=>row.id===peer)?.active||!visible())return;
     const body=(drafts.get(peer)||'').trim();
     if(!body||body.length>4000){notice='Nội dung cần từ 1 đến 4000 ký tự.';paint();return;}
     const token=capture();sending=true;notice='';paint();
