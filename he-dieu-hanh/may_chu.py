@@ -36,7 +36,8 @@ from hanh_dong import HanhDong, active_actor
 from hanh_dong_don_vi import HanhDongDonVi
 from mcp_uy_quyen_don_vi import UyQuyenMCPDonVi
 from mcp_http_don_vi import MCPHTTPDonVi
-from oauth_mcp_don_vi import OAuthMCPDonVi
+from oauth_mcp_don_vi import OAuthMCPDonVi, LoiOAuth
+from oauth_http import read_request as read_oauth_request
 from lich_cong_viec import LichCongViec
 from phoi_hop import PhoiHop
 from ho_tro_khach import HoTroKhach, QuaHanHoTro
@@ -466,9 +467,87 @@ def tao_may_chu(app, port=8766):
             self.send(status, payload, headers=headers)
             return True
 
+        def oauth_routes(self, method):
+            path = urlsplit(self.path).path
+            routes = {'/oauth/token', '/api/oauth/clients', '/api/oauth/clients/disable',
+                      '/api/oauth/bind', '/api/oauth/decide', '/api/mcp/grants', '/api/mcp/grants/revoke'}
+            if not app.unit_preview or path not in routes:
+                return False
+            self.connection.settimeout(12)
+            try:
+                if any(len(self.headers.get_all(key, [])) > 1 for key in ('Origin', 'Cookie', 'Authorization')):
+                    raise LoiOAuth('invalid_request')
+                if not self.origin_ok(required=method == 'POST' and path != '/oauth/token'):
+                    self.send(403, {'error': 'access_denied'})
+                    return True
+                if urlsplit(self.path).query:
+                    raise LoiOAuth('invalid_request')
+                if app.operations.draining.is_set():
+                    self.send(503, {'error': 'temporarily_unavailable'}, headers={'Retry-After': '5'})
+                    return True
+                allowed = ('GET', 'POST') if path in ('/api/oauth/clients', '/api/mcp/grants') else ('POST',)
+                if method not in allowed:
+                    self.send(405, {'error': 'invalid_request'}, headers={'Allow': ', '.join(allowed)})
+                    return True
+                if path == '/oauth/token':
+                    if self.headers.get('Authorization') is not None:
+                        raise LoiOAuth('invalid_request')
+                    if not app.core.nhan.chinh_sach.cong_ghi.dang_mo:
+                        self.send(503, {'error': 'temporarily_unavailable'})
+                        return True
+                    body = read_oauth_request(self.headers, self.rfile.read, form=True)
+                    self.send(200, app.oauth_mcp.exchange(body), headers={'Pragma': 'no-cache'})
+                    return True
+                actor = self.actor()
+                if not actor:
+                    self.send(401, {'error': 'login_required'})
+                    return True
+                if not self.cookie_actor_matches(actor):
+                    return True
+                if path not in ('/api/oauth/clients', '/api/oauth/clients/disable'):
+                    actor = self.scoped_actor(actor)
+                    if actor is None: return True
+                body = read_oauth_request(self.headers, self.rfile.read) if method == 'POST' else None
+                revoking = path in ('/api/oauth/clients/disable', '/api/mcp/grants/revoke')
+                denying = path == '/api/oauth/decide' and body.get('approve') is False
+                if body is not None and not revoking and not denying and not app.core.nhan.chinh_sach.cong_ghi.dang_mo:
+                    self.send(403, {'error': 'write_gate_closed'})
+                    return True
+                if path == '/api/oauth/clients':
+                    result = app.oauth_mcp.list_clients(actor) if body is None else app.oauth_mcp.register_client(actor, body)
+                elif path == '/api/mcp/grants':
+                    result = app.inbound_mcp.list(actor) if body is None else app.inbound_mcp.create(actor, body)
+                elif path in ('/api/oauth/clients/disable', '/api/mcp/grants/revoke'):
+                    if set(body) != {'id'}: raise LoiOAuth('invalid_request')
+                    result = (app.oauth_mcp.disable_client(actor, body['id']) if path == '/api/oauth/clients/disable'
+                              else app.inbound_mcp.revoke(actor, body['id']))
+                elif path == '/api/oauth/bind':
+                    if set(body) != {'request'}: raise LoiOAuth('invalid_request')
+                    result = app.oauth_mcp.bind(actor, self.session(), body['request'])
+                else:
+                    if (not {'request', 'approve'} <= set(body) or set(body)-{'request', 'approve', 'selection'}
+                            or (body.get('approve') is False and 'selection' in body)):
+                        raise LoiOAuth('invalid_request')
+                    result = app.oauth_mcp.decide(actor, self.session(), body['request'],
+                        approve=body['approve'], selection=body.get('selection'))
+                self.send(200, result)
+            except LoiOAuth as error:
+                self.send(400, {'error': error.code}, headers={'Pragma': 'no-cache'})
+            except PermissionError:
+                self.send(403, {'error': 'context_changed'})
+            except (ValueError, UnicodeError):
+                self.send(400, {'error': 'invalid_request'})
+            except (TimeoutError, OSError):
+                self.send(408, {'error': 'invalid_request'})
+            except Exception:
+                self.send(500, {'error': 'server_error'})
+            return True
+
         def do_GET(self):
             self.connection.settimeout(12)
             if self.scoped_mcp('GET'):
+                return
+            if self.oauth_routes('GET'):
                 return
             if not self.origin_ok():
                 return self.send(403, {"error": "Nguồn truy cập không được phép"})
@@ -667,6 +746,8 @@ def tao_may_chu(app, port=8766):
             self.connection.settimeout(12)
             if self.scoped_mcp('POST'):
                 return
+            if self.oauth_routes('POST'):
+                return
             path = urlsplit(self.path).path
             if not self.preview_path(path, "POST"):
                 return
@@ -859,10 +940,12 @@ def tao_may_chu(app, port=8766):
         def do_OPTIONS(self):
             if self.scoped_mcp('OPTIONS'):
                 return
+            if self.oauth_routes('OPTIONS'):
+                return
             self.send(405, {"error": "Không mở CORS"}, headers={"Allow": "GET, POST"})
 
         def do_DELETE(self):
-            if not self.scoped_mcp(self.command):
+            if not self.scoped_mcp(self.command) and not self.oauth_routes(self.command):
                 self.send(405, {'error': 'Phương thức không được hỗ trợ'})
 
         do_HEAD = do_DELETE

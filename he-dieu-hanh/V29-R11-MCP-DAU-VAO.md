@@ -2,7 +2,7 @@
 
 Ngày 17/11/2026, tiếp [R10](V29-R10-PHE-DUYET-GHI-DON-VI.md). Đây là chặng
 nền grant/credential, worker và HTTP MCP trong chế độ đơn vị thử nghiệm.
-OAuth có nền backend đang kiểm, chưa có luồng HTTP/consent/giao diện quản lý
+OAuth có nền backend và HTTP token/API đang kiểm, chưa có luồng authorize/consent/giao diện quản lý
 hoàn chỉnh hoặc chuyển dữ liệu production; chưa hoàn tất R11 và chưa triển
 khai thay đổi này lên website.
 
@@ -177,7 +177,7 @@ kiểm Origin/JSON-RPC/header và notification. Luồng client chuẩn sẽ cầ
 metadata discovery, resource audience và PKCE; không nhận ChatGPT/Claude đã
 kết nối khi mới có nền grant này. Đây là version pin, không khẳng định mới nhất.
 
-## R11c — nền authorization code S256, chưa nối HTTP/UI
+## R11c — nền authorization code S256
 
 Ngày 17/11/2026: backend đăng ký public client do chủ quản hệ thống duyệt,
 redirect allowlist khớp tuyệt đối, resource cố định, scope theo công cụ đọc/
@@ -216,6 +216,33 @@ Tham chiếu [MCP authorization ghim](https://modelcontextprotocol.io/specificat
 [protected resource metadata RFC9728](https://www.rfc-editor.org/rfc/rfc9728).
 Chưa dùng nền code S256 này để nhận là đã hoàn tất OAuth 2.1.
 
-Còn metadata/discovery, HTTP OAuth/PKCE/consent, giao diện quản lý và nghiệm thu phát hành/hậu kiểm.
+## R11c — HTTP token và API duyệt/quản lý, chưa có trang authorize
+
+Ngày17/11/2026: thêm `POST /oauth/token`, form-urlencoded với code/verifier/
+client/redirect/resource; không lấy cookie hoặc header đơn vị để đổi chủ thể.
+Không nhận Authorization passthrough, query token, field/header trùng, JSON
+không hữu hạn; body form tối đa8KiB, JSON API tối đa64KiB. Token response
+no-store/Pragma no-cache. Chưa cấp refresh hoặc client-secret authentication.
+
+API cookie thực gồm bind/decide dưới `/api/oauth/`, đăng ký/list/ngắt client
+do chủ quản hệ thống, create/list/revoke grant dưới `/api/mcp/`. POST quản lý
+cần Origin đúng, cookie thật, actor và đơn vị còn hiệu lực. BIND/consent giữ
+các snapshot session/unit/role hiện có; header actor cũ bị409. Grant trả key
+một lần, list không trả lại. Cổng ghi đóng vẫn cho thu hồi/ngắt/từ chối;
+không cho cấp thêm hoặc đổi code. Draining chặn nhận thao tác mới.
+
+Ngày17/11/2026: tám bài socket/cookie thật đạt: approve→form exchange→MCP,
+cookie/header tài khoản khác không đổi subject, quyền client control plane,
+đổi unit/actor/Origin, deny/revoke khi cổng ghi đóng, replay/clientdisable,
+giới hạn/parser và draining. Start request trong fixture vẫn qua backend;
+chưa có GET authorize/trang consent hoặc SDK OAuth end-to-end.
+
+```sh
+python3 -m unittest discover -s he-dieu-hanh -p 'thu_oauth_http.py' -v
+```
+
+Không quảng bá metadata hoặc resource_metadata challenge khi trang authorize
+chưa có. Còn discovery, GET authorize/consent UI, trang quản lý client/grant,
+SDK OAuth HTTPS end-to-end và nghiệm thu phát hành/hậu kiểm.
 Manual bearer/SDK tổng hợp chưa chứng minh ChatGPT hoặc Claude đã kết nối
 thật. Chưa nhận toàn R11/lộ trình hệ sinh thái đã hoàn tất.

@@ -1,0 +1,157 @@
+"""Token/consent qua HTTP và cookie thật; authorize UI/discovery còn tiếp."""
+import base64
+import hashlib
+import http.client
+import json
+import unittest
+from urllib.parse import parse_qs, urlencode, urlsplit
+
+import thu_don_vi_http as fixture
+
+
+class ThuOAuthHTTP(unittest.TestCase):
+    request = fixture.ThuDonViHTTP.request
+    close = fixture.ThuDonViHTTP.close
+
+    def setUp(self):
+        fixture.ThuDonViHTTP.setUp(self)
+        status, self.client, _ = self.request('/api/oauth/clients', {
+            'name': 'Client HTTP thu', 'redirect_uris': ['https://client.test/callback'],
+            'allowed_tools': ['du_an.danh_sach']}, 'chu-quan')
+        self.assertEqual(status, 200)
+        self.verifier = 'v'*64
+        self.challenge = base64.urlsafe_b64encode(hashlib.sha256(self.verifier.encode()).digest()).decode().rstrip('=')
+        result = self.request('/api/tools', {'name': 'du_an.tao', 'arguments': {'name': 'Du an OAuth HTTP'}},
+                              'nguoi-a', self.units[0])
+        self.assertEqual(result[0], 200)
+        self.project = result[1]['ket_qua']['id']
+
+    def pending(self):
+        # Phần start chưa nối authorize page; backend tạo request thật cho wire test.
+        return self.app.oauth_mcp.start({'client_id': self.client['id'], 'redirect_uri': self.client['redirect_uris'][0],
+            'response_type': 'code', 'resource': self.app.inbound_mcp.resource, 'scope': 'tool:du_an.danh_sach',
+            'state': 'synthetic-http-state', 'code_challenge': self.challenge, 'code_challenge_method': 'S256'})['request']
+
+    def approved(self):
+        request = self.pending()
+        self.assertEqual(self.request('/api/oauth/bind', {'request': request}, 'nguoi-a', self.units[0])[0], 200)
+        status, body, _ = self.request('/api/oauth/decide', {'request': request, 'approve': True,
+            'selection': {'tools': ['du_an.danh_sach'], 'project_ids': [self.project], 'expires_in': 900}},
+            'nguoi-a', self.units[0])
+        self.assertEqual(status, 200)
+        return parse_qs(urlsplit(body['redirect_uri']).query)['code'][0]
+
+    def token(self, code, *, extra=None, headers=None, raw=None, method='POST', path='/oauth/token'):
+        body = {'grant_type': 'authorization_code', 'code': code, 'client_id': self.client['id'],
+                'redirect_uri': self.client['redirect_uris'][0], 'code_verifier': self.verifier,
+                'resource': self.app.inbound_mcp.resource, **(extra or {})}
+        fields = {'Content-Type': 'application/x-www-form-urlencoded'}
+        fields.update(headers or {})
+        conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
+        conn.request(method, path, raw if raw is not None else urlencode(body), fields)
+        response = conn.getresponse()
+        data = response.read()
+        result = response.status, json.loads(data) if data else None, dict(response.getheaders())
+        conn.close()
+        return result
+
+    def test_real_cookie_consent_form_exchange_and_bearer_mcp(self):
+        status, token, headers = self.token(self.approved(), headers={
+            'Cookie': self.cookies['nguoi-b'], 'X-BDSG-Unit': self.units[1], 'X-BDSG-Actor': 'nguoi-b'})
+        self.assertEqual(status, 200)
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        self.assertEqual(headers['Pragma'], 'no-cache')
+        status, body, _ = self.request('/mcp', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+            'params': {'name': 'du_an.danh_sach'}}, headers={'Accept': 'application/json, text/event-stream',
+                                                         'Authorization': 'Bearer '+token['access_token']})
+        self.assertEqual(status, 200)
+        self.assertFalse(body['result']['isError'])
+        self.assertEqual([row['id'] for row in json.loads(body['result']['content'][0]['text'])['projects']], [self.project])
+
+    def test_admin_client_registry_is_control_plane_and_no_epoch_leak(self):
+        status, body, _ = self.request('/api/oauth/clients', who='chu-quan')
+        self.assertEqual(status, 200)
+        self.assertEqual(len(body['clients']), 1)
+        self.assertNotIn('issuer_epoch', json.dumps(body))
+        self.assertEqual(self.request('/api/oauth/clients', who='nguoi-a')[0], 403)
+        self.assertEqual(self.request('/api/oauth/clients', who='chu-quan', headers={'X-BDSG-Actor': 'nguoi-a'})[0], 409)
+
+    def test_consent_requires_session_origin_and_unchanged_identity_unit(self):
+        request = self.pending()
+        body = {'request': request}
+        self.assertEqual(self.request('/api/oauth/bind', body, unit=self.units[0])[0], 401)
+        self.assertEqual(self.request('/api/oauth/bind', body, 'nguoi-a', self.units[0], headers={'Origin': ''})[0], 403)
+        self.assertEqual(self.request('/api/oauth/bind', body, 'nguoi-a', self.units[0])[0], 200)
+        self.assertEqual(self.request('/api/oauth/bind', body, 'nguoi-a', self.units[1])[0], 403)
+        self.assertEqual(self.request('/api/oauth/bind', body, 'nguoi-b', self.units[0])[0], 403)
+        self.assertEqual(self.request('/api/oauth/bind', body, 'nguoi-a', self.units[0],
+                                      headers={'X-BDSG-Actor': 'nguoi-b'})[0], 409)
+
+    def test_deny_works_with_write_gate_closed_and_does_not_issue_code(self):
+        request = self.pending()
+        self.request('/api/oauth/bind', {'request': request}, 'nguoi-a', self.units[0])
+        self.app.core.nhan.chinh_sach.cong_ghi.dong()
+        status, body, _ = self.request('/api/oauth/decide', {'request': request, 'approve': False}, 'nguoi-a', self.units[0])
+        self.assertEqual(status, 200)
+        self.assertEqual(parse_qs(urlsplit(body['redirect_uri']).query)['error'], ['access_denied'])
+        self.assertNotIn('code=', body['redirect_uri'])
+
+    def test_token_mismatch_replay_and_client_disable(self):
+        code = self.approved()
+        self.assertEqual(self.token(code, extra={'resource': 'https://other.test/mcp'})[0], 400)
+        status, token, _ = self.token(code)
+        self.assertEqual(status, 200)
+        self.assertEqual(self.token(code)[1]['error'], 'invalid_grant')
+        status, _, _ = self.request('/mcp', {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'},
+            headers={'Accept': 'application/json, text/event-stream', 'Authorization': 'Bearer '+token['access_token']})
+        self.assertEqual(status, 401)
+        code = self.approved()
+        self.assertEqual(self.request('/api/oauth/clients/disable', {'id': self.client['id']}, 'chu-quan')[0], 200)
+        self.assertEqual(self.token(code)[1]['error'], 'invalid_client')
+
+    def test_token_rejects_query_origin_authorization_media_duplicates_and_nonfinite_json(self):
+        code = self.approved()
+        for options in ({'path': '/oauth/token?access_token=synthetic'}, {'headers': {'Origin': 'https://other.test'}},
+                        {'headers': {'Authorization': 'Bearer synthetic-placeholder'}},
+                        {'headers': {'Content-Type': 'application/json'}}, {'raw': 'grant_type=x&grant_type=y'},
+                        {'raw': 'bad=%ff'}, {'headers': {'Transfer-Encoding': 'chunked'}}):
+            with self.subTest(kind=list(options)):
+                self.assertIn(self.token(code, **options)[0], (400, 403))
+        self.assertEqual(self.token(code, method='GET')[0], 405)
+        self.assertEqual(self.token(code)[0], 200)
+        self.assertEqual(self.request('/api/oauth/decide', {'request': None, 'approve': float('nan')},
+                                      'nguoi-a', self.units[0])[0], 400)
+        request = self.pending()
+        duplicate = '{"request":"'+request+'","request":"'+request+'"}'
+        self.assertEqual(self.token(code, path='/api/oauth/bind', raw=duplicate, headers={
+            'Cookie': self.cookies['nguoi-a'], 'Origin': self.app.origin,
+            'Content-Type': 'application/json', 'X-BDSG-Unit': self.units[0]})[0], 400)
+        self.assertEqual(self.request('/api/oauth/bind', {'request': request}, 'nguoi-a', self.units[0])[0], 200)
+
+    def test_manual_grants_are_scoped_return_once_and_revoke_even_when_gate_closed(self):
+        settings = {'name': 'Client manual HTTP', 'client_id': 'synthetic-manual',
+                    'tools': ['nen_tang.danh_sach'], 'project_ids': [], 'expires_in': 900}
+        status, issued, _ = self.request('/api/mcp/grants', settings, 'nguoi-a', self.units[0])
+        self.assertEqual(status, 200)
+        self.assertTrue('credential' in issued)
+        status, listed, _ = self.request('/api/mcp/grants', who='nguoi-a', unit=self.units[0])
+        self.assertEqual(status, 200)
+        self.assertTrue(issued['credential'] not in json.dumps(listed), 'Danh sách không trả lại credential')
+        self.assertEqual(self.request('/api/mcp/grants', who='nguoi-a', unit=self.units[1])[1]['grants'], [])
+        self.app.core.nhan.chinh_sach.cong_ghi.dong()
+        self.assertEqual(self.request('/api/mcp/grants', settings, 'nguoi-a', self.units[0])[0], 403)
+        self.assertEqual(self.request('/api/mcp/grants/revoke', {'id': issued['id']}, 'nguoi-a', self.units[0])[0], 200)
+
+    def test_gate_drain_bad_shapes_and_no_discovery_advertised_yet(self):
+        self.assertEqual(self.request('/.well-known/oauth-protected-resource/mcp')[0], 403)
+        self.assertEqual(self.request('/.well-known/oauth-authorization-server')[0], 403)
+        self.assertEqual(self.request('/api/oauth/bind', {}, 'nguoi-a', self.units[0])[0], 400)
+        self.assertEqual(self.request('/api/mcp/grants/revoke', {'id': 'x', 'owner': 'pretend'}, 'nguoi-a', self.units[0])[0], 400)
+        self.app.core.nhan.chinh_sach.cong_ghi.dong()
+        self.assertEqual(self.token('synthetic-placeholder')[0], 503)
+        self.app.operations.draining.set()
+        self.assertEqual(self.request('/api/oauth/clients', who='chu-quan')[0], 503)
+        self.assertEqual(self.request('/api/oauth/clients', who='chu-quan', headers={'Origin': 'https://other.test'})[0], 403)
+
+
+if __name__ == '__main__': unittest.main()

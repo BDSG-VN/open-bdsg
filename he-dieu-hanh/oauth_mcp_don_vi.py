@@ -1,4 +1,4 @@
-"""Authorization code S256 và consent BDSG; nền backend, chưa có HTTP/UI."""
+"""Authorization code S256 và consent BDSG; trang authorize/discovery còn tiếp."""
 import base64
 import hashlib
 import hmac
@@ -85,6 +85,15 @@ class OAuthMCPDonVi:
         if not isinstance(actor, dict) or 'mcp_delegation' in actor:
             raise PermissionError('Cần chủ quản web để quản lý client OAuth')
         self.units.require_system_admin(actor, db)
+
+    def list_clients(self, actor):
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN')
+            self._system_actor(actor, db)
+            clients = [json.loads(row[0]) for row in db.execute('SELECT document FROM unit_oauth_clients ORDER BY id')]
+            return {'clients': [{key: value for key, value in client.items() if key != 'issuer_epoch'} |
+                                {'issuer_current': client['issuer_epoch'] == self.authority.issuer_epoch}
+                                for client in clients]}
 
     def _client(self, db, identifier):
         if not isinstance(identifier, str) or not re.fullmatch(r'bdsg_client_[A-Za-z0-9_-]{24}', identifier):
