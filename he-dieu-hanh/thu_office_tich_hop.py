@@ -92,6 +92,7 @@ class ThuOfficeTichHop(unittest.TestCase):
         for extension in ("docx", "xlsx", "pptx"):
             file = self.file(extension)
             session = self.editor.open(A, {"id": file["id"]})
+            self.assertEqual(session['save_protocol'],'legacy')
             config = session["config"]
             self.assertEqual(config["document"]["fileType"], extension)
             verify(config["token"], SECRET, "editor")

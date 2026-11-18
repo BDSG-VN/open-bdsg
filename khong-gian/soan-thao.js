@@ -7,6 +7,7 @@
   const retry = document.querySelector("#retry");
   let editor,
     key,
+    requireReceipt = false,
     changed = false,
     working = false,
     closed = false,
@@ -60,14 +61,27 @@
         );
       return;
     }
+    const requestId = result.request_id;
+    if (typeof requestId !== "string" || !requestId.length || requestId.length > 128)
+      throw new Error(
+        "Chưa nhận được mã lệnh lưu. Giữ tài liệu mở và kiểm tra lại kết nối.",
+      );
     for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      const progress = await call("phien_soan_thao", { key });
-      if (progress.save_error || progress.state !== "active")
+      const progress = await call("phien_soan_thao", { key, request_id: requestId });
+      const hasReceipt = Object.prototype.hasOwnProperty.call(progress, "command_state");
+      if ((requireReceipt && !hasReceipt) || (hasReceipt && progress.request_id !== requestId))
+        throw new Error(
+          "Chưa xác nhận được lần lưu này. Giữ tài liệu mở và kiểm tra lại.",
+        );
+      if (progress.save_error || progress.state !== "active" ||
+          (hasReceipt && ["failed", "superseded", "abandoned", "unchanged"].includes(progress.command_state)))
         throw new Error(
           "Bộ soạn thảo chưa lưu được. Giữ trang này mở và thử lại.",
         );
-      if (!progress.pending && progress.last_saved) return;
+      // Timestamp thuộc cả phiên; ledger phải xác nhận đúng lệnh đang chờ.
+      if (hasReceipt ? progress.command_state === "committed" : !progress.pending && progress.last_saved)
+        return;
     }
     throw new Error(
       "Chưa nhận được xác nhận lưu. Giữ tài liệu mở, kiểm tra lại trước khi rời trang.",
@@ -148,6 +162,11 @@
       if (!/^[a-f0-9]{24}$/.test(id || ""))
         throw new Error("Thiếu tài liệu. Quay về kho tệp và chọn lại.");
       const result = await call("mo_soan_thao", { id });
+      const protocol = Object.prototype.hasOwnProperty.call(result, "save_protocol")
+        ? result.save_protocol : "legacy";
+      if (!["legacy", "request-ledger-v1"].includes(protocol))
+        throw new Error("Chưa hỗ trợ phiên bản soạn thảo này. Tải lại trang rồi mở lại tài liệu.");
+      requireReceipt = protocol === "request-ledger-v1";
       key = result.key;
       if (result.api_url !== "/office-docs/web-apps/apps/api/documents/api.js")
         throw new Error("Nguồn bộ soạn thảo không hợp lệ.");

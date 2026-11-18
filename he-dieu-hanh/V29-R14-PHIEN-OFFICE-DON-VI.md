@@ -66,6 +66,28 @@ người có quyền xác nhận `acknowledge_unsaved_changes=true` để thu h�
 cấp công cụ/HTTP/UI cho phương thức này; chưa thử ngắt cache/WebSocket
 engine thật. Mất quyền trong lúc đợi lệnh khiến phản hồi bị từ chối.
 
+Ngày 18/11/2026 đã kiểm force-save backend với ONLYOFFICE thật khi Word
+vẫn mở. Sau khi gõ chuỗi kiểm mới, kho vẫn bản 2; gọi save đúng một lần,
+nhận `dang-luu`, rồi tiến trình đúng request chuyển `committed`. Đọc lại
+DOCX thấy chuỗi mới ở bản 3, ClamAV không phát hiện, phiên vẫn `active` và
+browser còn mở. Đây là kiểm phương thức backend qua harness riêng, chưa
+phải nghiệm thu nút BDSG ghép với engine thật trong chế độ đơn vị.
+
+Khi mở, backend khai báo `save_protocol`: đơn vị dùng `request-ledger-v1`,
+legacy dùng `legacy`. Controller gửi request_id khi poll và chỉ nhận
+committed đúng mã; không mượn last_saved toàn phiên cho accepted/unknown
+hoặc lệnh khác. Phiên yêu cầu ledger mà thiếu receipt không hạ về legacy;
+protocol lạ/null bị từ chối, backend cũ thiếu hẳn trường vẫn dùng legacy.
+Không tự gọi lại save trong một lượt chờ. Chưa nghiệm thu toàn bộ UX đối
+soát unknown, thay đổi tiếp sau timeout hoặc scope của popup.
+
+Đo ngày 18/11/2026: 9 bài Node đi qua nút Lưu của controller thật, DOM/API
+tổng hợp, không viết lại source để lộ hàm nội bộ; kiểm commit/mismatch/
+accepted/unknown/terminal, legacy, thiếu mã và lỗi giao thức. Chrome dùng
+HTML/CSS/JS thật kiểm 7 ca ở 1440/980/390, gồm loading/focus, lỗi và thành
+công, không overflow/lỗi JS. API/editor trong bộ ảnh UI này là tổng hợp;
+khác với ca force-save engine thật nêu trên. Công cụ pilot vẫn đóng.
+
 ## Chưa mở để sử dụng
 
 Ngày 18/11/2026 đã thêm profile xác thực engine theo đường dẫn trong chế

@@ -378,6 +378,7 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
     def test_source_restores_scope_but_cross_unit_session_does_not_reuse_key(self):
         self.app.projects.share(self.a,{'id':self.project,'unit_id':self.units[1],'identity':'nguoi-a','role':'editor'})
         first=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertEqual(first['save_protocol'],'request-ledger-v1')
         self.assertTrue(self.source(first).startswith(b'PK'))
         second=self.editor.open(self.b,{'id':self.file['id']})
         self.assertNotEqual(first['key'],second['key'])

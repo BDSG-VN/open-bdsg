@@ -186,6 +186,7 @@ class SoanThaoOffice:
             "key": session["key"],
             "config": config,
             "api_url": self.prefix + "web-apps/apps/api/documents/api.js",
+            "save_protocol": "request-ledger-v1" if self.scopes.units is not None else "legacy",
         }
 
     def source(self, query, authorization):
