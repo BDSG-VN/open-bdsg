@@ -1,6 +1,6 @@
 # Thu hồi kết nối Office đang mở
 
-Ngày tra cứu và ghi nhận: **18/11/2026**. Phạm vi: chọn ranh giới kiểm quyền phía máy chủ cho ONLYOFFICE; tài liệu nghiên cứu, chưa triển khai hay nghiệm thu giải pháp.
+Ngày tra cứu và ghi nhận: **18/11/2026**. Phạm vi: ranh giới kiểm quyền phía máy chủ cho ONLYOFFICE và bằng chứng từng lát trên stage; chưa bật production hoặc nghiệm thu toàn bộ giải pháp.
 
 ## Cổng cộng tác đang triển khai
 
@@ -28,7 +28,24 @@ Trước khi bật: cấu hình dịch vụ/nginx stage, giới hạn tài nguy�
 
 ## Kết luận để chọn hướng
 
-**Đề xuất chưa kiểm chứng:** giữ cổng kiểm quyền HTTP, bổ sung lớp giữ và ngắt kết nối đang mở, kiểm dữ liệu cả hai chiều, bao phủ polling lẫn WebSocket. Dùng `drop` như biện pháp bổ sung để dừng sửa; không dùng riêng lệnh này làm bảo đảm thu hồi đọc. Cơ sở và giới hạn dưới đây tách riêng thông tin chính thức, suy luận thiết kế và quan sát thử nghiệm.
+Giữ cổng kiểm quyền HTTP, bổ sung lớp giữ và ngắt kết nối đang mở, kiểm dữ liệu cả hai chiều, bao phủ polling lẫn WebSocket. Các lát stage đã đo được ghi tại mốc hiện tại bên dưới; chưa suy thành nghiệm thu mọi transport hoặc nhiều worker. Dùng `drop` như biện pháp bổ sung để dừng sửa; không dùng riêng lệnh này làm bảo đảm thu hồi đọc. Cơ sở và giới hạn dưới đây tách riêng thông tin chính thức, suy luận thiết kế và quan sát thử nghiệm.
+
+## Mốc hiện tại trên stage
+
+Đo ngày **18/11/2026**, SDK/ONLYOFFICE thật, nguồn ứng dụng `3286eca`, dữ liệu tổng hợp, không client guard BDSG:
+
+| Lát kiểm | Quan sát | Giới hạn |
+|---|---|---|
+| CLI công khai, polling-10 | SDK tự fallback sang HTTP; 5 sự kiện cộng tác trước thu hồi, 1 GET C đang chờ; auth mới 403, GET kết thúc trong 5 giây, polling mới 403 và 0 `saveChanges` sau mốc đó. | Thời điểm kết thúc tại interface trình duyệt. |
+| CLI mặc định, WebSocket-11 | 20 sự kiện cộng tác trước thu hồi; auth mới 403, socket đóng trong 5 giây và 0 `saveChanges` sau mốc đó. | Word/WebSocket, không xóa dữ liệu đã tải trước đó. |
+| Client độc lập, polling-12 | Sau cộng tác thật, giữ GET của SDK chưa chuyển tiếp; client TLS riêng dùng đúng SID/cookie đã xác thực, chờ ít nhất 2 giây trước thu hồi. Client riêng nhận HTTP 403 sau 374 ms từ ACK thu hồi; request mới cũng 403. Driver chưa thả hoặc hủy route GET trong lúc đo. | Driver riêng, không phải chế độ CLI công khai. Không dùng thời điểm SDK hủy request làm tín hiệu; không mở hai GET cùng SID tới engine hoặc tuyên bố đo trực tiếp thời điểm socket upstream đóng. |
+| Tự kết nối lại, reconnect-14 | Đóng 1 WebSocket native bằng mã 4001; SDK tự tạo 1 kết nối mới, không reload trang hoặc thay cấu hình editor. C nhận 23 sự kiện sửa sau kết nối lại; canvas có phần dấu mới `AFTER RECONNECT reconnect-14`. | Có wrapper chỉ giữ tham chiếu constructor native để gây đóng transport; không sửa payload hoặc mã SDK. Không phải kiểm upgrade, mất mạng vật lý hay thu hồi trong lúc reconnect. |
+
+Lát polling-12 dùng `HTTPSConnection` chuẩn với kiểm chứng thư/SNI; chỉ ánh xạ TCP về loopback của stage, không tắt TLS. URL, SID, cookie và body chỉ ở bộ nhớ; báo cáo chỉ chứa mã HTTP, timing và các điều kiện quan sát. C vẫn giữ nguyên trang editor, nên HTTP 403 của client riêng không phụ thuộc SDK tự hủy yêu cầu.
+
+Reconnect-13 trước đó không tạo được điều kiện socket cũ đóng bằng thao tác route thử, dừng trước bước đo phục hồi. Không tính lần đó là sản phẩm lỗi hay nghiệm thu đạt. Reconnect-14 thay cách gây ngắt bằng socket native và kiểm cả socket cũ đóng, kết nối mới cùng dữ liệu mới tới người cộng tác.
+
+Sau thử, stage đã dừng, firewall khớp trước thử và website chính vẫn R13. Nguồn `3286eca` được đối chiếu 642 tệp trước/sau; không diễn giải các phép thử riêng này thành luồng UI → nhân → HTTP → launcher đã hoàn tất. Các mục cũ bên dưới giữ nguyên bối cảnh và phạm vi tại thời điểm đo.
 
 ## Điều tài liệu chính thức xác nhận
 
@@ -114,4 +131,4 @@ Các điểm dưới là **đề xuất thiết kế chưa kiểm chứng**, d�
 
 Chạy engine thật với ít nhất hai danh tính thử; người bị thu hồi không có client guard. Kiểm riêng polling-only, WebSocket trực tiếp, polling → WebSocket và reconnect; nếu engine bật transport khác thì kiểm hoặc khóa rõ transport đó. Kiểm người còn quyền vẫn đọc/sửa được. [Các transport và nâng cấp](https://socket.io/docs/v4/how-it-works/).
 
-Sau mốc thu hồi, thử gửi sửa từ người mất quyền và tạo dấu mới từ người còn quyền. Đo riêng dữ liệu được chuyển mỗi chiều, thời gian đóng, lần kiểm quyền mới và phiên bản thực sự lưu. Thử cả kết nối nhàn rỗi, đang có dữ liệu và thu hồi qua worker khác. Chỉ kết luận mức bảo đảm cùng giới hạn thời gian đã đo; chưa có phép đo của lớp bảo vệ máy chủ trong tài liệu này.
+Sau mốc thu hồi, thử gửi sửa từ người mất quyền và tạo dấu mới từ người còn quyền. Đo riêng dữ liệu được chuyển mỗi chiều, thời gian đóng, lần kiểm quyền mới và phiên bản thực sự lưu. Thử cả kết nối nhàn rỗi, đang có dữ liệu và thu hồi qua worker khác. Chỉ kết luận theo các lát và giới hạn đã đo; các kết quả stage ở trên chưa phủ hết tải, nhiều worker, upgrade, binary hoặc luồng giao diện đầy đủ.
