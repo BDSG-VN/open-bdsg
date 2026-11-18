@@ -89,23 +89,26 @@ class ThuIssuerOfficeLinux(unittest.TestCase):
                             and (flags&os.O_ACCMODE)==os.O_RDONLY and not flags&os.O_CREAT and not swapped):
                         swapped=True
                         self.path.rename(saved)
-                        if kind=='inode':
-                            self.path.write_bytes(original)
-                            self.path.chmod(0o600)
-                        else:self.path.symlink_to(saved.name)
+                        try:
+                            if kind=='inode':
+                                self.path.write_bytes(original)
+                                self.path.chmod(0o600)
+                            else:self.path.symlink_to(saved.name)
+                            self.assertEqual(self.path.is_symlink(),kind=='symlink')
+                            return real_open(path,flags,*args,**kwargs)
+                        finally:
+                            # Trả đường dẫn gốc trước các lần kiểm kế tiếp;
+                            # phép thử phải bắt được tráo tạm thời ở lần đọc này.
+                            self.path.unlink(missing_ok=True)
+                            saved.rename(self.path)
                     return real_open(path,flags,*args,**kwargs)
-                try:
-                    # Chỉ chèn lịch đổi tệp ở biên IO; lstat/open/fstat thật
-                    # phân biệt inode mới và symlink trỏ về chính inode cũ.
-                    with patch('phien_office_don_vi.os.open',side_effect=swap_before_open):
-                        with self.assertRaises(PermissionError):self.case.source(self.opened)
-                    self.assertTrue(swapped)
-                    self.assertEqual(self.path.read_bytes(),original)
-                    self.assertEqual(self.path.is_symlink(),kind=='symlink')
-                finally:
-                    if swapped:
-                        self.path.unlink()
-                        saved.rename(self.path)
+                # Chỉ chèn lịch đổi tệp ở biên IO; lstat/open/fstat thật
+                # phân biệt inode mới và symlink trỏ về chính inode cũ.
+                with patch('phien_office_don_vi.os.open',side_effect=swap_before_open):
+                    with self.assertRaises(PermissionError):self.case.source(self.opened)
+                self.assertTrue(swapped)
+                self.assertEqual(self.path.read_bytes(),original)
+                self.assertFalse(self.path.is_symlink())
                 self.assert_original_source()
 
 
