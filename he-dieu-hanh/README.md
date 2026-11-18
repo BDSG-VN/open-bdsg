@@ -1,5 +1,7 @@
 # Không gian kinh doanh và cổng MCP Thanh Hoá
 
+[V29 R14 — opt-in backend Office đơn vị, chưa mở giao diện/production](V29-R14-OFFICE-SANDBOX.md).
+
 [V29 R12 — hộp thư đơn vị, đang phát triển](V29-R12-HOP-THU-DON-VI.md).
 
 [V29 R11 — nền ủy quyền MCP đầu vào và pilot](V29-R11-MCP-DAU-VAO.md).

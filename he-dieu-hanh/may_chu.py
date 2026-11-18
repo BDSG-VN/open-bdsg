@@ -75,12 +75,18 @@ PREVIEW_TOOLS = frozenset({
 
 PREVIEW_APPS = ("account", "work", "tasks", "projects", "office", "ai-settings",
                 "browser", "modules", "staff", "integrations", "studio", "agents", "requests")
+OFFICE_PREVIEW_TOOLS = frozenset('van_phong.' + name for name in (
+    'tao_office', 'mo_soan_thao', 'luu_soan_thao', 'phien_soan_thao', 'bo_phien_soan_thao'))
 
 
 class UngDung:
     def __init__(self, data, origin, ghi=False, catalogue=None, connections=None, *, unit_preview=False,
-                 unit_ai_probe=None, unit_ai_factory=None):
+                 unit_ai_probe=None, unit_ai_factory=None, unit_office_preview=False):
+        if type(unit_office_preview) is not bool or (unit_office_preview and unit_preview is not True):
+            raise ValueError('Soạn thảo đơn vị thử nghiệm cần cờ boolean và gateway đơn vị riêng')
         self.unit_preview = unit_preview
+        self.unit_office_preview = unit_office_preview
+        self.preview_tools = PREVIEW_TOOLS | (OFFICE_PREVIEW_TOOLS if unit_office_preview else frozenset())
         self.origin = origin.rstrip("/")
         self.catalogue = (
             catalogue
@@ -129,7 +135,8 @@ class UngDung:
         self.google_login = DangNhapGoogle(self.kho, self.origin)
         self.vn_integrations = TichHopVietNam(self.kho)
         self.vn_sync = DongBoVietNam(self.vn_integrations)
-        self.office.editor_status = (lambda: {"state": "chua-ho-tro-don-vi"}) if unit_preview else self.office_editor.status
+        self.office.editor_status = ((lambda: {"state": "chua-ho-tro-don-vi"})
+            if unit_preview and not unit_office_preview else self.office_editor.status)
         self.tasks.documents = self.documents
         self.runtime = RuntimeTacVu(self.kho, self.tasks)
         self.browser = TrinhDuyet(self.kho, self.tasks)
@@ -186,9 +193,11 @@ class UngDung:
             # chưa chuyển phạm vi không được đọc cấu hình legacy từ scoped actor.
             scoped_tools = PREVIEW_TOOLS | {"nen_tang.danh_sach"}
             for role in ("agent", "operator", "quan-tri"):
+                role_tools = scoped_tools | (OFFICE_PREVIEW_TOOLS
+                    if unit_office_preview and role in ('operator', 'quan-tri') else frozenset())
                 tools = self.core.nhan.danh_sach_cong_cu(self.core.danh_tinh({
                     "id": "preview-policy", "name": "Preview", "role": role}))
-                tools = [tool for tool in tools if tool["ten"] in scoped_tools]
+                tools = [tool for tool in tools if tool["ten"] in role_tools]
                 self.core.nhan.chinh_sach.khai_vai(role,
                     doc=[tool["ten"] for tool in tools if not tool["ghi"]]
                         + (["mo_hinh.cau_hinh", "cau_hinh.dau_noi", "ket_noi.doc"] if role == "operator" else []),
@@ -766,7 +775,8 @@ def tao_may_chu(app, port=8766):
                           "workspace": {"mode": "units" if app.unit_preview else "legacy",
                               "system_admin": bool(actor and actor["id"] == "chu-quan"
                                                    and actor["role"] == "quan-tri"),
-                              "apps": list(PREVIEW_APPS) if app.unit_preview else []}}
+                              "apps": list(PREVIEW_APPS) if app.unit_preview else [],
+                              "capabilities": {"office_editor": app.unit_office_preview} if app.unit_preview else {}}}
                 )
             routes = {
                 "/api/agents": "agent.danh_sach",
@@ -916,7 +926,7 @@ def tao_may_chu(app, port=8766):
                     if app.unit_preview:
                         if set(body) - {"name", "arguments"}:
                             return self.send(400, {"error": "Lời gọi công cụ không hợp lệ"})
-                        if body["name"] not in PREVIEW_TOOLS:
+                        if body["name"] not in app.preview_tools:
                             return self.send(403, {"error": "Công cụ chưa hỗ trợ phạm vi đơn vị"})
                         if set(body.get("arguments", {})) & {"actor", "owner", "unit_scope"}:
                             return self.send(400, {"error": "Danh tính và phạm vi do máy chủ xác lập"})

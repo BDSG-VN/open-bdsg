@@ -19,7 +19,7 @@ from thu_mo_hinh_bdsg import Transport, answer
 from thu_dau_noi_don_vi import TransportTongHop
 
 
-class ThuDonViHTTP(unittest.TestCase):
+class CoSoDonViHTTP(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.provider_requests = []
@@ -28,7 +28,8 @@ class ThuDonViHTTP(unittest.TestCase):
             self.provider_requests.append((alias, transport))
             return MoHinhLiteLLM(alias, key, opener=transport)
         self.app = UngDung(self.tmp.name, "https://preview.test", True, unit_preview=True,
-            unit_ai_probe=lambda key, aliases: True, unit_ai_factory=factory)
+            unit_ai_probe=lambda key, aliases: True, unit_ai_factory=factory,
+            **getattr(self, 'app_options', {}))
         self.root = {"id": "chu-quan", "name": "Chu", "role": "quan-tri"}
         self.password = "mat-khau-tong-hop-test"
         self.app.kho.tao_chu(self.password)
@@ -95,6 +96,7 @@ class ThuDonViHTTP(unittest.TestCase):
         file=self.app.office_editor.create(actor,{'project_id':project,'name':'thu.docx'})
         return actor,file,self.app.office_editor.open(actor,{'id':file['id']})
 
+class ThuDonViHTTP(CoSoDonViHTTP):
     def test_office_signed_source_http_without_cookie_checks_lease_and_exact_query(self):
         from thu_office_tich_hop import SECRET
         actor,file,opened=self.office_session()
