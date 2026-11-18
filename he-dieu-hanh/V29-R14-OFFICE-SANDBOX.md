@@ -72,3 +72,13 @@ Các lượt PowerPoint19/20/21/22/25 chưa hoàn thành thao tác chèn do bộ
 Sau thử, **646 tệp nguồn Git** và **69 tệp web** vẫn khớp dấu kiểm. So với bản dựng Windows, **65 tệp UTF-8** cần chuẩn hóa CRLF → LF để đối chiếu bản Linux; tệp nhị phân giữ nguyên. Không gọi hai bản dựng đó là giống byte trước chuẩn hóa. Đã dừng gateway/proxy/transport và container thử, không còn listener stage; firewall IPv4/IPv6 khớp trước thử, năm dịch vụ chính và R13 hoạt động. Đã xóa **20 bản sao đầu vào riêng của 10 lượt QA** sau khi các tiến trình kết thúc; cấu hình gốc giữ riêng ngoài Git.
 
 Gate luồng cơ bản UI → nhân → HTTP → engine thật trên dữ liệu tổng hợp đã có bằng chứng cho ba định dạng. Vẫn cần kiểm thay đổi quyền/đơn vị trong editor thật, nhiều người và nhiều worker, tải, upgrade và thu hồi trong lúc reconnect, tài liệu phức tạp, Google theo đơn vị, snapshot/restore/cutover trước phát hành R14.
+
+## Phục hồi qua HTTP và nhân — 18/11/2026
+
+Đã bổ sung **2 bài kiểm tra** tại `thu_office_khoi_phuc_http.py`, dùng cookie đăng nhập thật, công cụ HTTP qua nhân, SQLite và cơ chế sao lưu/phục hồi công khai. Sau khi tạo và mở DOCX/XLSX/PPTX, phục hồi bản sao vào thư mục mới rồi chạy gateway khác: giữ nguyên byte tệp, phiên bản và quyền đơn vị; nguồn ký, tiến độ, lệnh lưu và callback của phiên soạn thảo cũ đều bị từ chối. Phiên mới dùng khóa mới và đọc đúng nội dung; đơn vị khác không đọc được tệp.
+
+Trường hợp đang chờ lưu được kiểm riêng: bản phục hồi không tự gửi lại lệnh engine, retry phiên cũ bị chặn và callback cũ không tải nội dung hoặc ghi phiên bản. Phiên mới gửi lệnh đúng một lần dù client retry; callback mới mới được tải kết quả và commit phiên bản **1 → 2** với byte nội dung đã biết trước.
+
+Hai bài đạt trên máy phát triển và trong dịch vụ Linux tách mạng, chạy bằng danh tính động không phải root, capability hiệu lực bằng **0**, `NoNewPrivs=1`, chỉ có loopback. Toàn **646 tệp nguồn** của backend `698875e13d51bd5cac6e898b19ca9530773564a8` được đối chiếu trước khi sao sang vùng thử chỉ đọc; bộ điều khiển kiểm mới có SHA-256 `2de6a057500c666d9e059c28d2e01a615be153dadf88559b1427ab379ba45ac0`. Dịch vụ thử kết thúc; firewall IPv4/IPv6 không đổi, các dịch vụ production được kiểm vẫn hoạt động.
+
+Đây là kiểm hợp đồng phục hồi HTTP/nhân với engine HTTP và scanner tổng hợp, **không phải** phục hồi ONLYOFFICE/ClamAV thật, giao diện trình duyệt, WebSocket, nhiều worker hay RTO toàn máy chủ. Gate snapshot/restore/cutover với toàn bộ dịch vụ vẫn chưa hoàn tất; không bật R14 production từ kết quả này.
