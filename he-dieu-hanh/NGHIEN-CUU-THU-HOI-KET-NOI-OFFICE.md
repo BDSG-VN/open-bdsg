@@ -82,6 +82,24 @@ Nếu trình duyệt chạy cùng máy với proxy TLS thử, `--loopback` ánh 
 
 Mã thoát `0` khi các socket đã mở được đóng trong 5 giây và không nhận `saveChanges` sau mốc đó; `2` khi phép đo hợp lệ phát hiện thiếu bảo đảm này. Lỗi tham số và các đối chiếu bundle được CLI chủ động từ chối có mã `3`; lỗi đọc/giải mã bundle hoặc thực thi khác có thể có mã `1`, không tính là phát hiện thu hồi. `result.json` và ảnh chỉ giữ dữ liệu tổng hợp, không có frame thô, cookie hoặc token. Bundle đầu vào chứa thông tin xác thực và phải tiếp tục được giữ riêng. Đây là bài kiểm WebSocket Word; polling-only, reconnect, binary và tài liệu khác vẫn cần nghiệm thu riêng.
 
+## Chế độ polling của công cụ nghiệm thu
+
+Ngày **18/11/2026**, CLI thêm `--transport polling`; mặc định vẫn là `websocket`. Chế độ này chặn riêng WebSocket của tài liệu trong trình duyệt thử, không kết nối route đó tới engine, để chính SDK tự chuyển sang polling. HTTP GET/POST tiếp tục dùng cookie, gateway, cổng kiểm quyền và engine thật. Không thay response bằng dữ liệu cộng tác tổng hợp. [Playwright route_web_socket](https://playwright.dev/python/docs/api/class-browsercontext#browser-context-route-web-socket), [Socket.IO transport](https://socket.io/docs/v4/how-it-works/).
+
+CLI yêu cầu GET/POST thành công của cả hai người, thay đổi thật đến người C và ít nhất một GET của C đang chờ trước khi thu hồi. Sau đó đo thời điểm request kết thúc, auth mới, yêu cầu polling mới và `saveChanges` sau cửa sổ 5 giây. Tập pending rỗng hoặc phản hồi 200 không quan sát được body không đủ bằng chứng: không được báo đạt. Observer chỉ đưa loại frame/mã trạng thái/timing vào báo cáo; body/URL có token chỉ ở bộ nhớ trong lúc quan sát. Hủy request được quan sát tại interface trình duyệt, chưa phải phép đo độc lập thời điểm ngắt socket upstream của engine.
+
+```sh
+python3 trien-khai/van-hanh/v29_thu_office_ws.py \
+  --origin https://office-qa.example --bundle-dir /private/qa-bundle \
+  --output-dir /private/qa-results/polling-01 --label polling-01 --transport polling
+```
+
+Kết quả polling có `transport=polling-only`, số lần chặn WebSocket, số HTTP 200, số GET pending, `revoked_poll_requests_ended_within_5s` và `new_poll_status_after_revoke`. Không dùng trường đóng WebSocket để mô tả polling. CLI vẫn thu hồi thành viên C thật trong đơn vị tổng hợp; không phát lại bundle cũ.
+
+Thử riêng **polling-09 ngày 18/11/2026**, nguồn ứng dụng `58fe762`, SDK/engine thật và driver tiền thân riêng: SDK tự fallback khi mỗi người có 2 lần thử WebSocket bị chặn; 38/24 HTTP 200 cho A/C, 5 sự kiện cộng tác trước thu hồi, 1 GET C đang chờ. Thu hồi 200, auth mới 403, GET đang chờ kết thúc trong 5 giây, yêu cầu polling mới 403 và 0 `saveChanges` sau mốc đó; không lỗi đọc body. Chưa gọi đây là kiểm chạy lại bằng CLI công khai vừa thay đổi. Vẫn còn kiểm reconnect/upgrade không chặn, polling qua client độc lập không tự hủy, binary, tải và nhiều worker.
+
+Nguồn SDK đóng gói có SHA256 `e47811041aa5c3470fc5c0920104ba94e93f47f9658d4547847b2fed0ed3e2a5`: đọc chuỗi cấu hình thấy thứ tự WebSocket/polling và đổi thứ tự khi connect lỗi. REA phân tích tĩnh toàn bundle dừng ở hạn provider, không phân tích xong AST; chỉ giữ được inventory/partial Evidence. Không dùng kết quả này chứng minh thực thi hoặc không có transport khác. Phép thử SDK thật bên trên mới là bằng chứng fallback đã xảy ra trong cấu hình đã chạy.
+
 ## Phương án phía máy chủ cần thử
 
 Các điểm dưới là **đề xuất thiết kế chưa kiểm chứng**, dựa trên vòng đời HTTP/transport ở các nguồn trên:
