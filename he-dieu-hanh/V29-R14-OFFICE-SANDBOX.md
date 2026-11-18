@@ -1,6 +1,6 @@
 # R14 — cổng soạn thảo đơn vị thử nghiệm
 
-Cập nhật **18/11/2026**. Mới có opt-in backend qua nhân/HTTP; chưa mở giao diện đơn vị hoặc bật production. Các bằng chứng transport trước đó ở [nghiên cứu kết nối Office](NGHIEN-CUU-THU-HOI-KET-NOI-OFFICE.md) không thay nghiệm thu luồng giao diện với cờ mới.
+Cập nhật **18/11/2026**. Có opt-in backend qua nhân/HTTP và giao diện đơn vị theo capability; chưa nghiệm thu trọn giao diện với engine thật hoặc bật production. Các bằng chứng transport trước đó ở [nghiên cứu kết nối Office](NGHIEN-CUU-THU-HOI-KET-NOI-OFFICE.md) không thay nghiệm thu luồng giao diện với cờ mới.
 
 ## Cách bật trong gateway thử riêng
 
@@ -42,4 +42,14 @@ Sau đó gọi bỏ phiên qua cùng cổng HTTP với hai xác nhận. Gọi l�
 
 Sau thử đã dừng gateway/proxy/transport và container thử; không còn listener stage. Tệp firewall IPv4/IPv6 khớp trước thử, năm dịch vụ chính hoạt động, production vẫn R13. Bốn bản sao đầu vào xác thực của QA15/16 được xóa sau khi tiến trình kết thúc; cấu hình gốc vẫn giữ riêng ngoài Git để đối chiếu.
 
-Cần tiếp tục nối capability vào giao diện/launcher với đúng scope và vòng đời parent, kiểm trên desktop/mobile, rồi chạy trọn UI → nhân → HTTP → engine thật từ toàn nguồn được đối chiếu. Còn các gate upgrade, thu hồi trong lúc reconnect, tải/nhiều worker, binary/tài liệu khác, snapshot/restore/cutover. Website chính chưa dùng opt-in này.
+### Giao diện kho tệp và cửa sổ soạn thảo
+
+Nguồn `698875e13d51bd5cac6e898b19ca9530773564a8` nối capability boolean vào `BDSGUnit`. Cửa sổ ứng dụng con chỉ có capability khi cả cha và phản hồi danh tính đều bật. Chỉ giao diện có quyền ghi mới bật tạo/mở tài liệu Office; Google theo đơn vị vẫn đóng. Legacy giữ cách mở thẻ riêng trước đó.
+
+Trong chế độ đơn vị, editor nằm trong iframe cùng origin của kho tệp. URL chỉ chứa mã tệp; guard tiếp tục chụp danh tính và phạm vi từ cha trước I/O. Đổi đơn vị hoặc gỡ cửa sổ cha dừng ngữ cảnh cũ. Escape không tự đóng tài liệu. Sau lưu/đóng hoặc bỏ phiên có biên nhận, editor trả về kho tệp trong cửa sổ cha. Nếu phục hồi lỗi trước khi dựng editor, người dùng vẫn về kho tệp được và bản ghi phục hồi giữ nguyên, không tự gửi thao tác ghi.
+
+Ngày **18/11/2026**, **69 ca Node liên quan** và **4 ca đóng gói** đạt. Rà soát Spec tìm lỗi kẹt phục hồi nói trên; hồi quy đã đỏ rồi đạt sau sửa. Rà soát lại Spec và Standards không còn finding. Trình duyệt kiểm **9 tình huống** ở rộng **1440/980/390 px**: tạo/lưu/đóng, bỏ phiên, đổi đơn vị, mở tệp có sẵn, mặc định đóng, chỉ đọc, điện thoại và hai dạng bản ghi phục hồi hỏng. Dùng DOM/launcher/guard/controller/CSS từ kho thật, nhưng vỏ cha, API và engine tổng hợp; không gọi đó là nghiệm thu full UI với engine thật.
+
+Toàn **646 tệp Git** của nguồn này đã đối chiếu trong thư mục staging riêng trên máy chủ; chưa bật runtime mới. Cần chạy tiếp trọn UI → nhân → HTTP → engine thật từ nguồn đó, gồm vỏ nhiều cửa sổ và kiểm quyền sau thay đổi. Còn các gate upgrade, thu hồi trong lúc reconnect, tải/nhiều worker, binary/tài liệu khác, snapshot/restore/cutover. Website chính chưa dùng opt-in này.
+
+[CI đúng nguồn giao diện 698875e](https://github.com/bdsgthanhhoa/open-bdsg/actions/runs/44250877698) đã kết thúc thành công ngày **18/11/2026**: **703 ca ứng dụng** gồm **688 đạt, 15 bỏ qua**, **52 ca vận hành**, **4 ca đóng gói** và các bước Node/MCP TLS đạt. Đây vẫn không thay phép đo giao diện với engine thật.
