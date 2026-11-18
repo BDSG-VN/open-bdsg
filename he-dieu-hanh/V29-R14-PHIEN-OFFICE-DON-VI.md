@@ -94,6 +94,25 @@ khác với ca force-save engine thật nêu trên. Công cụ pilot vẫn đón
 
 ## Chưa mở để sử dụng
 
+Ngày 18/11/2026 bổ sung nền ý định lưu bền: backend đơn vị khai báo
+`save_intents=true`, nhận request_key tùy chọn cho save/progress và ánh xạ
+(key,actor,request_key) sang request_id trong cùng giao dịch tạo lệnh.
+Gọi lại cùng ý định sau callback commit hoặc restart chỉ đọc lại kết quả,
+không gửi command mới. Hai người cùng key có mapping riêng; ý định khác
+khi có lệnh chờ bị báo xung đột, không mượn lệnh đang chờ làm kết quả.
+Progress hỏi intent chưa có trả not-started/request_id=null, không lấy
+receipt mới nhất của key. Không nhận đồng thời request_key và request_id.
+
+Kiểm cục bộ ngày 18/11/2026: 36 bài phiên đơn vị và 15 bài Office legacy
+đạt. Có lệnh commit, timeout/restart, hai lời gọi đồng thời, tách actor,
+scope/rejoin và input sai; transport engine tổng hợp, đọc phiên bản qua
+Office thật trên SQLite tạm. Schema MCP khai báo request_key tùy chọn;
+legacy không quảng bá hỗ trợ và từ chối nhận intent trước gọi engine.
+Đã tái lập việc tạo command mới sau commit trước sửa, rồi đạt sau sửa.
+Controller chưa dùng khả năng mới này; còn nối UI kiểm lại đúng ý định,
+giữ trạng thái khi mất phản hồi và đối soát bỏ phiên có xác nhận mất sửa
+đổi. Không coi nền backend là trải nghiệm khôi phục đã hoàn chỉnh.
+
 Ngày 18/11/2026 thêm guard cửa sổ Office kết hợp khóa danh tính hiện có
 với capture BDSGUnit của cửa sổ mở nó, chụp đồng bộ trước IO. Editor đơn
 vị chỉ nhận cha cùng origin/danh tính có phạm vi sẵn sàng; không chọn đơn

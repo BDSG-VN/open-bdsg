@@ -41,6 +41,125 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
     def actor(self,unit):
         return self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},unit)
 
+    def test_save_intent_returns_same_commit_without_second_engine_command(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertTrue(opened['save_intents'])
+        args={'key':opened['key'],'request_key':'intent-save-1'}
+        connection,payload=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            first=self.editor.save(self.a,args)
+            with patch.object(self.editor,'_fetch',return_value=changed_document('Intent committed')):
+                self.assertEqual(self.callback(opened,request=first['request_id']),{'error':0})
+            again=self.editor.save(self.a,args)
+            restarted=SoanThaoOffice(self.app.office,self.app.origin);restarted.secret=SECRET
+            self.assertEqual(restarted.save(self.a,args),again)
+            self.assertEqual(restarted.progress(self.a,args)['command_state'],'committed')
+        self.assertEqual(again,{'state':'da-luu','request_id':first['request_id']})
+        self.assertEqual(connection.request.call_count,1)
+        progress=self.editor.progress(self.a,args)
+        self.assertEqual(progress['request_id'],first['request_id'])
+        self.assertEqual(progress['command_state'],'committed')
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['file']['version'],2)
+
+    def test_unknown_intent_survives_restart_without_redispatch(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args={'key':opened['key'],'request_key':'intent-timeout'}
+        connection=Mock();connection.getresponse.side_effect=TimeoutError('Synthetic timeout')
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            first=self.editor.save(self.a,args)
+            restarted=SoanThaoOffice(self.app.office,self.app.origin);restarted.secret=SECRET
+            self.assertEqual(restarted.save(self.a,args),first)
+            progress=restarted.progress(self.a,args)
+        self.assertEqual(connection.request.call_count,1)
+        self.assertEqual(progress['command_state'],'unknown')
+        self.assertEqual(progress['request_id'],first['request_id'])
+        self.assertEqual(progress['request_key'],'intent-timeout')
+
+    def test_new_intent_does_not_borrow_pending_or_previous_commit(self):
+        from van_phong import LoiXungDotVanPhong
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection,payload=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            first=self.editor.save(self.a,{'key':opened['key'],'request_key':'first'})
+            with self.assertRaises(LoiXungDotVanPhong):
+                self.editor.save(self.a,{'key':opened['key'],'request_key':'second'})
+            self.assertEqual(connection.request.call_count,1)
+        with patch.object(self.editor,'_fetch',return_value=changed_document('First only')):
+            self.assertEqual(self.callback(opened,request=first['request_id']),{'error':0})
+        progress=self.editor.progress(self.a,{'key':opened['key'],'request_key':'second'})
+        self.assertEqual(progress['command_state'],'not-started')
+        self.assertIsNone(progress['request_id'])
+        self.assertEqual(progress['request_key'],'second')
+
+    def test_intent_never_bypasses_scope_or_membership_generation(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args={'key':opened['key'],'request_key':'scoped-intent'}
+        connection,payload=self.command_connection(4)
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            self.editor.save(self.a,args)
+            for method in (self.editor.save,self.editor.progress):
+                with self.assertRaises((PermissionError,ValueError)):method(self.b,args)
+            self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+            member={'unit_id':self.units[0],'identity':'nguoi-a'}
+            self.app.units.set_member(self.root,{**member,'role':'revoke'})
+            self.app.units.set_member(self.root,{**member,'role':'admin'})
+            for method in (self.editor.save,self.editor.progress):
+                with self.assertRaises((PermissionError,ValueError)):method(self.actor(self.units[0]),args)
+        self.assertEqual(connection.request.call_count,1)
+
+    def test_intent_input_and_ambiguous_progress_are_rejected_before_engine(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        with patch('soan_thao_office.http.client.HTTPConnection') as connection:
+            for intent in ('',None,True,[],{},'a'*129,'white space','ý-định'):
+                for method in (self.editor.save,self.editor.progress):
+                    with self.subTest(intent=intent,method=method.__name__),self.assertRaises(ValueError):
+                        method(self.a,{'key':opened['key'],'request_key':intent})
+            with self.assertRaises(ValueError):
+                self.editor.progress(self.a,{'key':opened['key'],'request_key':'valid','request_id':'a'*32})
+        connection.assert_not_called()
+
+    def test_shared_key_keeps_each_actors_intent_separate_from_latest_command(self):
+        self.app.kho.tao_agent('nguoi-c','Nguoi C','operator')
+        member={'unit_id':self.units[0],'identity':'nguoi-c'}
+        self.app.units.set_member(self.root,{**member,'role':'member'})
+        self.app.projects.share(self.a,{'id':self.project,**member,'role':'editor'})
+        other=self.app.units.bind({'id':'nguoi-c','role':'operator','name':'Nguoi C'},self.units[0])
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertEqual(self.editor.open(other,{'id':self.file['id']})['key'],opened['key'])
+        args={'key':opened['key'],'request_key':'same-external-intent'}
+        connection,payload=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            first=self.editor.save(self.a,args)
+            with patch.object(self.editor,'_fetch',return_value=changed_document('First actor')):
+                self.assertEqual(self.callback(opened,request=first['request_id']),{'error':0})
+            self.assertEqual(self.editor.progress(other,args)['command_state'],'not-started')
+            second=self.editor.save(other,args)
+            self.assertNotEqual(first['request_id'],second['request_id'])
+            self.assertEqual(self.editor.save(self.a,args)['request_id'],first['request_id'])
+        self.assertEqual(connection.request.call_count,2)
+        self.assertEqual(self.editor.progress(self.a,args)['command_state'],'committed')
+        self.assertEqual(self.editor.progress(other,args)['command_state'],'accepted')
+
+    def test_same_intent_concurrent_calls_issue_one_command(self):
+        import concurrent.futures
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args={'key':opened['key'],'request_key':'simultaneous'}
+        started,release=threading.Event(),threading.Event()
+        def command(payload):
+            started.set()
+            if not release.wait(5):raise TimeoutError('Test did not release command')
+            return 0
+        with patch.object(self.editor,'_command',side_effect=command) as transport:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                first=executor.submit(self.editor.save,self.a,args)
+                self.assertTrue(started.wait(3))
+                try:second=executor.submit(self.editor.save,self.a,args).result(timeout=3)
+                finally:release.set()
+                initial=first.result(timeout=3)
+            self.assertEqual(transport.call_count,1)
+        self.assertEqual(second['request_id'],initial['request_id'])
+        self.assertEqual(second['state'],'chua-ro-ket-qua')
+
     def test_configured_engine_port_routes_command_and_snapshot_over_real_loopback_http(self):
         requests=[];raw=changed_document('Tai lieu qua cong engine thu rieng')
         class Engine(BaseHTTPRequestHandler):

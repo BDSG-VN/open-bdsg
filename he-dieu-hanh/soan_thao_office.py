@@ -56,6 +56,10 @@ class SoanThaoOffice:
                 db.execute('''CREATE TABLE IF NOT EXISTS office_editor_commands(
                     id TEXT PRIMARY KEY REFERENCES office_editor_requests(id),
                     state TEXT NOT NULL,updated REAL NOT NULL)''')
+                db.execute('''CREATE TABLE IF NOT EXISTS office_editor_intents(
+                    key TEXT NOT NULL,actor TEXT NOT NULL,intent TEXT NOT NULL,
+                    request TEXT NOT NULL REFERENCES office_editor_requests(id),
+                    PRIMARY KEY(key,actor,intent))''')
 
     def status(self):
         return {
@@ -187,6 +191,7 @@ class SoanThaoOffice:
             "config": config,
             "api_url": self.prefix + "web-apps/apps/api/documents/api.js",
             "save_protocol": "request-ledger-v1" if self.scopes.units is not None else "legacy",
+            "save_intents": self.scopes.units is not None,
         }
 
     def source(self, query, authorization):
@@ -265,6 +270,8 @@ class SoanThaoOffice:
     def save(self, actor, args):
         if self.scopes.units is not None:
             return self._save_scoped(actor,args)
+        if 'request_key' in args:
+            raise ValueError('Ý định lưu cần phạm vi đơn vị')
         with self.kho.ket_noi() as db:
             db.execute("BEGIN IMMEDIATE")
             session = self._row(db, args.get("key"))
@@ -328,7 +335,7 @@ class SoanThaoOffice:
         return session
 
     def _command_record(self,db,key,request=None):
-        sql='''SELECT r.id,COALESCE(c.state,'unknown') AS state,c.updated
+        sql='''SELECT r.id,r.actor,COALESCE(c.state,'unknown') AS state,c.updated
             FROM office_editor_requests r LEFT JOIN office_editor_commands c
             ON r.id=c.id WHERE r.key=?'''
         values=[key]
@@ -340,6 +347,23 @@ class SoanThaoOffice:
         if request is not None and row is None:
             raise PermissionError('Lệnh lưu không thuộc phiên này')
         return row
+
+    def _intent_key(self,args):
+        if 'request_key' not in args:return None
+        intent=args['request_key']
+        if (self.scopes.units is None or not isinstance(intent,str)
+                or not re.fullmatch(r'[A-Za-z0-9._:-]{1,128}',intent)):
+            raise ValueError('Mã ý định lưu không hợp lệ')
+        return intent
+
+    def _intent_command(self,db,actor,key,intent):
+        mapping=db.execute('SELECT request FROM office_editor_intents WHERE key=? AND actor=? AND intent=?',
+                           (key,actor['id'],intent)).fetchone()
+        if mapping is None:return None
+        command=self._command_record(db,key,mapping['request'])
+        if command['actor']!=actor['id']:
+            raise PermissionError('Ý định lưu không thuộc người gọi')
+        return command
 
     def _settle_command(self,db,session,state):
         if self.scopes.units is None or not session['pending']:return
@@ -370,10 +394,21 @@ class SoanThaoOffice:
 
     def _save_scoped(self,actor,args):
         key=args.get('key')
+        intent=self._intent_key(args)
         with self.kho.ket_noi() as db:
             db.execute('BEGIN IMMEDIATE')
+            if intent is not None:
+                self._result_session(db,actor,key)
+                known=self._intent_command(db,actor,key,intent)
+                if known is not None:
+                    states={'committed':'da-luu','unchanged':'khong-co-thay-doi',
+                            'failed':'loi-luu','abandoned':'da-bo-phien',
+                            'superseded':'da-thay-the','accepted':'dang-luu'}
+                    return {'state':states.get(known['state'],'chua-ro-ket-qua'),'request_id':known['id']}
             session=self._save_session(db,actor,key)
             if session['pending']:
+                if intent is not None:
+                    raise LoiXungDotVanPhong('Phiên còn lệnh khác đang chờ; cần kiểm tra trước khi lưu tiếp')
                 command=db.execute('SELECT state FROM office_editor_commands WHERE id=?',(session['pending'],)).fetchone()
                 state='dang-luu' if command and command['state']=='accepted' else 'chua-ro-ket-qua'
                 return {'state':state,'request_id':session['pending']}
@@ -382,6 +417,8 @@ class SoanThaoOffice:
             db.execute('UPDATE office_editors SET pending=?,pending_at=? WHERE key=?',(request,time.time(),key))
             db.execute('INSERT INTO office_editor_requests VALUES(?,?,?,?)',(request,key,actor['id'],actor['role']))
             db.execute('INSERT INTO office_editor_commands VALUES(?,?,?)',(request,'prepared',time.time()))
+            if intent is not None:
+                db.execute('INSERT INTO office_editor_intents VALUES(?,?,?,?)',(key,actor['id'],intent,request))
         with self.kho.ket_noi() as db:
             db.execute('BEGIN IMMEDIATE')
             latest=self._save_session(db,actor,key)
@@ -445,6 +482,9 @@ class SoanThaoOffice:
         return {'state':'da-bo-phien','request_id':request}
 
     def progress(self, actor, args):
+        intent=self._intent_key(args)
+        if intent is not None and 'request_id' in args:
+            raise ValueError('Chỉ chọn mã ý định hoặc mã lệnh để kiểm tra lưu')
         with self.kho.ket_noi() as db:
             db.execute('BEGIN')
             row = db.execute(
@@ -476,10 +516,12 @@ class SoanThaoOffice:
             }
             if self.scopes.units is not None:
                 request=args['request_id'] if 'request_id' in args else row['pending']
-                command=self._command_record(db,row['key'],request)
-                result.update(request_id=command['id'] if command else row['pending'],
+                command=(self._intent_command(db,actor,row['key'],intent) if intent is not None
+                         else self._command_record(db,row['key'],request))
+                result.update(request_id=command['id'] if command else (None if intent is not None else row['pending']),
                     pending_request_id=row['pending'],
-                    command_state=command['state'] if command else ('unknown' if row['pending'] else None))
+                    command_state=command['state'] if command else ('not-started' if intent is not None else 'unknown' if row['pending'] else None))
+                if intent is not None:result['request_key']=intent
                 result['save_error']=result['save_error'] or bool(command and command['state']=='failed')
             return result
 

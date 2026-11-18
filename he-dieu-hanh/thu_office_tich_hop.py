@@ -94,7 +94,11 @@ class ThuOfficeTichHop(unittest.TestCase):
         tool = next(t for t in catalogue["result"]["tools"]
                     if t["name"] == "van_phong.phien_soan_thao")
         self.assertEqual(tool["inputSchema"]["properties"].get("request_id"), {"type": "string"})
+        self.assertEqual(tool["inputSchema"]["properties"].get("request_key"), {"type": "string"})
         self.assertEqual(tool["inputSchema"]["required"], ["key"])
+        save = next(t for t in catalogue["result"]["tools"]
+                    if t["name"] == "van_phong.luu_soan_thao")
+        self.assertEqual(save["inputSchema"]["properties"].get("request_key"), {"type": "string"})
         session = self.editor.open(A, {"id": self.file()["id"]})
         for args in ({"key": session["key"]},
                      {"key": session["key"], "request_id": "c" * 32}):
@@ -102,11 +106,20 @@ class ThuOfficeTichHop(unittest.TestCase):
             self.assertTrue(result["ok"], result)
             self.assertEqual(result["ket_qua"]["state"], "active")
 
+    def test_legacy_does_not_accept_intent_or_send_engine_command(self):
+        opened=self.editor.open(A,{"id":self.file()["id"]})
+        args={"key":opened["key"],"request_key":"unsupported-intent"}
+        with patch('soan_thao_office.http.client.HTTPConnection') as transport:
+            for name in ('luu_soan_thao','phien_soan_thao'):
+                self.assertFalse(self.app.core.goi(A,'van_phong.'+name,args)['ok'])
+        transport.assert_not_called()
+
     def test_three_formats_create_open_and_signed_source(self):
         for extension in ("docx", "xlsx", "pptx"):
             file = self.file(extension)
             session = self.editor.open(A, {"id": file["id"]})
             self.assertEqual(session['save_protocol'],'legacy')
+            self.assertFalse(session['save_intents'])
             config = session["config"]
             self.assertEqual(config["document"]["fileType"], extension)
             verify(config["token"], SECRET, "editor")
