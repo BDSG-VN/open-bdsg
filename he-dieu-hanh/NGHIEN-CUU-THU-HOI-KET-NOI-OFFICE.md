@@ -10,7 +10,19 @@ WebSocket kiểm quyền BDSG trước handshake, trước mỗi message hai chi
 
 Đã kiểm **7 ca qua HTTP/WebSocket loopback thật** ngày 18/11/2026: đóng socket nhàn rỗi hai đầu sau thu hồi, hủy polling đang chờ, polling GET thiếu Origin, giữ byte binary/POST hợp lệ, lỗi bộ kiểm quyền, từ chối origin/cookie/key sai và từ chối POST nén bằng HTTP 415. Body có `Content-Encoding` chưa được hỗ trợ; cổng tắt tự giải nén để không âm thầm đổi payload. Engine và bộ kiểm quyền trong các ca này là server tổng hợp; **chưa phải ONLYOFFICE thật**, chưa đo thông lượng/tải hoặc đóng nhiều worker, chưa xử lý đủ vòng đời tắt ứng dụng và chưa cấu hình nginx chuyển đường cộng tác qua cổng này. Không lấy kết quả này thay phép thử đỏ `public-04` phía trên hoặc tuyên bố lỗi sản phẩm đã vá.
 
-Trước khi bật: thêm cấu hình dịch vụ/giới hạn kết nối và vòng đời shutdown, kiểm upstream chậm/lỗi/chuyển hướng, chạy lại CLI bằng engine thật trên nguồn mới và chứng minh cả cộng tác/thu hồi/reconnect/polling. [aiohttp ClientSession và WebSocket](https://docs.aiohttp.org/en/stable/client_reference.html), [gói aiohttp chính thức](https://pypi.org/project/aiohttp/).
+Tiếp nối ngày **18/11/2026**: cổng giới hạn tối đa 64 yêu cầu/kênh đang xử lý (có thể giảm qua `max_connections`), từ chối thêm bằng 503; đây không phải giới hạn toàn bộ TCP keepalive ở nginx. Shutdown chặn kênh mới, hủy handler, đợi tối đa 2 giây rồi đóng transport còn giữ. Handshake upstream giới hạn 3 giây; HTTP polling tính cả đọc body tối đa 60 giây. Không tự theo redirect của WebSocket; hook aiohttp chặn trước request kế tiếp, tránh đi ra ngoài endpoint nội bộ.
+
+CLI chỉ bind `127.0.0.1`, yêu cầu ba cổng riêng biệt và origin HTTPS. Có `--check` không mở socket; access log bị tắt khi chạy CLI. Ví dụ cấu hình thử tổng hợp, không phải cấu hình production:
+
+```sh
+python3 he-dieu-hanh/cong_ket_noi_office.py \
+  --listen-port 18081 --engine-port 18082 --auth-port 18083 \
+  --public-origin https://office-qa.example --max-connections 16 --check
+```
+
+Tổng **15 ca loopback đạt** ngày 18/11/2026, thêm giới hạn kênh, shutdown hai đầu/từ chối mở lại, chặn message mới hai chiều khi mất quyền, redirect, auth chậm và handshake chậm. Đây vẫn là engine/auth tổng hợp; chưa đo tải hoặc bảo đảm thu hồi trên engine thật. Mốc thu hồi được quan sát qua các lần kiểm quyền HTTP, không phải giao dịch nguyên tử với mỗi byte đã vào bộ đệm mạng.
+
+Trước khi bật: cấu hình dịch vụ/nginx stage, giới hạn tài nguyên hệ điều hành, kiểm dưới tải và chạy lại CLI bằng engine thật trên nguồn mới; chứng minh cộng tác/thu hồi/reconnect/polling. [aiohttp ClientSession và WebSocket](https://docs.aiohttp.org/en/stable/client_reference.html), [gói aiohttp chính thức](https://pypi.org/project/aiohttp/).
 
 ## Kết luận để chọn hướng
 
