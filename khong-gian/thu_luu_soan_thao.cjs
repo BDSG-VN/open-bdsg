@@ -13,8 +13,8 @@ async function harness(progresses, saved = {state:'dang-luu',request_id:request}
   let engineEvents;
   function element(selector) {
     if (!elements.has(selector)) elements.set(selector, {
-      disabled: selector === '#save', hidden: true, textContent:'', handlers:{},
-      focus() {}, replaceChildren() {},
+      disabled: selector === '#save', hidden: true, open:false, checked:false, textContent:'', handlers:{},
+      focus() {}, replaceChildren() {}, showModal(){this.open=true;}, close(){this.open=false;},
       addEventListener(name, handler) { this.handlers[name] = handler; },
     });
     return elements.get(selector);
@@ -29,11 +29,16 @@ async function harness(progresses, saved = {state:'dang-luu',request_id:request}
       if (body.name === 'van_phong.mo_soan_thao') result = {
         key:options.key || 'bdsg-'+'a'.repeat(32),config:{},api_url:'/office-docs/web-apps/apps/api/documents/api.js',save_protocol:protocol,
         save_intents:Object.hasOwn(options,'intents') ? options.intents : false,
+    abandon_sessions:Object.hasOwn(options,'abandonCapability') ? options.abandonCapability : false,
         pending_save:options.pending || null,
       };
       else if (body.name === 'van_phong.luu_soan_thao') {
         options.onSave?.(engineEvents);
         result = typeof saved === 'function' ? await saved(body.arguments) : saved;
+      }
+      else if (body.name === 'van_phong.bo_phien_soan_thao') {
+        result=options.abandon ? await options.abandon(body.arguments) :
+          {state:'da-bo-phien',...body.arguments,revoked_sessions:1};
       }
       else {
         assert.equal(body.name,'van_phong.phien_soan_thao');
@@ -45,11 +50,11 @@ async function harness(progresses, saved = {state:'dang-luu',request_id:request}
   };
   const context = {
     window:{BDSGOfficeGuard:{create:()=>guard},addEventListener:(name,fn)=>windowEvents.set(name,fn),
-      sessionStorage:{getItem:key=>storage.get(key)||null,setItem(key,value){if(options.storageDenied)throw new Error('quota');storage.set(key,value);},removeItem:key=>storage.delete(key)}},
+      sessionStorage:{getItem:key=>storage.get(key)||null,setItem(key,value){if(options.storageDenied)throw new Error('quota');storage.set(key,value);},removeItem(key){if(options.removeDenied)throw new Error('Synthetic cleanup failure');storage.delete(key);}}},
     document:{querySelector:element,createElement:()=>({}),
       head:{append:script=>queueMicrotask(()=>script.onload())}},
     location:{search:'?id='+'a'.repeat(24),assign:value=>navigations.push(value),reload() {}},
-    matchMedia:()=>({matches:false}),URLSearchParams,AbortSignal,crypto:{randomUUID:()=>options.intent || 'e'.repeat(32)},
+    matchMedia:()=>({matches:options.mobile || false}),URLSearchParams,AbortSignal,crypto:{randomUUID:()=>options.intent || 'e'.repeat(32)},
     setTimeout:(fn,delay)=>{if(delay<5000)queueMicrotask(fn);return 1;},clearTimeout() {},
     DocsAPI:{DocEditor:class {
       constructor(_id, config) {engineEvents=config.events;queueMicrotask(()=>config.events.onDocumentReady());}
@@ -58,19 +63,162 @@ async function harness(progresses, saved = {state:'dang-luu',request_id:request}
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'soan-thao.js'),'utf8'),context);
   for (let i=0;i<30 && element('#save').disabled;i++) await Promise.resolve();
-  if (!expectReady) return {calls,opened:!element('#save').disabled,error:element('#error')};
-  assert.equal(element('#save').disabled,false,'Editor phải sẵn sàng trước thao tác');
-  for (let click=0;click<(options.clicks || 1);click++) {
+  if (expectReady) assert.equal(element('#save').disabled,false,'Editor phải sẵn sàng trước thao tác');
+  for (let click=0;expectReady && click<(options.clicks ?? 1);click++) {
     await element(options.action === 'close' ? '#close' : '#save').handlers.click();
     snapshots.push({inert:element('main').inert,closeDisabled:element('#close').disabled,
       label:element('#save').textContent,status:element('#status').textContent});
   }
-  return {calls,status:element('#status').textContent,error:element('#error'),polls:index,
-    snapshots,storage,element,engineEvents,windowEvents,navigations,destroyed,closeRequests};
+  return {calls,get status(){return element('#status').textContent;},error:element('#error'),polls:index,
+    opened:!element('#save').disabled,snapshots,storage,element,engineEvents,windowEvents,navigations,
+    get destroyed(){return destroyed;},get closeRequests(){return closeRequests;}};
 }
 const progress = overrides => ({state:'active',pending:false,last_saved:123,
   request_id:request,command_state:'committed',...overrides});
 const success = result => result.status === 'Đã lưu phiên bản vào kho BDSG.';
+async function confirmAbandon(result) {
+  await result.element('#abandon').handlers.click();
+  for (const id of ['#abandon-loss','#abandon-shared']) {
+    result.element(id).checked=true;result.element(id).handlers.change();
+  }
+  await result.element('#abandon-confirm').handlers.click();
+}
+
+test('Xác nhận bỏ phiên giữ mã trước ghi và chỉ rời trang sau đúng biên nhận',async()=>{
+  const storage=new Map();
+  const result=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,storage,
+    abandon(args){
+      const stored=[...storage.entries()].find(([key])=>key.startsWith('bdsg-office-abandon:'));
+      assert.ok(stored,'Phải giữ mã trước gửi');
+      const record=JSON.parse(stored[1]);
+      assert.deepEqual(Object.keys(record).sort(),['file_id','key','request_key','version']);
+      assert.equal(record.request_key,args.request_key);
+      return {state:'da-bo-phien',file_id:args.file_id,key:args.key,request_key:args.request_key,revoked_sessions:1};
+    }});
+  await confirmAbandon(result);
+  const writes=result.calls.filter(c=>c.name==='van_phong.bo_phien_soan_thao');
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].arguments.acknowledge_unsaved_changes,true);
+  assert.equal(writes[0].arguments.acknowledge_shared_session,true);
+  assert.deepEqual(result.navigations,['/#office']);assert.equal(result.destroyed,1);
+  assert.equal(result.storage.size,0);assert.doesNotMatch(result.status,/Đã lưu/);
+});
+
+test('Bỏ phiên cần cả hai xác nhận; hủy hộp thoại không gửi ghi',async()=>{
+  const result=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0});
+  assert.equal(result.element('#abandon').hidden,false);
+  await result.element('#abandon').handlers.click();
+  assert.equal(result.element('#abandon-dialog').open,true);
+  assert.equal(result.element('#abandon-confirm').disabled,true);
+  result.element('#abandon-loss').checked=true;
+  result.element('#abandon-loss').handlers.change();
+  assert.equal(result.element('#abandon-confirm').disabled,true);
+  result.element('#abandon-cancel').handlers.click();
+  assert.equal(result.element('#abandon-dialog').open,false);
+  assert.equal(result.calls.filter(c=>c.name==='van_phong.bo_phien_soan_thao').length,0);
+  assert.equal(result.storage.size,0);
+});
+
+test('Bỏ phiên mất phản hồi rồi tải lại ưu tiên mã cũ, không mở engine hoặc ghi lưu',async()=>{
+  const storage=new Map();
+  const first=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,storage,
+    abandon(){throw new TypeError('Failed to fetch');}});
+  await confirmAbandon(first);
+  const sent=first.calls.find(c=>c.name==='van_phong.bo_phien_soan_thao').arguments;
+  assert.equal(first.element('main').inert,true);assert.equal(first.element('#close').disabled,true);
+  assert.doesNotMatch(first.error.textContent,/Failed to fetch/);
+  storage.set('bdsg-office-save:context-a:'+'a'.repeat(24),'{broken');
+  const second=await harness([],undefined,undefined,false,{intents:true,abandonCapability:true,storage,
+    key:'bdsg-'+'b'.repeat(32),intent:'f'.repeat(32)});
+  assert.equal(second.engineEvents,undefined);
+  assert.equal(second.element('#abandon').textContent,'Kiểm tra yêu cầu bỏ phiên');
+  assert.equal(second.element('#abandon').disabled,false);
+  assert.equal(second.calls.length,1);
+  await second.element('#abandon').handlers.click();
+  assert.deepEqual(second.calls[1].arguments,sent);
+  assert.deepEqual(second.navigations,['/#office']);assert.equal(storage.size,0);
+});
+
+test('Biên nhận bỏ phiên sai hoặc lỗi dọn bộ nhớ không mở khóa hay rời trang',async()=>{
+  for (const mismatch of [{key:'bdsg-'+'f'.repeat(32)},{file_id:'f'.repeat(24)},
+      {request_key:'other-operation'},{state:'da-luu'},{revoked_sessions:-1},{revoked_sessions:1.5},{revoked_sessions:true}]) {
+    const result=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,
+      abandon:args=>({state:'da-bo-phien',...args,revoked_sessions:1,...mismatch})});
+    await confirmAbandon(result);
+    assert.deepEqual(result.navigations,[]);assert.equal(result.destroyed,0);
+    assert.equal(result.element('main').inert,true);assert.equal(result.element('#save').disabled,true);
+    assert.equal(result.storage.size,1);
+  }
+  const cleanup=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,removeDenied:true});
+  await confirmAbandon(cleanup);
+  assert.equal(cleanup.storage.size,1);assert.equal(cleanup.element('main').inert,true);
+  assert.deepEqual(cleanup.navigations,[]);assert.match(cleanup.error.textContent,/chưa dọn/);
+});
+
+test('Không giữ được mã bỏ phiên thì không gửi ghi; record bỏ phiên hỏng giữ nguyên',async()=>{
+  const denied=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,storageDenied:true});
+  await confirmAbandon(denied);
+  assert.equal(denied.calls.filter(c=>c.name==='van_phong.bo_phien_soan_thao').length,0);
+  assert.equal(denied.element('main').inert,true);
+  const namespace='bdsg-office-abandon:context-a:'+'a'.repeat(24);
+  const storage=new Map([[namespace,'{broken']]);
+  const corrupt=await harness([],undefined,undefined,false,{intents:true,abandonCapability:true,storage});
+  assert.equal(corrupt.engineEvents,undefined);assert.equal(corrupt.element('#abandon').disabled,true);
+  assert.equal(storage.get(namespace),'{broken');assert.equal(corrupt.calls.length,1);
+});
+
+test('Capability bỏ phiên thiếu/sai/hạ cấp không bỏ qua operation còn chờ',async()=>{
+  const record=JSON.stringify({version:1,file_id:'a'.repeat(24),key:'bdsg-'+'a'.repeat(32),request_key:'old-abandon'});
+  for (const capability of [false,null,1,'true']) {
+    const storage=new Map([['bdsg-office-abandon:context-a:'+'a'.repeat(24),record]]);
+    const result=await harness([],undefined,undefined,false,{intents:true,abandonCapability:capability,storage});
+    assert.equal(result.engineEvents,undefined);assert.equal(result.calls.length,1);assert.equal(storage.size,1);
+    assert.equal(result.opened,false);
+  }
+});
+
+test('Điện thoại phục hồi record lưu hỏng bằng bỏ phiên mà không tải engine',async()=>{
+  const storage=new Map([['bdsg-office-save:context-a:'+'a'.repeat(24),'{broken']]);
+  const result=await harness([],undefined,undefined,false,{intents:true,abandonCapability:true,storage,mobile:true});
+  assert.equal(result.engineEvents,undefined);assert.equal(result.element('#abandon').hidden,false);
+  assert.equal(result.element('#abandon').disabled,false);
+  await confirmAbandon(result);
+  assert.deepEqual(result.navigations,['/#office']);assert.equal(storage.size,0);
+});
+
+test('Callback SDK muộn không mở nút tải lại hoặc che hướng dẫn bỏ phiên đang chờ',async()=>{
+  const result=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,
+    abandon(){throw new TypeError('lost');}});
+  await confirmAbandon(result);
+  result.engineEvents.onError();
+  assert.equal(result.element('#retry').hidden,true);
+  assert.match(result.error.textContent,/Kiểm tra yêu cầu bỏ phiên/);
+  result.engineEvents.onDocumentStateChange({data:true});
+  assert.match(result.status,/bỏ phiên/);
+  let warned=false;result.windowEvents.get('beforeunload')({preventDefault(){warned=true;}});
+  assert.equal(warned,true);
+  result.element('#back').handlers.click({preventDefault(){}});
+  assert.equal(result.calls.filter(c=>c.name==='van_phong.bo_phien_soan_thao').length,1);
+});
+
+test('Key open sai định dạng không cho tạo record hoặc gửi bỏ phiên',async()=>{
+  const result=await harness([],undefined,undefined,false,{intents:true,abandonCapability:true,key:'invalid-key'});
+  assert.equal(result.element('#abandon').disabled,true);
+  await result.element('#abandon').handlers.click();
+  assert.equal(result.element('#abandon-dialog').open,false);
+  assert.equal(result.storage.size,0);assert.equal(result.calls.length,1);
+});
+
+test('Retry bỏ phiên lỗi storage không khẳng định yêu cầu trước chưa được gửi',async()=>{
+  const options={intents:true,abandonCapability:true,clicks:0,abandon(){throw new TypeError('lost');}};
+  const result=await harness([],undefined,undefined,true,options);
+  await confirmAbandon(result);
+  options.storageDenied=true;
+  await result.element('#abandon').handlers.click();
+  assert.equal(result.calls.filter(c=>c.name==='van_phong.bo_phien_soan_thao').length,1);
+  assert.match(result.error.textContent,/Chưa gửi thêm yêu cầu trong lần thử này/);
+  assert.equal(result.element('main').inert,true);
+});
 
 test('Lưu gửi đúng mã lệnh khi đọc tiến trình và nhận đúng commit',async()=>{
   const result=await harness([progress({})]);

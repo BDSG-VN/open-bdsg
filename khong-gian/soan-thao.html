@@ -20,8 +20,19 @@
       <button id="save" disabled>Lưu phiên bản</button>
       <button id="close" disabled>Lưu và đóng</button>
       <button id="retry" hidden>Tải lại trình soạn thảo</button>
+      <button id="abandon" class="secondary" hidden>Bỏ phiên soạn thảo</button>
     </header>
     <p id="error" role="alert" hidden></p>
+    <dialog id="abandon-dialog" aria-labelledby="abandon-title" aria-describedby="abandon-description">
+      <h2 id="abandon-title">Bỏ phiên soạn thảo?</h2>
+      <p id="abandon-description">Các phiên bạn đã tham gia của tài liệu này trong đơn vị hiện tại sẽ mất quyền ghi. Chỉ những phiên bản đã có trong kho BDSG được giữ lại.</p>
+      <label><input id="abandon-loss" type="checkbox"> Tôi chấp nhận mất các thay đổi chưa được xác nhận lưu vào kho BDSG.</label>
+      <label><input id="abandon-shared" type="checkbox"> Tôi hiểu người đang cùng sửa trong các phiên dùng chung cũng có thể mất thay đổi chưa lưu. Nếu họ có lần lưu đang chờ, hệ thống sẽ từ chối bỏ phiên.</label>
+      <div class="dialog-actions">
+        <button id="abandon-cancel" class="secondary" autofocus>Tiếp tục giữ phiên</button>
+        <button id="abandon-confirm" disabled>Bỏ phiên và về kho tệp</button>
+      </div>
+    </dialog>
     <main aria-label="Bộ soạn thảo ONLYOFFICE"><div id="editor"></div></main>
   </body>
 </html>

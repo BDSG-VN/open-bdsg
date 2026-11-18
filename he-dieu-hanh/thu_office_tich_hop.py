@@ -106,6 +106,24 @@ class ThuOfficeTichHop(unittest.TestCase):
             self.assertTrue(result["ok"], result)
             self.assertEqual(result["ket_qua"]["state"], "active")
 
+    def test_abandon_tool_declares_explicit_acknowledgements_but_legacy_denies_write(self):
+        catalogue=self.app.core.mcp(A,{'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}})
+        tool=next(t for t in catalogue['result']['tools'] if t['name']=='van_phong.bo_phien_soan_thao')
+        schema=tool['inputSchema']
+        required={'file_id','key','request_key','acknowledge_unsaved_changes','acknowledge_shared_session'}
+        self.assertEqual(set(schema['required']),required)
+        self.assertFalse(schema['additionalProperties'])
+        for field in ('acknowledge_unsaved_changes','acknowledge_shared_session'):
+            self.assertEqual(schema['properties'][field],{'type':'boolean'})
+        file=self.file();opened=self.editor.open(A,{'id':file['id']})
+        self.assertFalse(opened['abandon_sessions'])
+        args={'file_id':file['id'],'key':opened['key'],'request_key':'abandon-legacy',
+              'acknowledge_unsaved_changes':True,'acknowledge_shared_session':True}
+        with patch('soan_thao_office.http.client.HTTPConnection') as transport:
+            self.assertFalse(self.app.core.goi(A,'van_phong.bo_phien_soan_thao',args)['ok'])
+        transport.assert_not_called()
+        self.assertEqual(self.app.office.read(A,{'id':file['id']})['file']['version'],1)
+
     def test_legacy_does_not_accept_intent_or_send_engine_command(self):
         opened=self.editor.open(A,{"id":self.file()["id"]})
         args={"key":opened["key"],"request_key":"unsupported-intent"}

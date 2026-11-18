@@ -47,6 +47,7 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
 
     def test_abandon_before_first_save_fences_late_write_and_retry_keeps_new_session(self):
         opened=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertTrue(opened['abandon_sessions'])
         args=self.abandon_args(opened)
         result=self.editor.abandon_sessions(self.a,args)
         self.assertEqual(result['state'],'da-bo-phien')

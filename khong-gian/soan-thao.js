@@ -5,8 +5,18 @@
   const save = document.querySelector("#save"),
     close = document.querySelector("#close");
   const retry = document.querySelector("#retry");
+  const abandon = document.querySelector("#abandon"),
+    abandonDialog = document.querySelector("#abandon-dialog"),
+    abandonConfirm = document.querySelector("#abandon-confirm"),
+    abandonLoss = document.querySelector("#abandon-loss"),
+    abandonShared = document.querySelector("#abandon-shared");
   let editor,
     key,
+    fileId,
+    abandonMode = false,
+    abandonStorageKey,
+    pendingAbandon = null,
+    abandonCorrupt = false,
     requireReceipt = false,
     intentMode = false,
     intentStorageKey,
@@ -26,6 +36,8 @@
     document.querySelector("main").replaceChildren();
     save.disabled = close.disabled = true;
     retry.hidden = true;
+    abandon.disabled = true;
+    if (abandonDialog.open) abandonDialog.close();
     status.textContent = "Phiên soạn thảo đã dừng.";
     showError(message);
   } });
@@ -36,6 +48,11 @@
   const validRequest = value => typeof value === "string" && value.length > 0 && value.length <= 128;
   const validIntent = value => typeof value === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(value);
   function holdNavigation() {
+    if (pendingAbandon) {
+      showError("Có yêu cầu bỏ phiên chưa xác nhận. Bấm Kiểm tra yêu cầu bỏ phiên trước khi rời tài liệu.");
+      status.textContent = "Tài liệu vẫn khóa để kiểm tra yêu cầu bỏ phiên.";
+      return;
+    }
     showError(pendingIntent?.canRetry ?
       "Lần lưu chưa có kết quả xác nhận. Chỉ bấm Thử lưu lại khi muốn tiếp tục lưu; tài liệu vẫn mở." :
       "Có lần lưu đang chờ xử lý. Hoàn tất kiểm tra lần lưu trước khi rời tài liệu.");
@@ -49,11 +66,14 @@
   }
   function controls() {
     const active = !!editor && guard.active;
-    document.querySelector("main").inert = !active || working || !!pendingIntent || recoveryBlocked;
-    save.disabled = !active || working || recoveryBlocked;
-    close.disabled = !active || working || !!pendingIntent || recoveryBlocked;
+    document.querySelector("main").inert = !active || working || !!pendingIntent || recoveryBlocked || !!pendingAbandon || abandonDialog.open;
+    save.disabled = !active || working || recoveryBlocked || !!pendingAbandon || abandonDialog.open;
+    close.disabled = !active || working || !!pendingIntent || recoveryBlocked || !!pendingAbandon || abandonDialog.open;
+    abandon.hidden = !abandonMode;
+    abandon.disabled = !abandonMode || !key || working || closed || !guard.active || abandonCorrupt;
+    abandon.textContent = pendingAbandon ? "Kiểm tra yêu cầu bỏ phiên" : "Bỏ phiên soạn thảo";
     save.textContent = pendingIntent ? (pendingIntent.canRetry ? "Thử lưu lại" : "Kiểm tra lần lưu") : "Lưu phiên bản";
-    if (pendingIntent || recoveryBlocked) retry.hidden = true;
+    if (pendingIntent || recoveryBlocked || pendingAbandon) retry.hidden = true;
   }
   function rememberIntent() {
     const record = JSON.stringify({version:1,key,request_key:pendingIntent.request_key,request_id:pendingIntent.request_id});
@@ -68,6 +88,75 @@
       if (window.sessionStorage.getItem(intentStorageKey) !== null) throw new Error();
     } catch (_) { throw new Error("Chưa cập nhật được trạng thái lưu trong trình duyệt. Giữ tài liệu mở và kiểm tra lại lần lưu."); }
     pendingIntent = null;
+  }
+  function rememberAbandon() {
+    const record = JSON.stringify(pendingAbandon);
+    try {
+      window.sessionStorage.setItem(abandonStorageKey, record);
+      if (window.sessionStorage.getItem(abandonStorageKey) !== record) throw new Error();
+    } catch (_) {
+      throw new Error("Chưa giữ được yêu cầu bỏ phiên trong trình duyệt. Chưa gửi thêm yêu cầu trong lần thử này; giữ trang mở và kiểm tra bộ nhớ rồi kiểm lại cùng yêu cầu.");
+    }
+  }
+  function restoreAbandon() {
+    if (!abandonStorageKey) return;
+    try {
+      const raw = window.sessionStorage.getItem(abandonStorageKey);
+      if (raw === null) return;
+      if (!abandonMode) throw new Error();
+      const record = JSON.parse(raw);
+      if (!record || Object.keys(record).sort().join(",") !== "file_id,key,request_key,version" ||
+          record.version !== 1 || record.file_id !== fileId ||
+          typeof record.key !== "string" || !/^bdsg-[a-f0-9]{32}$/.test(record.key) ||
+          !validIntent(record.request_key)) throw new Error();
+      pendingAbandon = record;
+    } catch (_) {
+      abandonCorrupt = recoveryBlocked = true;
+      throw new Error("Chưa đọc được yêu cầu bỏ phiên trước đó hoặc dịch vụ chưa hỗ trợ. Giữ nguyên trạng thái; chưa thể mở sửa hay tạo yêu cầu bỏ phiên khác.");
+    }
+  }
+  function removeRecord(namespace) {
+    window.sessionStorage.removeItem(namespace);
+    if (window.sessionStorage.getItem(namespace) !== null) throw new Error();
+  }
+  async function performAbandon() {
+    if (!pendingAbandon || working || closed || !guard.active || abandonCorrupt) return;
+    working = true;
+    controls();
+    status.textContent = "Đang kiểm tra và bỏ phiên soạn thảo…";
+    error.hidden = true;
+    try {
+      rememberAbandon();
+      const result = await call("bo_phien_soan_thao", {
+        file_id: pendingAbandon.file_id, key: pendingAbandon.key, request_key: pendingAbandon.request_key,
+        acknowledge_unsaved_changes: true, acknowledge_shared_session: true,
+      });
+      if (result.state !== "da-bo-phien" || result.file_id !== pendingAbandon.file_id ||
+          result.key !== pendingAbandon.key || result.request_key !== pendingAbandon.request_key ||
+          !Number.isSafeInteger(result.revoked_sessions) || result.revoked_sessions < 0)
+        throw new Error("Chưa xác nhận được đúng yêu cầu bỏ phiên. Giữ trang mở và bấm Kiểm tra yêu cầu bỏ phiên.");
+      guard.assertActive();
+      try {
+        removeRecord(intentStorageKey);
+        removeRecord(abandonStorageKey);
+      } catch (_) {
+        throw new Error("Đã nhận biên nhận bỏ phiên nhưng chưa dọn được trạng thái trong trình duyệt. Giữ trang mở và bấm Kiểm tra yêu cầu bỏ phiên; không mở sửa tiếp.");
+      }
+      pendingAbandon = pendingIntent = null;
+      changed = recoveryBlocked = false;
+      closed = true;
+      try { editor?.destroyEditor(); } catch (_) {}
+      editor = null;
+      status.textContent = "Đã bỏ phiên. Chỉ các phiên bản đã có trong kho BDSG được giữ lại.";
+      location.assign("/#office");
+    } catch (failure) {
+      if (closed) return;
+      showError(failure.message);
+      status.textContent = "Chưa hoàn tất bỏ phiên. Bấm Kiểm tra yêu cầu bỏ phiên để tiếp tục cùng yêu cầu.";
+    } finally {
+      working = false;
+      controls();
+    }
   }
   function restoreIntent(id,result) {
     if (typeof guard.contextKey !== "string") throw new Error("Chưa xác minh được phạm vi giữ trạng thái lưu.");
@@ -96,7 +185,7 @@
     }
   }
   retry.addEventListener("click", () => {
-    if (!changed && !working && !pendingIntent && !recoveryBlocked) location.reload();
+    if (!closed && guard.active && !changed && !working && !pendingIntent && !recoveryBlocked && !pendingAbandon && !abandonDialog.open) location.reload();
   });
   async function call(name, args) {
     let response, value;
@@ -111,6 +200,7 @@
       value = await response.json();
     } catch (_) {
       guard.assertActive();
+      if (name === "bo_phien_soan_thao") throw new Error("Chưa nhận được phản hồi bỏ phiên. Giữ trang mở và bấm Kiểm tra yêu cầu bỏ phiên; hệ thống sẽ dùng cùng yêu cầu.");
       throw new Error(intentMode ? "Chưa nhận được phản hồi. Giữ trang mở và bấm Kiểm tra lần lưu." :
         "Kết nối chưa xác nhận được thao tác. Giữ tài liệu mở, kiểm tra kết nối rồi thử lại.");
     }
@@ -221,7 +311,7 @@
     );
   }
   async function perform(final) {
-    if (working || !editor || closed || !guard.active) return;
+    if (working || !editor || closed || !guard.active || pendingAbandon || abandonDialog.open) return;
     if (final && (pendingIntent || recoveryBlocked)) { holdNavigation(); return; }
     working = true;
     document.querySelector("main").inert = true;
@@ -273,16 +363,42 @@
     }
   }
   save.addEventListener("click", () => perform(false));
+  abandon.addEventListener("click", () => {
+    if (abandon.disabled || working || closed || !guard.active) return;
+    if (pendingAbandon) return performAbandon();
+    abandonLoss.checked = abandonShared.checked = false;
+    abandonConfirm.disabled = true;
+    abandonDialog.showModal();
+    controls();
+  });
+  function confirmAbandonControls() {
+    abandonConfirm.disabled = !abandonLoss.checked || !abandonShared.checked || working;
+  }
+  abandonLoss.addEventListener("change", confirmAbandonControls);
+  abandonShared.addEventListener("change", confirmAbandonControls);
+  document.querySelector("#abandon-cancel").addEventListener("click", () => {
+    abandonDialog.close();
+    controls();
+    abandon.focus();
+  });
+  abandonDialog.addEventListener("close", controls);
+  abandonConfirm.addEventListener("click", () => {
+    if (!abandonDialog.open || !abandonLoss.checked || !abandonShared.checked ||
+        working || closed || !guard.active || !abandonMode || abandonCorrupt) return;
+    pendingAbandon = {version:1,file_id:fileId,key,request_key:crypto.randomUUID()};
+    abandonDialog.close();
+    return performAbandon();
+  });
   close.addEventListener("click", () => perform(true));
   document.querySelector("#back").addEventListener("click", (event) => {
-    if (editor && !closed) {
+    if (!closed && (editor || pendingAbandon || recoveryBlocked)) {
       event.preventDefault();
-      if (pendingIntent || recoveryBlocked || working) { holdNavigation(); return; }
+      if (pendingIntent || recoveryBlocked || working || pendingAbandon || abandonDialog.open) { holdNavigation(); return; }
       perform(true);
     }
   });
   window.addEventListener("beforeunload", (event) => {
-    if (!closed && (changed || working || pendingIntent || recoveryBlocked)) {
+    if (!closed && (changed || working || pendingIntent || recoveryBlocked || pendingAbandon)) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -290,10 +406,6 @@
   async function open() {
     try {
       await guard.ready;
-      if (matchMedia("(max-width: 750px)").matches)
-        throw new Error(
-          "Bản Community dùng bộ soạn thảo trên máy tính. Trên điện thoại, mở kho tệp để tải hoặc nhập tài liệu.",
-        );
       const id = new URLSearchParams(location.search).get("id");
       if (!/^[a-f0-9]{24}$/.test(id || ""))
         throw new Error("Thiếu tài liệu. Quay về kho tệp và chọn lại.");
@@ -306,9 +418,25 @@
       if ((Object.hasOwn(result,"save_intents") && typeof result.save_intents !== "boolean") ||
         (result.save_intents === true && !requireReceipt)) throw new Error("Phiên này chưa hỗ trợ đối soát lưu. Tải lại trang rồi mở lại tài liệu.");
       intentMode = result.save_intents === true;
-      key = result.key;
-      if (intentMode && !/^bdsg-[a-f0-9]{32}$/.test(key || ""))
+      if ((Object.hasOwn(result,"abandon_sessions") && typeof result.abandon_sessions !== "boolean") ||
+          (result.abandon_sessions === true && !intentMode))
+        throw new Error("Phiên này chưa hỗ trợ bỏ phiên có đối soát. Giữ trạng thái cũ và mở lại khi dịch vụ sẵn sàng.");
+      fileId = id;
+      if (intentMode && (typeof result.key !== "string" || !/^bdsg-[a-f0-9]{32}$/.test(result.key)))
         throw new Error("Chưa xác nhận được phiên tài liệu. Quay về kho tệp và mở lại.");
+      key = result.key;
+      abandonMode = result.abandon_sessions === true;
+      if (typeof guard.contextKey === "string") {
+        abandonStorageKey = "bdsg-office-abandon:" + encodeURIComponent(guard.contextKey) + ":" + id;
+        intentStorageKey = "bdsg-office-save:" + encodeURIComponent(guard.contextKey) + ":" + id;
+      }
+      if (abandonMode && !abandonStorageKey) throw new Error("Chưa xác minh được phạm vi bỏ phiên.");
+      restoreAbandon();
+      if (pendingAbandon) {
+        status.textContent = "Có yêu cầu bỏ phiên chưa xác nhận. Bấm Kiểm tra yêu cầu bỏ phiên; chưa mở sửa tài liệu.";
+        controls();
+        return;
+      }
       if (intentMode) restoreIntent(id,result);
       else if (typeof guard.contextKey === "string") {
         try {
@@ -321,6 +449,10 @@
       }
       if (result.api_url !== "/office-docs/web-apps/apps/api/documents/api.js")
         throw new Error("Nguồn bộ soạn thảo không hợp lệ.");
+      if (matchMedia("(max-width: 750px)").matches)
+        throw new Error(
+          "Bản Community dùng bộ soạn thảo trên máy tính. Trên điện thoại, mở kho tệp để tải hoặc nhập tài liệu; có thể bỏ phiên đang kẹt sau khi xác nhận.",
+        );
       const script = document.createElement("script");
       script.src = result.api_url;
       await new Promise((resolve, reject) => {
@@ -349,7 +481,7 @@
         showError(
           "Tài liệu mở lâu hơn dự kiến. Kiểm tra kết nối hoặc tải lại trình soạn thảo.",
         );
-        retry.hidden = changed || working || !!pendingIntent || recoveryBlocked;
+        retry.hidden = changed || working || !!pendingIntent || recoveryBlocked || !!pendingAbandon;
       }, 60000);
       editor = new DocsAPI.DocEditor("editor", {
         ...result.config,
@@ -359,6 +491,7 @@
             editorReady = true;
             clearTimeout(readyTimeout);
             retry.hidden = true;
+            if (pendingAbandon) { controls(); return; }
             error.hidden = true;
             status.textContent = pendingIntent ? "Có lần lưu đang chờ xác nhận. Bấm Kiểm tra lần lưu trước khi sửa tiếp." :
               "Tài liệu đã mở. Dùng Lưu phiên bản để ghi vào kho BDSG.";
@@ -370,22 +503,23 @@
             if (event.data) {
               editGeneration++;
               changed = true;
-              if (!pendingIntent && !working) status.textContent =
+              if (!pendingIntent && !working && !pendingAbandon) status.textContent =
                 "Có thay đổi đang soạn. Chưa lưu phiên bản vào kho BDSG.";
             }
           },
           onRequestClose: () => {
             if (!guard.active) return;
             if (closeRequest) closeRequest();
-            else if (pendingIntent || recoveryBlocked || working) holdNavigation();
+            else if (pendingIntent || recoveryBlocked || working || pendingAbandon || abandonDialog.open) holdNavigation();
             else perform(true);
           },
           onError: () => {
             if (!guard.active) return;
             clearTimeout(readyTimeout);
-            retry.hidden = changed || working || !!pendingIntent || recoveryBlocked;
+            retry.hidden = changed || working || !!pendingIntent || recoveryBlocked || !!pendingAbandon;
             showError(
-              "Bộ soạn thảo gặp lỗi. Giữ trang mở và thử lưu lại; không coi tài liệu đã được lưu.",
+              pendingAbandon ? "Bộ soạn thảo gặp lỗi. Giữ trang mở và bấm Kiểm tra yêu cầu bỏ phiên; không mở sửa tiếp." :
+                "Bộ soạn thảo gặp lỗi. Giữ trang mở và thử lưu lại; không coi tài liệu đã được lưu.",
             );
           },
         },
@@ -396,6 +530,7 @@
       showError(failure.message);
       retry.hidden =
         changed || working || !!pendingIntent || recoveryBlocked || matchMedia("(max-width: 750px)").matches;
+      controls();
     }
   }
   open();

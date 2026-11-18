@@ -79,6 +79,27 @@ iframe {
 ::selection {
   background: #e7e7e3;
 }
+.secondary { background: #fff; color: #454541; border-color: #b5b5af; }
+.secondary:hover { background: #f0f0ec; }
+dialog {
+  max-width: min(36rem, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #b5b5af;
+  border-radius: 16px;
+  color: #1a1a19;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+}
+dialog::backdrop { background: rgb(26 26 25 / 40%); }
+dialog h2 { margin: 0 0 12px; font-size: 22px; line-height: 1.25; }
+dialog p { margin: 0 0 20px; }
+dialog label { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; cursor: pointer; }
+dialog input { flex: 0 0 20px; width: 20px; height: 20px; margin: 2px 0 0; accent-color: #1a1a19; }
+.dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+dialog button { min-height: 44px; }
 @media (max-width: 750px) {
   header {
     flex-wrap: wrap;

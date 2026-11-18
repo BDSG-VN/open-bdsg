@@ -204,6 +204,7 @@ class SoanThaoOffice:
             "api_url": self.prefix + "web-apps/apps/api/documents/api.js",
             "save_protocol": "request-ledger-v1" if self.scopes.units is not None else "legacy",
             "save_intents": self.scopes.units is not None,
+            "abandon_sessions": self.scopes.units is not None,
             "pending_save": pending_save,
         }
 

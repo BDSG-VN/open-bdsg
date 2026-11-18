@@ -497,7 +497,7 @@ class ThuDonViHTTP(unittest.TestCase):
                                      unit=self.units[0], headers={"Authorization": "Bearer " + self.bearer})[0], 401)
         for tool in ("runtime.python", "mo_hinh.trang_thai",
                      "van_phong.google_nhap", "van_phong.tao_office", "van_phong.mo_soan_thao",
-                     "van_phong.luu_soan_thao", "cau_hinh.tat_mo_hinh", "nguoi_dung.tao", "nhat_ky.danh_sach"):
+                     "van_phong.luu_soan_thao", "van_phong.bo_phien_soan_thao", "cau_hinh.tat_mo_hinh", "nguoi_dung.tao", "nhat_ky.danh_sach"):
             self.assertEqual(self.tool(tool)[0], 403, tool)
 
     def test_kernel_cung_chan_cong_cu_toan_cong_chua_phan_don_vi(self):
@@ -506,7 +506,7 @@ class ThuDonViHTTP(unittest.TestCase):
         for actor in (self.root, {"id": "nguoi-a", "name": "nguoi-a", "role": "operator"}):
             scoped = self.app.units.bind(actor, self.units[0])
             for name in ("cau_hinh.mo_hinh", "cau_hinh.tat_mo_hinh",
-                         "ket_noi.ghi", "nhat_ky.danh_sach"):
+                         "ket_noi.ghi", "nhat_ky.danh_sach", "van_phong.bo_phien_soan_thao"):
                 result = self.app.core.goi(scoped, name, {})
                 self.assertFalse(result["ok"], (actor["id"], name, result))
             catalogue = self.app.core.goi(scoped, "nen_tang.danh_sach", {})
