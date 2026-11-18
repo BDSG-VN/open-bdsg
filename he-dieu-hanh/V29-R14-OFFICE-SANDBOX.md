@@ -82,3 +82,28 @@ Trường hợp đang chờ lưu được kiểm riêng: bản phục hồi khô
 Hai bài đạt trên máy phát triển và trong dịch vụ Linux tách mạng, chạy bằng danh tính động không phải root, capability hiệu lực bằng **0**, `NoNewPrivs=1`, chỉ có loopback. Toàn **646 tệp nguồn** của backend `698875e13d51bd5cac6e898b19ca9530773564a8` được đối chiếu trước khi sao sang vùng thử chỉ đọc; bộ điều khiển kiểm mới có SHA-256 `2de6a057500c666d9e059c28d2e01a615be153dadf88559b1427ab379ba45ac0`. Dịch vụ thử kết thúc; firewall IPv4/IPv6 không đổi, các dịch vụ production được kiểm vẫn hoạt động.
 
 Đây là kiểm hợp đồng phục hồi HTTP/nhân với engine HTTP và scanner tổng hợp, **không phải** phục hồi ONLYOFFICE/ClamAV thật, giao diện trình duyệt, WebSocket, nhiều worker hay RTO toàn máy chủ. Gate snapshot/restore/cutover với toàn bộ dịch vụ vẫn chưa hoàn tất; không bật R14 production từ kết quả này.
+
+## Hai tiến trình gateway dùng chung kho — 18/11/2026
+
+`thu_office_nhieu_tien_trinh_http.py` chạy hai tiến trình Python độc lập bằng
+`spawn`, cùng kho SQLite nhưng mỗi tiến trình tự dựng ứng dụng và cổng HTTP.
+Mở đồng thời trả cùng khóa editor. Tám yêu cầu lưu cùng ý định, phân đều qua hai
+cổng, chỉ gửi **một** lệnh engine; retry trả được trong khi lệnh đầu vẫn chờ
+phản hồi. Tệp chưa tăng phiên bản trước callback.
+
+Hai callback giống nhau được buộc cùng tải kết quả trước khi bên nào commit.
+Cả hai nhận xác nhận, nhưng tệp chỉ tăng **1 → 2**, đúng byte tài liệu tổng hợp
+đã biết. Đọc tệp và tiến độ qua cả hai gateway đều thấy kết quả committed.
+Retry lưu và callback sau commit không phát lệnh hay tải kết quả thêm.
+Đây không phải cam kết chỉ tải một lần khi hai callback đang đồng thời xử lý.
+
+Một ca đạt trên Windows và Linux cô lập. Phép thử Linux dùng nguồn backend
+`698875e13d51bd5cac6e898b19ca9530773564a8`, đối chiếu **646 tệp** trước khi sao
+sang vùng chỉ đọc; SHA-256 bộ kiểm mới là
+`0930fe2bafac55c3ae7a108c1a1b99d4e597fe8e539b756868c5e1a456edb574`.
+Dịch vụ thử không phải root, không có capability, chỉ mạng loopback và đã
+kết thúc sạch. Firewall không đổi, sáu dịch vụ production được kiểm vẫn hoạt động.
+
+Engine HTTP và scanner trong ca này là tổng hợp. Kết quả chưa chứng minh tải
+thực tế, engine/SDK/WebSocket thật với nhiều worker, worker chết giữa lệnh,
+hoặc toàn bộ điều kiện phát hành R14. Không thay cấu hình production từ ca này.
