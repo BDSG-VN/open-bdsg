@@ -125,3 +125,40 @@ sản phẩm để làm ca đạt. Lượt đầu bộ kiểm dọn sai Event c�
 bị kẹt; đã sửa chính bộ kiểm và chạy lại, không tính lượt kẹt là đạt.
 Kết quả này vẫn dùng engine/scanner tổng hợp, chưa thay phép nghiệm thu sự cố
 với SDK/ONLYOFFICE/ClamAV thật hoặc khôi phục toàn máy chủ.
+
+## Phục hồi Word qua toàn giao diện với engine thật — 18/11/2026
+
+Lượt Word34 dùng toàn webOS nguồn `698875e13d51bd5cac6e898b19ca9530773564a8`,
+ONLYOFFICE và ClamAV thật, tài khoản/dự án tổng hợp trong stage riêng.
+Giao diện tạo DOCX, gõ dấu nội dung đã biết, lưu phiên bản **2**, rồi gõ thêm
+một dấu khác chưa lưu vào BDSG. Ảnh trước phục hồi thấy cả hai dấu và trạng
+thái chưa lưu. Bộ điều phối xác minh qua HTTP rằng byte phiên bản **2** chỉ
+chứa nội dung đã commit, rồi chụp SQLite bằng cơ chế sao lưu công khai.
+
+Kho được phục hồi vào thư mục mới, không mang theo `office-editor-epoch`.
+Chỉ gateway thử được thay bằng tiến trình đọc kho phục hồi; engine, cache,
+proxy và cổng cộng tác thử vẫn giữ nguyên. Nguồn ký của phiên cũ có đối chứng
+**200 trước → 403 sau**; tiến độ và lệnh lưu cũ bị từ chối. Callback ký
+trạng thái **1** có đối chứng `error:0 → error:1`; không gọi đó là phép thử
+callback lưu trạng thái 6 đến trễ với engine thật. Socket cũ đóng không muộn
+hơn **5 giây** sau lúc gateway phục hồi sẵn sàng. Nội dung đã tải về vẫn còn
+hiển thị ở trình duyệt cũ; không tuyên bố xóa được bản dữ liệu đó từ xa.
+
+Tải lại giao diện giữ cookie/đơn vị, đọc đúng byte phiên bản **2**, có dấu đã
+commit và không có dấu chưa lưu. Mở lại cấp khóa editor mới; gõ nội dung mới,
+lưu/đóng qua UI và đọc lại DOCX phiên bản **3** có đủ nội dung đã commit và
+nội dung mới, không có phần chưa lưu của phiên cũ. ClamAV trả không phát hiện.
+Khởi động lại gateway phục hồi rồi đọc bằng cả HTTP và giao diện vẫn đúng
+phiên bản **3** và cùng byte; không có lỗi JavaScript trang. Đã xem ba ảnh
+trước phục hồi, phiên cũ mất kết nối và phiên mới lưu thành công.
+
+Đã dừng browser, gateway phục hồi, ba dịch vụ stage và container thử. Sau đó
+**646 tệp nguồn**, **69 tệp web** và các profile stage khớp trước thử; firewall
+IPv4/IPv6 không đổi, R13 cùng sáu dịch vụ production được kiểm hoạt động.
+Hai bản sao đầu vào xác thực của lượt QA đã được xóa sau khi tiến trình kết
+thúc; đầu vào gốc và dữ liệu diễn tập giữ riêng ngoài Git.
+
+Đây là phục hồi dữ liệu ứng dụng khi engine thật vẫn nóng, chỉ DOCX và một
+người. Chưa phải khôi phục cả engine/cache từ bản sao, mất host, sao lưu ngoài
+máy, RPO/RTO toàn hệ thống, phục hồi Excel/PowerPoint hoặc đủ điều kiện cutover.
+R14 vẫn chưa phát hành production.
