@@ -162,3 +162,28 @@ thúc; đầu vào gốc và dữ liệu diễn tập giữ riêng ngoài Git.
 người. Chưa phải khôi phục cả engine/cache từ bản sao, mất host, sao lưu ngoài
 máy, RPO/RTO toàn hệ thống, phục hồi Excel/PowerPoint hoặc đủ điều kiện cutover.
 R14 vẫn chưa phát hành production.
+
+### Phục hồi bảng tính với engine thật — 18/11/2026
+
+Excel36 chạy cùng nguồn và mô hình phục hồi của Word34, trên dữ liệu tổng
+hợp: A1 có công thức `SUM(10,20)` với giá trị **30**, A2 chứa dấu đã commit,
+A3 chứa dấu chưa lưu khi chụp snapshot. Sau phục hồi, nguồn ký cũ **200 → 403**,
+tiến độ/lưu cũ bị chặn, callback ký trạng thái 1 có đối chứng `error:0 → error:1`,
+socket cũ đóng trong **5 giây** từ gateway sẵn sàng.
+
+Giao diện đọc lại đúng byte bản **2**, giữ công thức/giá trị và A2; không có
+dấu chưa lưu trong A3. Editor khóa mới ghi nội dung mới vào A3, lưu bản **3**;
+OOXML xác nhận công thức và giá trị **30** vẫn nguyên, có nội dung mới và không
+có phần chưa lưu của phiên cũ. HTTP và giao diện đọc cùng byte bản **3** sau
+restart gateway. ClamAV không phát hiện, không có lỗi JavaScript trang.
+
+Lượt Excel35 bị timeout khi tải lại và không tính đạt. Lượt36 ghi nhận hộp
+thoại `beforeunload` đúng tại bước này; bộ kiểm xác nhận rời trang rồi toàn
+luồng đạt. Không sửa SDK hay mã sản phẩm, không vô hiệu cảnh báo cho người dùng.
+Đã xem ảnh bảng tính trước phục hồi và bản mới sau lưu. Dịch vụ thử và engine
+đã dừng, source/web/profile và firewall khớp trước thử, sáu dịch vụ production
+hoạt động; bốn bản sao đầu vào riêng của QA35/36 được dọn sau terminal.
+
+Đây vẫn là phục hồi kho ứng dụng với engine nóng, một người, không phải
+phục hồi cả engine/cache hoặc mất host. PowerPoint, nhiều worker với engine
+thật, tải, thu hồi khi reconnect/upgrade và cutover còn cần kiểm riêng.
