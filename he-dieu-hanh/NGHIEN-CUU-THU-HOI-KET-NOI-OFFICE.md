@@ -2,6 +2,16 @@
 
 Ngày tra cứu và ghi nhận: **18/11/2026**. Phạm vi: chọn ranh giới kiểm quyền phía máy chủ cho ONLYOFFICE; tài liệu nghiên cứu, chưa triển khai hay nghiệm thu giải pháp.
 
+## Cổng cộng tác đang triển khai
+
+Ngày **18/11/2026**, `cong_ket_noi_office.tao_cong` có bản thử độc lập bằng aiohttp 3.14.5 (phụ thuộc riêng `requirements-office-transport.txt`). Chỉ nhận đường `/office-docs/[version/]doc/<key>/c/` đã phân loại; upstream và bộ kiểm quyền là endpoint HTTP loopback cố định. Không nối vào gateway mặc định hoặc nginx production.
+
+WebSocket kiểm quyền BDSG trước handshake, trước mỗi message hai chiều và định kỳ lúc nhàn rỗi. HTTP polling GET/POST có cùng kiểm quyền; yêu cầu đang chờ bị hủy khi mất quyền, buffer phản hồi tối đa 8 MiB và kiểm lại trước trả dữ liệu. Cookie chỉ gửi đến bộ kiểm quyền, không dùng cookie jar chung; lỗi bộ kiểm quyền chặn tiếp tục truyền. Origin ngoài bị từ chối; GET polling không có Origin vẫn kiểm cookie/quyền. Bộ bảo vệ không đọc hoặc sửa nội dung gói cộng tác, không tự phát hành lease.
+
+Đã kiểm **7 ca qua HTTP/WebSocket loopback thật** ngày 18/11/2026: đóng socket nhàn rỗi hai đầu sau thu hồi, hủy polling đang chờ, polling GET thiếu Origin, giữ byte binary/POST hợp lệ, lỗi bộ kiểm quyền, từ chối origin/cookie/key sai và từ chối POST nén bằng HTTP 415. Body có `Content-Encoding` chưa được hỗ trợ; cổng tắt tự giải nén để không âm thầm đổi payload. Engine và bộ kiểm quyền trong các ca này là server tổng hợp; **chưa phải ONLYOFFICE thật**, chưa đo thông lượng/tải hoặc đóng nhiều worker, chưa xử lý đủ vòng đời tắt ứng dụng và chưa cấu hình nginx chuyển đường cộng tác qua cổng này. Không lấy kết quả này thay phép thử đỏ `public-04` phía trên hoặc tuyên bố lỗi sản phẩm đã vá.
+
+Trước khi bật: thêm cấu hình dịch vụ/giới hạn kết nối và vòng đời shutdown, kiểm upstream chậm/lỗi/chuyển hướng, chạy lại CLI bằng engine thật trên nguồn mới và chứng minh cả cộng tác/thu hồi/reconnect/polling. [aiohttp ClientSession và WebSocket](https://docs.aiohttp.org/en/stable/client_reference.html), [gói aiohttp chính thức](https://pypi.org/project/aiohttp/).
+
 ## Kết luận để chọn hướng
 
 **Đề xuất chưa kiểm chứng:** giữ cổng kiểm quyền HTTP, bổ sung lớp giữ và ngắt kết nối đang mở, kiểm dữ liệu cả hai chiều, bao phủ polling lẫn WebSocket. Dùng `drop` như biện pháp bổ sung để dừng sửa; không dùng riêng lệnh này làm bảo đảm thu hồi đọc. Cơ sở và giới hạn dưới đây tách riêng thông tin chính thức, suy luận thiết kế và quan sát thử nghiệm.
