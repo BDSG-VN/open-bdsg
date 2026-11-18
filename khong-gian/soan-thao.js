@@ -68,7 +68,8 @@
       );
     for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      const progress = await call("phien_soan_thao", { key, request_id: requestId });
+      const progress = await call("phien_soan_thao",
+        requireReceipt ? { key, request_id: requestId } : { key });
       const hasReceipt = Object.prototype.hasOwnProperty.call(progress, "command_state");
       if ((requireReceipt && !hasReceipt) || (hasReceipt && progress.request_id !== requestId))
         throw new Error(

@@ -671,7 +671,7 @@ class DieuPhoi:
                 ("luu_soan_thao", lambda a: app.office_editor.save(actor(), a), True,
                  {"key":text}, ["key"]),
                 ("phien_soan_thao", lambda a: app.office_editor.progress(actor(), a), False,
-                 {"key":text}, ["key"]),
+                 {"key":text,"request_id":text}, ["key"]),
                 ("bat_dau_tai", lambda a: app.office.begin_upload(actor(), a), True,
                  {"project_id":text,"name":text,"total":integer,"sha256":text,"request_key":text},
                  ["project_id","name","total","sha256","request_key"]),

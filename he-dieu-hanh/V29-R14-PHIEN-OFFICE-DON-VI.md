@@ -74,7 +74,11 @@ browser còn mở. Đây là kiểm phương thức backend qua harness riêng, 
 phải nghiệm thu nút BDSG ghép với engine thật trong chế độ đơn vị.
 
 Khi mở, backend khai báo `save_protocol`: đơn vị dùng `request-ledger-v1`,
-legacy dùng `legacy`. Controller gửi request_id khi poll và chỉ nhận
+legacy dùng `legacy`. Controller chỉ gửi request_id khi poll ở giao thức
+`request-ledger-v1`; legacy hoặc backend cũ không khai báo giao thức vẫn
+gửi DTO chỉ có key. Danh mục công cụ mới khai báo request_id tùy chọn,
+giữ key bắt buộc. Đã kiểm danh mục MCP và lời gọi qua nhân ngày 18/11/2026.
+Với giao thức ledger, controller chỉ nhận
 committed đúng mã; không mượn last_saved toàn phiên cho accepted/unknown
 hoặc lệnh khác. Phiên yêu cầu ledger mà thiếu receipt không hạ về legacy;
 protocol lạ/null bị từ chối, backend cũ thiếu hẳn trường vẫn dùng legacy.

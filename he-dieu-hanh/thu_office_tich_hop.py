@@ -88,6 +88,20 @@ class ThuOfficeTichHop(unittest.TestCase):
             {"token": sign({**payload, "exp": int(time.time()) + 60}, SECRET)}, ""
         )
 
+    def test_progress_tool_accepts_request_id_and_keeps_key_only_contract(self):
+        catalogue = self.app.core.mcp(A, {"jsonrpc": "2.0", "id": 1,
+                                         "method": "tools/list", "params": {}})
+        tool = next(t for t in catalogue["result"]["tools"]
+                    if t["name"] == "van_phong.phien_soan_thao")
+        self.assertEqual(tool["inputSchema"]["properties"].get("request_id"), {"type": "string"})
+        self.assertEqual(tool["inputSchema"]["required"], ["key"])
+        session = self.editor.open(A, {"id": self.file()["id"]})
+        for args in ({"key": session["key"]},
+                     {"key": session["key"], "request_id": "c" * 32}):
+            result = self.app.core.goi(A, "van_phong.phien_soan_thao", args)
+            self.assertTrue(result["ok"], result)
+            self.assertEqual(result["ket_qua"]["state"], "active")
+
     def test_three_formats_create_open_and_signed_source(self):
         for extension in ("docx", "xlsx", "pptx"):
             file = self.file(extension)

@@ -87,6 +87,7 @@ test('Luồng legacy chưa có ledger vẫn đọc được trạng thái hiện
   for (const protocol of ['legacy','absent']) {
     const result=await harness([{state:'active',pending:false,last_saved:123}],undefined,protocol);
     assert.equal(success(result),true);
+    assert.deepEqual(Object.keys(result.calls.find(c=>c.name==='van_phong.phien_soan_thao').arguments),['key']);
   }
 });
 test('Giao thức lạ hoặc khai báo null không được hạ xuống legacy',async()=>{
