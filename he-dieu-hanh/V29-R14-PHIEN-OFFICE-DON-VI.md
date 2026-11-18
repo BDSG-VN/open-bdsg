@@ -94,6 +94,31 @@ khác với ca force-save engine thật nêu trên. Công cụ pilot vẫn đón
 
 ## Chưa mở để sử dụng
 
+Ngày 18/11/2026 thêm guard cửa sổ Office kết hợp khóa danh tính hiện có
+với capture BDSGUnit của cửa sổ mở nó, chụp đồng bộ trước IO. Editor đơn
+vị chỉ nhận cha cùng origin/danh tính có phạm vi sẵn sàng; không chọn đơn
+vị từ URL hoặc sessionStorage. Header đơn vị/epoch/revision được ghim vào
+capture, không nhận giá trị thay thế từ caller. Server vẫn kiểm quyền qua
+lease tài liệu đã lưu, không có bearer ticket mới thay quyền kiểm đó.
+
+Đổi A→B→A, mất/cấp lại tư cách, đóng/tải lại/chuyển trang cha hoặc 409 unit_changed dừng editor,
+hủy request và xóa vùng tài liệu; không nhận scope mới. Kiểm membership
+khi focus/visibility và định kỳ 5 giây, đối chiếu id/epoch/revision. Legacy
+mở trực tiếp vẫn không thêm header đơn vị. Không hạ cửa sổ đã chụp units
+sang legacy trong lúc mở. Đây là hàng rào UI, không thay xác thực server
+hoặc tự ngắt WebSocket/cache engine đã tồn tại.
+
+Đo ngày 18/11/2026: 11 bài Node guard công khai, gồm BDSGUnit thật và
+transport tổng hợp, đạt. Chrome parent BDSGUnit/controller/HTML/CSS thật,
+API/editor tổng hợp kiểm 9 ca ở 1440/390: đổi đơn vị, đổi trong lúc mở/
+lưu, membership, mở trực tiếp, đóng/tải lại/chuyển trang cha và mobile.
+Đã tái lập lỗi giữ đối tượng controller cha cũ trước sửa; mỗi lần kiểm
+nay đối chiếu cả controller hiện tại của cha. Kiểm xóa nội dung và
+callback editor muộn; 0 lỗi JS/tràn ngang, đã xem 10 ảnh. Bộ 7 ca lưu cũ
+cũng được kiểm lại với guard mới và xem đủ ảnh. Chưa có launcher đơn vị
+công khai: nối cách mở cửa sổ từ Office đang đóng cùng bốn công cụ cho tới
+khi các gate còn lại đạt; không coi harness có opener là UI hoàn chỉnh.
+
 Ngày 18/11/2026 đã thêm profile xác thực engine theo đường dẫn trong chế
 độ đơn vị thử nghiệm. Mã giao diện chung yêu cầu danh tính còn hiệu lực;
 cache và đường doc/WebSocket phải mang key phiên hợp lệ. Backend khôi

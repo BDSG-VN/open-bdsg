@@ -36,7 +36,7 @@ async function harness(progresses, saved = {state:'dang-luu',request_id:request}
     },
   };
   const context = {
-    window:{BDSGSessionGuard:{create:()=>guard},addEventListener() {}},
+    window:{BDSGOfficeGuard:{create:()=>guard},addEventListener() {}},
     document:{querySelector:element,createElement:()=>({}),
       head:{append:script=>queueMicrotask(()=>script.onload())}},
     location:{search:'?id='+'a'.repeat(24),assign() {},reload() {}},

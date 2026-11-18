@@ -13,7 +13,7 @@
     closed = false,
     clientDirty = false,
     closeRequest = null;
-  const guard = window.BDSGSessionGuard.create({ onInvalidate(message) {
+  const guard = window.BDSGOfficeGuard.create({ onInvalidate(message) {
     closed = true; changed = working = clientDirty = false; key = null;
     try { editor?.destroyEditor(); } catch (_) {}
     editor = null;

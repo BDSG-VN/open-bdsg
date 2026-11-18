@@ -72,7 +72,7 @@ def dung(cau_hinh, thu_muc_ra):
     ghi("du-an.css", doc_tep("khong-gian/du-an.css"))
     ghi("van-phong.js", doc_tep("khong-gian/van-phong.js"))
     ghi("van-phong.css", doc_tep("khong-gian/van-phong.css"))
-    for ten in ("soan-thao.html", "soan-thao.js", "soan-thao.css", "google-picker.html", "google-picker.js"):
+    for ten in ("soan-thao.html", "soan-thao.js", "soan-thao.css", "bao-ve-office.js", "google-picker.html", "google-picker.js"):
         ghi(ten, doc_tep("khong-gian/" + ten))
     ghi("studio.js", doc_tep("khong-gian/studio.js"))
     ghi("phe-duyet.js", doc_tep("khong-gian/phe-duyet.js"))

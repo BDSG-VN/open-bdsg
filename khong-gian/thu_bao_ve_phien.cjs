@@ -91,7 +91,7 @@ test("Trình soạn thảo hủy engine, xóa vùng riêng và bỏ qua callback
   let invalidate, destroyed = 0, engineEvents, calls = 0;
   const guard = { active: true, ready: Promise.resolve(), assertActive() { if (!this.active) throw new Error("stale"); },
     async fetch() { calls++; return { ok: true, json: async () => ({ ok: true, ket_qua: { key: "test", api_url: "/office-docs/web-apps/apps/api/documents/api.js", config: {} } }) }; } };
-  const window = { BDSGSessionGuard: { create(options) { invalidate = () => { guard.active = false; options.onInvalidate("Phiên đã đổi"); }; return guard; } }, addEventListener() {} };
+  const window = { BDSGOfficeGuard: { create(options) { invalidate = () => { guard.active = false; options.onInvalidate("Phiên đã đổi"); }; return guard; } }, addEventListener() {} };
   vm.runInNewContext(fs.readFileSync(__dirname + "/soan-thao.js", "utf8"), { window, document,
     location: { search: "?id=" + "a".repeat(24) }, URLSearchParams, matchMedia: () => ({ matches: false }),
     AbortSignal, queueMicrotask, setTimeout: () => 1, clearTimeout() {},
