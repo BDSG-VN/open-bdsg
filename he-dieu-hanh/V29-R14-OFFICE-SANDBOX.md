@@ -1,6 +1,6 @@
 # R14 — cổng soạn thảo đơn vị thử nghiệm
 
-Cập nhật **18/11/2026**. Có opt-in backend qua nhân/HTTP và giao diện đơn vị theo capability; chưa nghiệm thu trọn giao diện với engine thật hoặc bật production. Các bằng chứng transport trước đó ở [nghiên cứu kết nối Office](NGHIEN-CUU-THU-HOI-KET-NOI-OFFICE.md) không thay nghiệm thu luồng giao diện với cờ mới.
+Cập nhật **18/11/2026**. Có opt-in backend qua nhân/HTTP và giao diện đơn vị theo capability. Đã kiểm luồng cơ bản Word/Excel/PowerPoint từ vỏ BDSG đến engine thật trong môi trường thử; chưa bật production hoặc nghiệm thu toàn bộ R14. Các bằng chứng transport trước đó ở [nghiên cứu kết nối Office](NGHIEN-CUU-THU-HOI-KET-NOI-OFFICE.md) có phạm vi riêng với các phép đo giao diện dưới đây.
 
 ## Cách bật trong gateway thử riêng
 
@@ -50,6 +50,25 @@ Trong chế độ đơn vị, editor nằm trong iframe cùng origin của kho t
 
 Ngày **18/11/2026**, **69 ca Node liên quan** và **4 ca đóng gói** đạt. Rà soát Spec tìm lỗi kẹt phục hồi nói trên; hồi quy đã đỏ rồi đạt sau sửa. Rà soát lại Spec và Standards không còn finding. Trình duyệt kiểm **9 tình huống** ở rộng **1440/980/390 px**: tạo/lưu/đóng, bỏ phiên, đổi đơn vị, mở tệp có sẵn, mặc định đóng, chỉ đọc, điện thoại và hai dạng bản ghi phục hồi hỏng. Dùng DOM/launcher/guard/controller/CSS từ kho thật, nhưng vỏ cha, API và engine tổng hợp; không gọi đó là nghiệm thu full UI với engine thật.
 
-Toàn **646 tệp Git** của nguồn này đã đối chiếu trong thư mục staging riêng trên máy chủ; chưa bật runtime mới. Cần chạy tiếp trọn UI → nhân → HTTP → engine thật từ nguồn đó, gồm vỏ nhiều cửa sổ và kiểm quyền sau thay đổi. Còn các gate upgrade, thu hồi trong lúc reconnect, tải/nhiều worker, binary/tài liệu khác, snapshot/restore/cutover. Website chính chưa dùng opt-in này.
+Toàn **646 tệp Git** của nguồn này đã đối chiếu trong thư mục staging riêng trên máy chủ. Phép thử giao diện tổng hợp ở trên là bước trước các phép đo engine thật trong phần kế tiếp; không thay cho kết quả runtime đó. Website chính chưa dùng opt-in này.
 
 [CI đúng nguồn giao diện 698875e](https://github.com/bdsgthanhhoa/open-bdsg/actions/runs/44250877698) đã kết thúc thành công ngày **18/11/2026**: **703 ca ứng dụng** gồm **688 đạt, 15 bỏ qua**, **52 ca vận hành**, **4 ca đóng gói** và các bước Node/MCP TLS đạt. Đây vẫn không thay phép đo giao diện với engine thật.
+
+### Luồng cơ bản qua toàn giao diện và engine thật
+
+Ngày **18/11/2026**, chạy toàn bộ web được đóng gói từ nguồn `698875e13d51bd5cac6e898b19ca9530773564a8`, không thay vỏ cha bằng HTML kiểm thử hoặc giả API/engine. Trình duyệt riêng đăng nhập bằng giao diện, chọn đơn vị, mở ứng dụng Văn phòng và dùng dự án tổng hợp có quyền ghi. Dùng HTTPS kiểm chứng chứng thư/hostname; ánh xạ kết nối tới loopback của máy chủ thử, không tắt kiểm TLS.
+
+| Lượt | Tài liệu/thao tác | Bằng chứng đọc lại |
+|---|---|---|
+| Word17 | Tạo DOCX, gõ, bấm Lưu phiên bản khi editor còn mở | Phiên bản 1 → 2; XML trong DOCX có đúng nội dung đã gõ |
+| Excel18 | Tạo XLSX, nhập công thức ở A1 và nội dung ở A2 | Phiên bản 1 → 2; công thức `SUM(10,20)`, giá trị **30**, A2 đúng nội dung |
+| Slide26 | Tạo PPTX, chèn hộp văn bản ngang và gõ | Phiên bản 1 → 2; XML slide có đúng nội dung |
+| Mobile23 | Giao diện rộng **390 px**, tạo DOCX và mở cửa sổ Office | Hiện giới hạn Community, nút lưu bị khóa, **0** request tải SDK; về được kho tệp, không tràn ngang |
+
+Ba lượt desktop rộng **1440 px** đều dùng nút bỏ phiên với hai xác nhận, đọc tệp qua hộp thoại kho BDSG và kiểm ClamAV trả `khong-phat-hien`. Sau đó mở lại bằng giao diện, bấm Lưu và đóng trên tài liệu không sửa thêm; tải lại vỏ ứng dụng vẫn giữ đơn vị đã chọn và thấy tệp. Mỗi lượt không có lỗi JavaScript trang. Đã xem ảnh sau lưu và mở lại của cả ba định dạng. Không suy kết quả này ra mọi tài liệu phức tạp, tính năng Office hoặc cộng tác nhiều người.
+
+Các lượt PowerPoint19/20/21/22/25 chưa hoàn thành thao tác chèn do bộ điều khiển kiểm thử dùng selector/menu chưa đúng; lượt24 chỉ quan sát điều khiển. Chúng không được tính là nghiệm thu đạt. Slide26 chọn đúng menu chèn hộp văn bản ngang rồi kiểm nội dung tệp sau lưu; không sửa SDK hoặc mã sản phẩm để làm phép thử đạt.
+
+Sau thử, **646 tệp nguồn Git** và **69 tệp web** vẫn khớp dấu kiểm. So với bản dựng Windows, **65 tệp UTF-8** cần chuẩn hóa CRLF → LF để đối chiếu bản Linux; tệp nhị phân giữ nguyên. Không gọi hai bản dựng đó là giống byte trước chuẩn hóa. Đã dừng gateway/proxy/transport và container thử, không còn listener stage; firewall IPv4/IPv6 khớp trước thử, năm dịch vụ chính và R13 hoạt động. Đã xóa **20 bản sao đầu vào riêng của 10 lượt QA** sau khi các tiến trình kết thúc; cấu hình gốc giữ riêng ngoài Git.
+
+Gate luồng cơ bản UI → nhân → HTTP → engine thật trên dữ liệu tổng hợp đã có bằng chứng cho ba định dạng. Vẫn cần kiểm thay đổi quyền/đơn vị trong editor thật, nhiều người và nhiều worker, tải, upgrade và thu hồi trong lúc reconnect, tài liệu phức tạp, Google theo đơn vị, snapshot/restore/cutover trước phát hành R14.
