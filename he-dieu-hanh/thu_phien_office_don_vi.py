@@ -41,6 +41,149 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
     def actor(self,unit):
         return self.app.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},unit)
 
+    def abandon_args(self,opened,intent='abandon-1'):
+        return {'file_id':self.file['id'],'key':opened['key'],'request_key':intent,
+                'acknowledge_unsaved_changes':True,'acknowledge_shared_session':True}
+
+    def test_abandon_before_first_save_fences_late_write_and_retry_keeps_new_session(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args=self.abandon_args(opened)
+        result=self.editor.abandon_sessions(self.a,args)
+        self.assertEqual(result['state'],'da-bo-phien')
+        self.assertEqual(result['request_key'],'abandon-1')
+        self.assertEqual(result['revoked_sessions'],1)
+        with patch('soan_thao_office.http.client.HTTPConnection') as engine:
+            with self.assertRaises(PermissionError):
+                self.editor.save(self.a,{'key':opened['key'],'request_key':'late-first-save'})
+        engine.assert_not_called()
+        with self.assertRaises(PermissionError):self.source(opened)
+        fresh=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertNotEqual(opened['key'],fresh['key'])
+        restarted=SoanThaoOffice(self.app.office,self.app.origin);restarted.secret=SECRET
+        self.assertEqual(restarted.abandon_sessions(self.a,args),result)
+        self.assertTrue(self.source(fresh,restarted).startswith(b'PK'))
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['file']['version'],1)
+
+    def test_abandon_requires_both_explicit_acknowledgements_before_revoking(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args=self.abandon_args(opened)
+        invalid=[{k:v for k,v in args.items() if k!=field} for field in args]
+        for field in ('acknowledge_unsaved_changes','acknowledge_shared_session'):
+            invalid.extend({**args,field:value} for value in (False,1,'true',None))
+        invalid.extend({**args,'request_key':value} for value in (None,'',True,'a'*129))
+        invalid.append({**args,'actor':'nguoi-a'})
+        with patch('soan_thao_office.http.client.HTTPConnection') as engine:
+            for body in invalid:
+                with self.subTest(body=body),self.assertRaises(ValueError):
+                    self.editor.abandon_sessions(self.a,body)
+                self.assertTrue(self.source(opened).startswith(b'PK'))
+        engine.assert_not_called()
+        self.assertEqual(self.editor.abandon_sessions(self.a,args)['revoked_sessions'],1)
+
+    def test_abandon_own_unknown_save_blocks_signed_late_callback(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection=Mock();connection.getresponse.side_effect=TimeoutError('Synthetic timeout')
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            saved=self.editor.save(self.a,{'key':opened['key'],'request_key':'unknown-before-abandon'})
+        self.assertEqual(saved['state'],'chua-ro-ket-qua')
+        abandoned=self.editor.abandon_sessions(self.a,self.abandon_args(opened))
+        self.assertEqual(abandoned['state'],'da-bo-phien')
+        with patch.object(self.editor,'_fetch') as fetch:
+            with self.assertRaises(PermissionError):self.callback(opened,request=saved['request_id'])
+        fetch.assert_not_called()
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['file']['version'],1)
+
+    def test_abandon_never_cancels_peer_pending_save(self):
+        from van_phong import LoiXungDotVanPhong
+        self.app.kho.tao_agent('nguoi-c','Nguoi C','operator')
+        member={'unit_id':self.units[0],'identity':'nguoi-c'}
+        self.app.units.set_member(self.root,{**member,'role':'member'})
+        self.app.projects.share(self.a,{'id':self.project,**member,'role':'editor'})
+        other=self.app.units.bind({'id':'nguoi-c','role':'operator','name':'Nguoi C'},self.units[0])
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        shared=self.editor.open(other,{'id':self.file['id']})
+        self.assertEqual(shared['key'],opened['key'])
+        connection,_=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            saved=self.editor.save(other,{'key':opened['key'],'request_key':'peer-pending'})
+        with self.assertRaises(LoiXungDotVanPhong):
+            self.editor.abandon_sessions(self.a,self.abandon_args(opened))
+        self.assertTrue(self.source(opened).startswith(b'PK'))
+        self.assertEqual(self.editor.progress(other,{'key':opened['key'],'request_id':saved['request_id']})['command_state'],'accepted')
+        with patch.object(self.editor,'_fetch',return_value=changed_document('Peer save survives')):
+            self.assertEqual(self.callback(opened,request=saved['request_id']),{'error':0})
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['file']['version'],2)
+
+    def test_abandon_during_callback_download_prevents_commit(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection,_=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            saved=self.editor.save(self.a,{'key':opened['key'],'request_key':'download-in-flight'})
+        def fetch_and_abandon(url,key):
+            self.editor.abandon_sessions(self.a,self.abandon_args(opened))
+            return changed_document('Late download must not commit')
+        with patch.object(self.editor,'_fetch',side_effect=fetch_and_abandon):
+            with self.assertRaises(PermissionError):self.callback(opened,request=saved['request_id'])
+        self.assertEqual(self.app.office.read(self.a,{'id':self.file['id']})['file']['version'],1)
+
+    def test_abandon_is_bound_to_participating_unit_and_file_even_with_write_access(self):
+        self.app.projects.share(self.a,{'id':self.project,'unit_id':self.units[1],'identity':'nguoi-a','role':'editor'})
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        other_unit=self.editor.open(self.b,{'id':self.file['id']})
+        args=self.abandon_args(opened)
+        with self.assertRaises(PermissionError):self.editor.abandon_sessions(self.b,args)
+        other_file=self.editor.create(self.a,{'name':'khac.docx','project_id':self.project})
+        with self.assertRaises(PermissionError):
+            self.editor.abandon_sessions(self.a,{**args,'file_id':other_file['id']})
+        with self.assertRaises(PermissionError):self.editor.abandon_sessions(self.root,args)
+        self.assertTrue(self.source(opened).startswith(b'PK'))
+        self.assertTrue(self.source(other_unit).startswith(b'PK'))
+        self.editor.abandon_sessions(self.a,args)
+        with self.assertRaises(PermissionError):self.source(opened)
+        self.assertTrue(self.source(other_unit).startswith(b'PK'))
+
+    def test_abandon_receipt_rejects_changed_payload_and_regranted_authority(self):
+        from van_phong import LoiXungDotVanPhong
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args=self.abandon_args(opened)
+        self.editor.abandon_sessions(self.a,args)
+        fresh=self.editor.open(self.a,{'id':self.file['id']})
+        other_file=self.editor.create(self.a,{'name':'bien-nhan-khac.docx','project_id':self.project})
+        with self.assertRaises(LoiXungDotVanPhong):
+            self.editor.abandon_sessions(self.a,{**args,'file_id':other_file['id']})
+        with self.assertRaises(LoiXungDotVanPhong):
+            self.editor.abandon_sessions(self.a,{**args,'key':fresh['key']})
+        self.app.units.set_member(self.root,{'unit_id':self.units[0],'identity':'chu-quan','role':'admin'})
+        member={'unit_id':self.units[0],'identity':'nguoi-a'}
+        self.app.units.set_member(self.root,{**member,'role':'revoke'})
+        self.app.units.set_member(self.root,{**member,'role':'admin'})
+        actor=self.actor(self.units[0])
+        with self.assertRaises(PermissionError):self.editor.abandon_sessions(actor,args)
+        with self.assertRaises(PermissionError):self.source(fresh)
+        fenced=self.editor.abandon_sessions(actor,{**args,'key':fresh['key'],'request_key':'after-regrant'})
+        self.assertEqual(fenced['state'],'da-bo-phien')
+        newest=self.editor.open(actor,{'id':self.file['id']})
+        self.assertTrue(self.source(newest).startswith(b'PK'))
+
+    def test_abandon_receipt_restore_does_not_revoke_new_issuer_session(self):
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        args=self.abandon_args(opened)
+        self.editor.abandon_sessions(self.a,args)
+        with tempfile.TemporaryDirectory() as area:
+            bundle,target=Path(area)/'bundle',Path(area)/'restored'
+            backup(self.app.kho.root,bundle)
+            restore(bundle,target)
+            restored=UngDung(target/'data','https://office-scope.test',True,unit_preview=True)
+            try:
+                restored.office_editor.secret=SECRET;restored.office.scanner=Scanner()
+                actor=restored.units.bind({'id':'nguoi-a','role':'operator','name':'Nguoi A'},self.units[0])
+                fresh=restored.office_editor.open(actor,{'id':self.file['id']})
+                with self.assertRaises(PermissionError):restored.office_editor.abandon_sessions(actor,args)
+                self.assertTrue(self.source(fresh,restored.office_editor).startswith(b'PK'))
+                self.assertEqual(restored.office.read(actor,{'id':self.file['id']})['file']['version'],1)
+            finally:
+                restored.tasks.close();restored.core.audit.close()
+
     def test_save_intent_returns_same_commit_without_second_engine_command(self):
         opened=self.editor.open(self.a,{'id':self.file['id']})
         self.assertTrue(opened['save_intents'])

@@ -60,6 +60,12 @@ class SoanThaoOffice:
                     key TEXT NOT NULL,actor TEXT NOT NULL,intent TEXT NOT NULL,
                     request TEXT NOT NULL REFERENCES office_editor_requests(id),
                     PRIMARY KEY(key,actor,intent))''')
+                db.execute('''CREATE TABLE IF NOT EXISTS office_editor_abandons(
+                    actor TEXT NOT NULL,unit_id TEXT NOT NULL,intent TEXT NOT NULL,
+                    file_id TEXT NOT NULL,expected_key TEXT NOT NULL,
+                    unit_ref TEXT NOT NULL,project_ref TEXT NOT NULL,issuer_epoch TEXT NOT NULL,
+                    revoked_sessions INTEGER NOT NULL,
+                    PRIMARY KEY(actor,unit_id,intent))''')
 
     def status(self):
         return {
@@ -487,6 +493,62 @@ class SoanThaoOffice:
             db.execute("UPDATE office_editors SET state='revoked',pending=NULL WHERE key=?",(key,))
             self.office._audit(db,actor,'office-editor-abandon',key)
         return {'state':'da-bo-phien','request_id':request}
+
+    def abandon_sessions(self,actor,args):
+        if self.scopes.units is None:
+            raise PermissionError('Bỏ phiên phục hồi cần phạm vi đơn vị')
+        required={'file_id','key','request_key','acknowledge_unsaved_changes','acknowledge_shared_session'}
+        if (not isinstance(args,dict) or set(args)!=required
+                or args['acknowledge_unsaved_changes'] is not True
+                or args['acknowledge_shared_session'] is not True):
+            raise ValueError('Cần xác nhận mất thay đổi và ảnh hưởng phiên cùng sửa')
+        file_id,key=args['file_id'],args['key']
+        if (not isinstance(file_id,str) or not re.fullmatch(r'[a-f0-9]{24}',file_id)
+                or not isinstance(key,str) or not re.fullmatch(r'bdsg-[a-f0-9]{32}',key)):
+            raise ValueError('Cần đúng tài liệu và phiên từng tham gia')
+        intent=self._intent_key(args)
+        def result(count):
+            return {'state':'da-bo-phien','file_id':file_id,'key':key,
+                    'request_key':intent,'revoked_sessions':count}
+        with self.kho.ket_noi() as db:
+            db.execute('BEGIN IMMEDIATE')
+            file=self.office._file(actor,file_id,db,True)
+            ref=self.scopes.reference(actor,file['project_id'],db)
+            unit_id=ref['unit']['unit_id']
+            previous=db.execute('''SELECT * FROM office_editor_abandons
+                WHERE actor=? AND unit_id=? AND intent=?''',(actor['id'],unit_id,intent)).fetchone()
+            if previous is not None:
+                if previous['file_id']!=file_id or previous['expected_key']!=key:
+                    raise LoiXungDotVanPhong('Mã bỏ phiên đã dùng cho yêu cầu khác')
+                if (previous['issuer_epoch']!=self.scopes._epoch
+                        or json.loads(previous['unit_ref'])!=ref['unit']
+                        or json.loads(previous['project_ref'])!=ref['project']):
+                    raise PermissionError('Quyền hoặc thế hệ của biên nhận bỏ phiên đã thay đổi')
+                return result(previous['revoked_sessions'])
+            # Thu hồi là thao tác giảm quyền: kiểm quyền file hiện tại và lịch
+            # sử tham gia cùng đơn vị, không khôi phục quyền dùng lease cũ.
+            rows=db.execute('''SELECT e.* FROM office_editors e
+                JOIN office_editor_members m ON m.key=e.key AND m.actor=?
+                JOIN office_editor_scopes s ON s.key=e.key AND s.actor=m.actor
+                WHERE e.file_id=? AND json_extract(s.unit_ref,'$.unit_id')=?''',
+                (actor['id'],file_id,unit_id)).fetchall()
+            if not any(row['key']==key for row in rows):
+                raise PermissionError('Phiên không thuộc tài liệu và đơn vị từng tham gia')
+            for row in rows:
+                if row['pending']:
+                    command=db.execute('SELECT actor FROM office_editor_requests WHERE id=? AND key=?',
+                                       (row['pending'],row['key'])).fetchone()
+                    if command is None or command['actor']!=actor['id']:
+                        raise LoiXungDotVanPhong('Có lần lưu của người cùng sửa; chưa thể bỏ phiên này')
+            targets=[row for row in rows if row['state']!='revoked']
+            for row in targets:
+                self._settle_command(db,row,'abandoned')
+                db.execute("UPDATE office_editors SET state='revoked',pending=NULL WHERE key=?",(row['key'],))
+            db.execute('INSERT INTO office_editor_abandons VALUES(?,?,?,?,?,?,?,?,?)',
+                (actor['id'],unit_id,intent,file_id,key,json.dumps(ref['unit']),
+                 json.dumps(ref['project']),self.scopes._epoch,len(targets)))
+            self.office._audit(db,actor,'office-editor-abandon-sessions',file_id)
+            return result(len(targets))
 
     def progress(self, actor, args):
         intent=self._intent_key(args)
