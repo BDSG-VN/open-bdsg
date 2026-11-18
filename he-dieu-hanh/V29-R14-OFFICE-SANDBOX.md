@@ -107,3 +107,21 @@ kết thúc sạch. Firewall không đổi, sáu dịch vụ production được
 Engine HTTP và scanner trong ca này là tổng hợp. Kết quả chưa chứng minh tải
 thực tế, engine/SDK/WebSocket thật với nhiều worker, worker chết giữa lệnh,
 hoặc toàn bộ điều kiện phát hành R14. Không thay cấu hình production từ ca này.
+
+### Tiến trình chết sau khi engine nhận lệnh — 18/11/2026
+
+Bộ kiểm hai gateway có thêm một ca thực sự kết thúc cưỡng bức tiến trình QA
+gửi lệnh, sau khi engine HTTP tổng hợp đã nhận lệnh nhưng chưa trả ACK.
+Client mất kết nối; gateway còn lại retry cùng ý định nhận trạng thái chưa rõ
+kết quả và cùng mã lệnh, giữ tệp ở phiên bản **1**, không phát lại lệnh.
+Callback hợp lệ đến trễ được gateway còn lại xử lý: phiên bản **1 → 2**, đúng
+byte; replay callback và retry lưu không tải hoặc phát lệnh thêm.
+
+Cả **2 ca** trong `thu_office_nhieu_tien_trinh_http.py` đạt trên Windows và
+Linux cô lập không root. SHA-256 bộ kiểm ở lượt Linux mới là
+`ccbf46eac619718836c816298496f7b7faa822c986a24be7caf7878b6bacebef`;
+backend vẫn là nguồn `698875e` đủ **646 tệp** đã đối chiếu. Không thay mã
+sản phẩm để làm ca đạt. Lượt đầu bộ kiểm dọn sai Event của process đã chết
+bị kẹt; đã sửa chính bộ kiểm và chạy lại, không tính lượt kẹt là đạt.
+Kết quả này vẫn dùng engine/scanner tổng hợp, chưa thay phép nghiệm thu sự cố
+với SDK/ONLYOFFICE/ClamAV thật hoặc khôi phục toàn máy chủ.

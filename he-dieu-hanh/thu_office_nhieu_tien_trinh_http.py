@@ -41,7 +41,7 @@ class ThuOfficeNhieuTienTrinhHTTP(CoSoDonViHTTP):
     app_options = {'unit_office_preview': True}
 
     @contextmanager
-    def workers(self, engine_port):
+    def workers(self, engine_port, crashed=None):
         context = multiprocessing.get_context('spawn')
         processes, ports = [], []
         try:
@@ -59,10 +59,13 @@ class ThuOfficeNhieuTienTrinhHTTP(CoSoDonViHTTP):
                 self.assertNotEqual(pid, os.getpid())
                 ports.append(port)
             self.assertNotEqual(processes[0][0].pid, processes[1][0].pid)
-            yield ports
+            yield ports, [process for process, _, _ in processes]
         finally:
             for process, stop, _ in processes:
-                stop.set()
+                # terminate có thể để khóa Event của tiến trình chết ở trạng
+                # thái không phục hồi; không báo dừng qua Event đó lần nữa.
+                if process.is_alive():
+                    stop.set()
             for process, _, reader in processes:
                 process.join(timeout=10)
                 if process.is_alive():
@@ -70,7 +73,10 @@ class ThuOfficeNhieuTienTrinhHTTP(CoSoDonViHTTP):
                     process.join(timeout=5)
                 reader.close()
             for process, _, _ in processes:
-                self.assertEqual(process.exitcode, 0, 'Gateway phải tự dừng sạch')
+                if crashed is not None and process.pid in crashed:
+                    self.assertNotEqual(process.exitcode, 0, 'Gateway thử sự cố phải thực sự chết')
+                else:
+                    self.assertEqual(process.exitcode, 0, 'Gateway phải tự dừng sạch')
 
     def at(self, port, path, body, authenticated=True):
         headers = {'Content-Type': 'application/json', 'Origin': self.app.origin if authenticated else ''}
@@ -132,7 +138,7 @@ class ThuOfficeNhieuTienTrinhHTTP(CoSoDonViHTTP):
         file = self.value(self.tool('van_phong.tao_office', {
             'project_id': project, 'name': 'hai-gateway.docx', 'request_key': 'd'*32}))
 
-        with self.workers(engine.server_port) as ports, concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        with self.workers(engine.server_port) as (ports, _), concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
             open_barrier = threading.Barrier(2)
 
             def open_at(port):
@@ -181,6 +187,93 @@ class ThuOfficeNhieuTienTrinhHTTP(CoSoDonViHTTP):
                 self.assertEqual(self.at(port, '/api/office-callback', {'token': token}, False)[:2], (200, {'error': 0}))
             self.assertEqual(len(commands), 1)
             self.assertEqual(len(downloads), 2)
+
+    def test_worker_dies_after_engine_accepts_survivor_does_not_replay_and_commits_late_callback(self):
+        document = changed_document('Callback den sau khi gateway gui lenh da chet')
+        commands, downloads = [], []
+        entered, release = threading.Event(), threading.Event()
+
+        class Engine(BaseHTTPRequestHandler):
+            def log_message(self, *_args):
+                pass
+
+            def do_POST(self):
+                payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                claims = verify(payload['token'], SECRET, 'command')
+                commands.append((claims['key'], claims['userdata']))
+                entered.set()
+                if not release.wait(10):
+                    self.send_error(503)
+                    return
+                raw = b'{"error":0}'
+                try:
+                    self.send_response(200)
+                    self.send_header('Content-Length', str(len(raw)))
+                    self.end_headers()
+                    self.wfile.write(raw)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass  # Tiến trình đã chết trước khi nhận ACK tổng hợp.
+
+            def do_GET(self):
+                downloads.append(self.path)
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(document)))
+                self.end_headers()
+                self.wfile.write(document)
+
+        engine = ThreadingHTTPServer(('127.0.0.1', 0), Engine)
+        threading.Thread(target=engine.serve_forever, daemon=True).start()
+        self.addCleanup(engine.server_close)
+        self.addCleanup(engine.shutdown)
+        self.addCleanup(release.set)
+        self.app.office.scanner = Scanner()
+        self.app.office_editor.secret = SECRET
+        project = self.value(self.tool('du_an.tao', {'name': 'Du an gateway bi dung dot ngot'}))['id']
+        file = self.value(self.tool('van_phong.tao_office', {
+            'project_id': project, 'name': 'khoi-phuc-lenh.docx', 'request_key': 'e'*32}))
+        crashed = set()
+        with self.workers(engine.server_port, crashed) as (ports, processes), concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            opened = self.tool_at(ports[0], 'van_phong.mo_soan_thao', {'id': file['id']})
+            key = opened['key']
+            args = {'key': key, 'request_key': 'luu-mat-ack-do-process-chet'}
+            future = pool.submit(self.tool_at, ports[0], 'van_phong.luu_soan_thao', args)
+            try:
+                self.assertTrue(entered.wait(10), 'Engine phải nhận lệnh trước khi gây sự cố')
+                processes[0].terminate()
+                processes[0].join(timeout=5)
+                self.assertFalse(processes[0].is_alive())
+                self.assertNotEqual(processes[0].exitcode, 0)
+                crashed.add(processes[0].pid)
+                with self.assertRaises((OSError, http.client.HTTPException)):
+                    future.result(timeout=5)
+
+                retry = self.tool_at(ports[1], 'van_phong.luu_soan_thao', args)
+                self.assertEqual(retry['state'], 'chua-ro-ket-qua')
+                request_id = commands[0][1]
+                self.assertEqual(retry['request_id'], request_id)
+                progress = self.tool_at(ports[1], 'van_phong.phien_soan_thao', {'key': key, 'request_id': request_id})
+                self.assertTrue(progress['pending'])
+                self.assertNotEqual(progress['command_state'], 'committed')
+                self.assertEqual(self.tool_at(ports[1], 'van_phong.doc', {'id': file['id']})['file']['version'], 1)
+                self.assertEqual(commands, [(key, request_id)])
+                self.assertEqual(downloads, [])
+            finally:
+                release.set()
+
+            token = sign({'payload': {'key': key, 'status': 6, 'userdata': request_id,
+                'users': ['nguoi-a'], 'url': f'http://127.0.0.1:{engine.server_port}/cache/files/{key}/output.docx'},
+                'operation': 'callback', 'exp': time.time()+300}, SECRET)
+            for _ in range(2):
+                self.assertEqual(self.at(ports[1], '/api/office-callback', {'token': token}, False)[:2], (200, {'error': 0}))
+            current = self.tool_at(ports[1], 'van_phong.doc', {'id': file['id']})
+            self.assertEqual(current['file']['version'], 2)
+            self.assertEqual(base64.b64decode(current['content_base64']), document)
+            progress = self.tool_at(ports[1], 'van_phong.phien_soan_thao', {'key': key, 'request_id': request_id})
+            self.assertEqual(progress['command_state'], 'committed')
+            self.assertFalse(progress['pending'])
+            self.assertEqual(self.tool_at(ports[1], 'van_phong.luu_soan_thao', args)['state'], 'da-luu')
+            self.assertEqual(commands, [(key, request_id)])
+            self.assertEqual(len(downloads), 1)
 
 
 if __name__ == '__main__':
