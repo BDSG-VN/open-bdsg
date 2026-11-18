@@ -28,4 +28,18 @@ python3 he-dieu-hanh/thu_don_vi_http.py -v
 python3 he-dieu-hanh/thu_oauth_http.py -v
 ```
 
+### Nghiệm thu Word qua HTTP với engine thật
+
+Ngày **18/11/2026**, trên nguồn `dcdb3d5fd3546545a133a4eff7537dbc2978ddca`, đã đối chiếu **644 tệp Git** trước và sau thử trong môi trường riêng. Gateway dùng constructor opt-in đã đóng góp, không sửa allowlist hoặc gọi trực tiếp phương thức Office từ bộ điều phối.
+
+Lượt `http-office-16` tạo DOCX và mở cấu hình cho hai người qua HTTPS `/api/tools` → nhân. Một trình duyệt riêng chạy SDK ONLYOFFICE thật, gõ nội dung và giữ tài liệu mở. Bộ điều phối gửi đúng một yêu cầu lưu HTTP, đọc biên nhận tiến trình đến `committed`, rồi đọc lại DOCX qua HTTP: phiên bản **1 → 2**, có dấu nội dung mới và ClamAV trả `khong-phat-hien`. Khi đã lưu, editor vẫn còn kết nối.
+
+Sau đó gọi bỏ phiên qua cùng cổng HTTP với hai xác nhận. Gọi lại cùng ý định nhận biên nhận giống nhau; phiên bản và SHA của tài liệu đã lưu không đổi. Kết nối WebSocket gốc của SDK đóng trong **5 giây** tính từ xác nhận bỏ phiên. Đóng kết nối không xóa nội dung đã tải về trình duyệt.
+
+Đây là launcher SDK thử riêng với cấu hình cấp qua HTTP, **chưa phải giao diện kho tệp/launcher BDSG**. Chỉ chứng minh Word và một editor đang kết nối; chưa chứng minh Excel/PowerPoint, tải hoặc nhiều worker. Lượt `http-office-15` trước đó đã mở và sửa tài liệu nhưng thiếu bước điều phối/kết quả lưu cuối, không tính đạt.
+
+[CI đúng nguồn dcdb3d5](https://github.com/bdsgthanhhoa/open-bdsg/actions/runs/44247151633) đạt: **703 ca ứng dụng** gồm **688 đạt, 15 bỏ qua**; **52 ca vận hành**, **4 ca đóng gói**, các bước Node và MCP/TLS đạt. Không tính ca bỏ qua là tích hợp thật.
+
+Sau thử đã dừng gateway/proxy/transport và container thử; không còn listener stage. Tệp firewall IPv4/IPv6 khớp trước thử, năm dịch vụ chính hoạt động, production vẫn R13. Bốn bản sao đầu vào xác thực của QA15/16 được xóa sau khi tiến trình kết thúc; cấu hình gốc vẫn giữ riêng ngoài Git để đối chiếu.
+
 Cần tiếp tục nối capability vào giao diện/launcher với đúng scope và vòng đời parent, kiểm trên desktop/mobile, rồi chạy trọn UI → nhân → HTTP → engine thật từ toàn nguồn được đối chiếu. Còn các gate upgrade, thu hồi trong lúc reconnect, tải/nhiều worker, binary/tài liệu khác, snapshot/restore/cutover. Website chính chưa dùng opt-in này.
