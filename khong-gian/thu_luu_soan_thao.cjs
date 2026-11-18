@@ -97,6 +97,16 @@ test('Bỏ phiên trong iframe chỉ trả về host sau biên nhận xác nhậ
   assert.equal(returned,0);await confirmAbandon(result);
   assert.equal(returned,1);assert.deepEqual(result.navigations,[]);
 });
+test('Phục hồi hỏng trước khi mở editor vẫn về kho tệp, giữ nguyên record và không ghi',async()=>{
+  let returned=0;
+  const parent={BDSGOfficeLauncher:{finish(){returned++;return true;}}};
+  const initial=await harness([],async()=>{throw new TypeError('lost');},undefined,true,{intents:true});
+  const namespace=[...initial.storage.keys()][0];initial.storage.set(namespace,'{broken');
+  const result=await harness([],undefined,undefined,false,{intents:true,parent,storage:initial.storage});
+  await result.element('#back').handlers.click({preventDefault(){}});
+  assert.equal(returned,1);assert.equal(initial.storage.get(namespace),'{broken');
+  assert.deepEqual(result.calls.map(c=>c.name),['van_phong.mo_soan_thao']);
+});
 
 test('Xác nhận bỏ phiên giữ mã trước ghi và chỉ rời trang sau đúng biên nhận',async()=>{
   const storage=new Map();

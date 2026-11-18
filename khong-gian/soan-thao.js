@@ -398,6 +398,8 @@
   close.addEventListener("click", () => perform(true));
   document.querySelector("#back").addEventListener("click", (event) => {
     event.preventDefault();
+    // Chưa có editor thì rời iframe không bỏ nội dung đang soạn. Giữ record để đối soát khi mở lại.
+    if (!editor && recoveryBlocked && !working) { returnToFiles(); return; }
     if (!closed && (editor || pendingAbandon || recoveryBlocked)) {
       event.preventDefault();
       if (pendingIntent || recoveryBlocked || working || pendingAbandon || abandonDialog.open) { holdNavigation(); return; }

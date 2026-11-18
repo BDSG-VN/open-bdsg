@@ -24,6 +24,15 @@ test('capability Office chỉ nhận boolean thật, snapshot không sửa đư�
   await unit.boot(me);
   assert.equal(unit.snapshot().capabilities.office_editor,false);
 });
+test('cửa sổ con chỉ có capability khi cả cha và me đều bật',async()=>{
+  const enabled={...me,workspace:{...me.workspace,capabilities:{office_editor:true}}};
+  const parent=client();await parent.unit.boot(me);await parent.unit.switchTo('a');
+  const disabledChild=client({parent:parent.win,pathname:'/workspace.html'});
+  await disabledChild.unit.boot(enabled);assert.equal(disabledChild.unit.snapshot().capabilities.office_editor,false);
+  const root=client();await root.unit.boot(enabled);await root.unit.switchTo('a');
+  const child=client({parent:root.win,pathname:'/workspace.html'});
+  await child.unit.boot(enabled);assert.equal(child.unit.snapshot().capabilities.office_editor,true);
+});
 
 test('client OAuth la control plane nhung consent va grant van can don vi',async()=>{
   const {unit}=client();await unit.boot(me);
