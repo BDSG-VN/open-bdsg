@@ -17,6 +17,7 @@ class ThuCongKetNoiOffice(unittest.IsolatedAsyncioTestCase):
         self.allowed = True
         self.auth_failure = False
         self.auth_slow = False
+        self.auth_delay = 0
         self.auth_release = asyncio.Event()
         self.handshake_release = asyncio.Event()
         self.path = '/office-docs/doc/bdsg-' + 'a' * 32 + '/c/?EIO=4&transport=websocket'
@@ -27,6 +28,8 @@ class ThuCongKetNoiOffice(unittest.IsolatedAsyncioTestCase):
         received = []
 
         async def auth(request):
+            if self.auth_delay:
+                await asyncio.sleep(self.auth_delay)
             if self.auth_slow:
                 await self.auth_release.wait()
             if self.auth_failure:
@@ -221,7 +224,7 @@ class ThuCongKetNoiOffice(unittest.IsolatedAsyncioTestCase):
     async def test_slow_auth_fails_closed_without_opening_channel(self):
         self.auth_slow = True
         try:
-            async with asyncio.timeout(2):
+            async with asyncio.timeout(3):
                 with self.assertRaises(WSServerHandshakeError) as raised:
                     async with self.client.ws_connect(self.proxy.make_url(self.path), headers={
                             'Origin': 'https://office.example', 'Cookie': 'session=synthetic'}):
@@ -229,6 +232,15 @@ class ThuCongKetNoiOffice(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(raised.exception.status, 403)
         finally:
             self.auth_release.set()
+
+    async def test_valid_auth_taking_one_second_can_open_channel_and_later_revoke(self):
+        self.auth_delay = 1
+        async with self.client.ws_connect(self.proxy.make_url(self.path), headers={
+                'Origin': 'https://office.example', 'Cookie': 'session=synthetic'}) as ws:
+            await ws.send_str('authorized-slow-auth')
+            self.assertEqual((await ws.receive(timeout=4)).data, 'authorized-slow-auth')
+            self.allowed = False
+            self.assertIn((await ws.receive(timeout=5)).type, (WSMsgType.CLOSE, WSMsgType.CLOSED))
 
 
 if __name__ == '__main__':

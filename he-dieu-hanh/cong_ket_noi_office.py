@@ -107,7 +107,10 @@ def tao_cong(*, engine_origin, auth_origin, public_origin, max_connections=64):
                         async with session.get(auth_origin + '/api/office-engine-auth',
                                 headers={'Cookie': request.headers.get('Cookie', ''),
                                     'X-BDSG-Engine-Path': request.raw_path},
-                                timeout=ClientTimeout(total=0.75), allow_redirects=False) as response:
+                                # Đo 18/11/2026: tải hai editor có lần auth
+                                # vượt 750 ms dù quyền còn hợp lệ. Giữ deadline
+                                # hữu hạn và chặn khi lỗi; không cache quyền.
+                                timeout=ClientTimeout(total=1.5), allow_redirects=False) as response:
                             return response.status == 200
                     except (ClientError, OSError, asyncio.TimeoutError):
                         return False

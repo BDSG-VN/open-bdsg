@@ -22,6 +22,8 @@ python3 he-dieu-hanh/cong_ket_noi_office.py \
 
 Tổng **15 ca loopback đạt** ngày 18/11/2026, thêm giới hạn kênh, shutdown hai đầu/từ chối mở lại, chặn message mới hai chiều khi mất quyền, redirect, auth chậm và handshake chậm. Đây vẫn là engine/auth tổng hợp; chưa đo tải hoặc bảo đảm thu hồi trên engine thật. Mốc thu hồi được quan sát qua các lần kiểm quyền HTTP, không phải giao dịch nguyên tử với mỗi byte đã vào bộ đệm mạng.
 
+Chẩn đoán tiếp ngày **18/11/2026**, nguồn `5ba0eed` với overlay chỉ ghi metadata: khi mở hai editor thật, thấy lần auth hết hạn ở 751/752 ms rồi pump/watch kết thúc; trước đó auth hợp lệ có lần mất 620 ms. Lần thử chưa tới bước thu hồi, không tính là phép đo bảo mật đạt hay đỏ. Deadline cũ 750 ms làm đóng kênh trong tải mở tài liệu; bản tiếp theo dùng 1,5 giây, vẫn chặn khi timeout/lỗi và không cache quyền. Hồi quy loopback với auth mất 1 giây phải mở/sửa được rồi ngắt sau thu hồi trong cửa sổ quan sát 5 giây. Tổng hiện **16 ca loopback đạt** ngày 18/11/2026; còn phải chạy lại SDK/engine thật với mã này. Không coi deadline hay phép cộng thời gian danh nghĩa là bảo đảm thời gian thực khi hệ thống quá tải.
+
 Trước khi bật: cấu hình dịch vụ/nginx stage, giới hạn tài nguyên hệ điều hành, kiểm dưới tải và chạy lại CLI bằng engine thật trên nguồn mới; chứng minh cộng tác/thu hồi/reconnect/polling. [aiohttp ClientSession và WebSocket](https://docs.aiohttp.org/en/stable/client_reference.html), [gói aiohttp chính thức](https://pypi.org/project/aiohttp/).
 
 ## Kết luận để chọn hướng
