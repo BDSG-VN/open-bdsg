@@ -13,6 +13,18 @@ function client({storage = new Map(), parent, pathname = '/'} = {}) {
 }
 const me = {user:{id:'actor',name:'Actor',role:'nguoi-dung'},workspace:{mode:'units',system_admin:true,apps:['account','projects']}};
 
+test('capability Office chỉ nhận boolean thật, snapshot không sửa được trạng thái gốc',async()=>{
+  const {unit}=client();
+  await unit.boot({...me,workspace:{...me.workspace,capabilities:{office_editor:true,unknown:true}}});
+  assert.equal(unit.snapshot().capabilities.office_editor,true);
+  unit.snapshot().capabilities.office_editor=false;
+  assert.equal(unit.snapshot().capabilities.office_editor,true);
+  await unit.boot({...me,workspace:{...me.workspace,capabilities:{office_editor:'true'}}});
+  assert.equal(unit.snapshot().capabilities.office_editor,false);
+  await unit.boot(me);
+  assert.equal(unit.snapshot().capabilities.office_editor,false);
+});
+
 test('client OAuth la control plane nhung consent va grant van can don vi',async()=>{
   const {unit}=client();await unit.boot(me);
   assert.deepEqual(Object.keys(unit.headers('/api/oauth/clients')),[]);

@@ -4,6 +4,7 @@
   let mode = 'legacy', actorId = 'guest', systemAdmin = false, apps = [], units = [], selected = null;
   let status = 'idle', error = '', generation = 0, loadVersion = 0, booted = false, actorRole = '', bootVersion = 0;
   let parentUnit = null, parentToken = null;
+  let capabilities = {office_editor:false};
   const hooks = new Set();
   const child = window.location.pathname === '/workspace.html' && window.parent !== window;
   if (child) { parentUnit = window.parent.BDSGUnit || null; parentToken = parentUnit?.capture() || null; }
@@ -12,7 +13,7 @@
   const copy = value => value ? {...value} : null;
   const contextKey = () => mode === 'legacy' ? actorId : JSON.stringify([actorId, selected?.id || null, selected?.epoch ?? null, selected?.revision ?? null]);
   function snapshot() {
-    return {mode,actorId,systemAdmin,apps:[...apps],units:units.map(copy),selected:copy(selected),status,error,generation};
+    return {mode,actorId,systemAdmin,apps:[...apps],capabilities:{...capabilities},units:units.map(copy),selected:copy(selected),status,error,generation};
   }
   function emit(type, reason) { window.dispatchEvent(new window.CustomEvent(type,{detail:{...snapshot(),reason}})); }
   function changed(previous, reason) {
@@ -86,12 +87,14 @@
     loadVersion++; actorId = nextActor; actorRole = me.user?.role || '';
     mode = me.workspace?.mode === 'units' ? 'units' : 'legacy'; systemAdmin = me.workspace?.system_admin === true;
     apps = Array.isArray(me.workspace?.apps) ? [...me.workspace.apps] : [];
+    capabilities = {office_editor:mode === 'units' && me.workspace?.capabilities?.office_editor === true};
     if (!sameActor) { units = []; selected = null; }
     booted = true; status = 'ready'; error = '';
     if (child) {
       if (!parentUnit || !parentCurrent()) throw fail();
       const initial = initialParent;
       if (initial.actorId !== actorId || initial.mode !== mode) throw fail();
+      capabilities = {office_editor:capabilities.office_editor && initial.capabilities?.office_editor === true};
       units = initial.units.map(copy); selected = copy(initial.selected);
       // Trạng thái tải của cha chỉ tạm thời; phạm vi đã chụp vẫn có hàng rào thế hệ và metadata máy chủ.
       status = selected && initial.status === 'loading' ? 'ready' : initial.status;

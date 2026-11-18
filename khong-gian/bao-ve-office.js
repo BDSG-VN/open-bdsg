@@ -25,7 +25,8 @@
       }
       const session = window.BDSGSessionGuard.create({onInvalidate: invalidate});
       function parentCurrent() {
-        try { return !!owner && !owner.closed && !!unit && owner.BDSGUnit === unit && unit.current(token); }
+        try { return !!owner && !owner.closed && !(owner.frameElement && !owner.frameElement.isConnected) &&
+          !!unit && owner.BDSGUnit === unit && unit.current(token); }
         catch (_) { return false; }
       }
       function assertActive() {

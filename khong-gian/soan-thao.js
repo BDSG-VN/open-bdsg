@@ -46,6 +46,12 @@
     error.hidden = false;
   };
   const validRequest = value => typeof value === "string" && value.length > 0 && value.length <= 128;
+  function returnToFiles() {
+    try {
+      if (window.parent !== window && window.parent?.BDSGOfficeLauncher?.finish(window)) return;
+    } catch (_) {}
+    location.assign("/#office");
+  }
   const validIntent = value => typeof value === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(value);
   function holdNavigation() {
     if (pendingAbandon) {
@@ -148,7 +154,7 @@
       try { editor?.destroyEditor(); } catch (_) {}
       editor = null;
       status.textContent = "Đã bỏ phiên. Chỉ các phiên bản đã có trong kho BDSG được giữ lại.";
-      location.assign("/#office");
+      returnToFiles();
     } catch (failure) {
       if (closed) return;
       showError(failure.message);
@@ -349,7 +355,7 @@
         editor = null;
         closed = true;
         working = false;
-        location.assign("/#office");
+        returnToFiles();
         return;
       }
       status.textContent = unchanged ? "Không có thay đổi cần lưu." : "Đã lưu phiên bản vào kho BDSG.";
@@ -391,10 +397,13 @@
   });
   close.addEventListener("click", () => perform(true));
   document.querySelector("#back").addEventListener("click", (event) => {
+    event.preventDefault();
     if (!closed && (editor || pendingAbandon || recoveryBlocked)) {
       event.preventDefault();
       if (pendingIntent || recoveryBlocked || working || pendingAbandon || abandonDialog.open) { holdNavigation(); return; }
       perform(true);
+    } else {
+      returnToFiles();
     }
   });
   window.addEventListener("beforeunload", (event) => {

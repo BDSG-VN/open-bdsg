@@ -29,7 +29,7 @@ jobs:
           node --test khong-gian/thu_he_dieu_hanh.cjs khong-gian/thu_trinh_duyet.cjs khong-gian/thu_van_phong_cua_so.cjs khong-gian/thu_bao_ve_phien.cjs khong-gian/thu_may_chu.cjs khong-gian/thu_phien_web.cjs
           node --test khong-gian/thu_don_vi.cjs khong-gian/thu_vo_don_vi.cjs khong-gian/thu_du_an_form.cjs
           node --test khong-gian/thu_luu_soan_thao.cjs
-          node --test khong-gian/thu_pham_vi_soan_thao.cjs
+          node --test khong-gian/thu_pham_vi_soan_thao.cjs khong-gian/thu_mo_soan_thao.cjs
           git diff --check
       - name: Verify MCP TLS and slow headers in a private network
         run: sudo python3 trien-khai/van-hanh/v29_thu_mcp_tls.py

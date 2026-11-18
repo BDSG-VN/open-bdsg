@@ -49,7 +49,7 @@ async function harness(progresses, saved = {state:'dang-luu',request_id:request}
     },
   };
   const context = {
-    window:{BDSGOfficeGuard:{create:()=>guard},addEventListener:(name,fn)=>windowEvents.set(name,fn),
+    window:{parent:options.parent,BDSGOfficeGuard:{create:()=>guard},addEventListener:(name,fn)=>windowEvents.set(name,fn),
       sessionStorage:{getItem:key=>storage.get(key)||null,setItem(key,value){if(options.storageDenied)throw new Error('quota');storage.set(key,value);},removeItem(key){if(options.removeDenied)throw new Error('Synthetic cleanup failure');storage.delete(key);}}},
     document:{querySelector:element,createElement:()=>({}),
       head:{append:script=>queueMicrotask(()=>script.onload())}},
@@ -83,6 +83,20 @@ async function confirmAbandon(result) {
   }
   await result.element('#abandon-confirm').handlers.click();
 }
+test('Lưu và đóng trong iframe trả về host sau đối soát, không điều hướng iframe sang Home',async()=>{
+  let returned=0;
+  const parent={BDSGOfficeLauncher:{finish(){returned++;return true;}}};
+  const result=await harness(args=>progress({request_key:args.request_key}),undefined,undefined,true,
+    {intents:true,parent,action:'close',onClose(events){events.onRequestClose();}});
+  assert.equal(returned,1);assert.equal(result.destroyed,1);assert.deepEqual(result.navigations,[]);
+});
+test('Bỏ phiên trong iframe chỉ trả về host sau biên nhận xác nhận',async()=>{
+  let returned=0;
+  const parent={BDSGOfficeLauncher:{finish(){returned++;return true;}}};
+  const result=await harness([],undefined,undefined,true,{intents:true,abandonCapability:true,clicks:0,parent});
+  assert.equal(returned,0);await confirmAbandon(result);
+  assert.equal(returned,1);assert.deepEqual(result.navigations,[]);
+});
 
 test('Xác nhận bỏ phiên giữ mã trước ghi và chỉ rời trang sau đúng biên nhận',async()=>{
   const storage=new Map();

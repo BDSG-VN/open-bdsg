@@ -1,6 +1,7 @@
 "use strict";
 (() => {
   const unitMode = () => window.BDSGUnit?.snapshot().mode === "units";
+  const editorAvailable = () => !unitMode() || window.BDSGUnit.snapshot().capabilities?.office_editor === true;
   let projects = [],
     files = [],
     selected = "",
@@ -130,8 +131,15 @@
   function heading() {
     return `<div class="office-heading"><div><h1>Văn phòng của dự án</h1><p>Tệp, ghi chú và các phiên bản công việc, trong cùng một không gian.</p></div><a class="button" href="#projects">Quản lý dự án ${icon("arrow")}</a></div>`;
   }
+  function openEditor(id) {
+    if (!write() || !editorAvailable() || !closeDialog()) return;
+    const t = ticket();
+    try {
+      window.BDSGOfficeLauncher.open(id, () => { if (valid(t)) load(); });
+    } catch (error) { if (valid(t)) notice(error.message, true); }
+  }
   async function newOffice(extension) {
-    if (!write() || busy) return;
+    if (!write() || !editorAvailable() || busy) return;
     const name = window.prompt(
       "Tên tài liệu mới (giữ đuôi ." + extension + ")",
       "tai-lieu." + extension,
@@ -152,6 +160,7 @@
       });
       createIntents.delete(intent);
       if (valid(t)) {
+        if (unitMode()) { busy = false; openEditor(file.id); return; }
         if (embedded()) {
           busy = false;
           await load();
@@ -285,7 +294,7 @@
       <div class="office-controls"><label class="office-project-label">Dự án<select id="office-project" ${busy ? "disabled" : ""}><option value="">Chọn dự án…</option>${projects.map((p) => `<option value="${esc(p.id)}" ${p.id === selected ? "selected" : ""}>${esc(p.name)}${p.archived ? " · Đã lưu trữ" : ""}</option>`).join("")}</select></label>
       <div class="office-primary-actions"><button class="button" type="button" data-office-new ${!write() || loading || busy ? "disabled" : ""}>${icon("plus")}Tạo văn bản</button><label class="button primary office-upload ${!write() || loading || busy ? "disabled" : ""}">Tải tệp lên<input id="office-upload" type="file" accept=".txt,.md,.csv,.pdf,.docx,.xlsx,.pptx" aria-label="Chọn tệp để tải lên" ${!write() || loading || busy ? "disabled" : ""}></label></div></div>
       <div class="office-filter-bar"><div class="office-tabs" role="group" aria-label="Khu vực tệp"><button type="button" data-office-tab="files" aria-pressed="${!trash}" ${busy ? "disabled" : ""}>Tệp của dự án</button><button type="button" data-office-tab="trash" aria-pressed="${trash}" ${busy ? "disabled" : ""}>Thùng rác</button></div><label class="office-search">${icon("search")}<input id="office-search" type="search" placeholder="Tìm tên tệp…" aria-label="Tìm tên tệp" value="${esc(query)}"></label></div>
-      <div class="office-formats" role="group" aria-label="Tạo tài liệu Office">${(unitMode() ? [] : [
+      <div class="office-formats" role="group" aria-label="Tạo tài liệu Office">${(!editorAvailable() ? [] : [
         ["docx", "Tạo Word"],
         ["xlsx", "Tạo Excel"],
         ["pptx", "Tạo PowerPoint"],
@@ -299,7 +308,7 @@
       <div id="office-progress" class="office-progress" hidden></div>
       <div id="office-transfers"></div>
       <div id="office-files" aria-busy="${loading}"></div>
-      ${unitMode() ? '<p>Đơn vị đang dùng kho tệp riêng theo quyền dự án. Soạn thảo Word/Excel/PowerPoint trực tuyến và kết nối Google chưa mở ở chế độ này; bạn vẫn có thể tải tệp lên và tải về.</p>' : '<details class="office-google"><summary>Kết nối Google Drive</summary><div id="office-google-body"><p>Mở để kiểm tra kết nối tài khoản riêng của bạn.</p></div></details>'}
+      ${unitMode() ? `<p>${editorAvailable() ? 'Soạn thảo trực tuyến đang thử nghiệm trên máy tính, trong đúng đơn vị và quyền dự án. Trên điện thoại, bạn có thể tải hoặc nhập tài liệu.' : 'Soạn thảo trực tuyến chưa mở cho đơn vị này; bạn vẫn có thể tải tệp lên và tải về.'} Kết nối Google chưa mở ở chế độ đơn vị.</p>` : '<details class="office-google"><summary>Kết nối Google Drive</summary><div id="office-google-body"><p>Mở để kiểm tra kết nối tài khoản riêng của bạn.</p></div></details>'}
       <div class="office-footer"><p id="office-usage"></p><p>Tệp tối đa 8 MiB; sửa văn bản tối đa 32 KiB. Word, Excel và PowerPoint soạn trên máy tính bằng ONLYOFFICE. ${access?.scan_state === "san-sang" ? "Bộ quét virus đang sẵn sàng." : "Bộ quét virus chưa sẵn sàng; không coi tệp là đã được quét."}</p></div>
       </section>`;
     drawFiles();
@@ -378,6 +387,7 @@
       .forEach((e) => (e.disabled = value));
   }
   function reset() {
+    window.BDSGOfficeLauncher?.reset();
     googleExports.clear();
     googleImports.clear();
     createIntents.clear();
@@ -399,6 +409,11 @@
   }
   function leave(hash) {
     if (hash !== "#office") {
+      if (window.BDSGOfficeLauncher?.active) {
+        location.replace("#office");
+        notice("Dùng Lưu và đóng hoặc Về kho tệp trong bộ soạn thảo trước khi rời văn phòng.", true);
+        return false;
+      }
       if (
         dirty &&
         state.user &&
@@ -550,12 +565,12 @@
     );
     if (!element) return;
     const actions = element.querySelector(".office-file-actions");
-    if (!unitMode() && write() && !file.trashed && /\.(docx|xlsx|pptx)$/i.test(file.name)) {
-      const link = document.createElement("a");
+    if (editorAvailable() && write() && !file.trashed && /\.(docx|xlsx|pptx)$/i.test(file.name)) {
+      const link = document.createElement(unitMode() ? "button" : "a");
       link.className = "button primary";
-      link.href = "/soan-thao.html?id=" + encodeURIComponent(file.id);
       link.textContent = "Mở bộ soạn thảo";
-      separateTab(link);
+      if (unitMode()) { link.type = "button"; link.addEventListener("click", () => openEditor(file.id)); }
+      else { link.href = "/soan-thao.html?id=" + encodeURIComponent(file.id); separateTab(link); }
       actions.prepend(link);
     }
     if (!unitMode() && !file.trashed) {

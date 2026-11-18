@@ -43,6 +43,12 @@ test('Namespace trạng thái lưu ghim actor và đơn vị, hết hiệu lực
   assert.deepEqual(JSON.parse(f.guard.contextKey),['actor','unit-a',2,3]);
   f.change();assert.throws(()=>f.guard.contextKey);
 });
+test('Gỡ cửa sổ ứng dụng cha dừng editor dù token đơn vị chưa đổi',async()=>{
+  const f=fixture();f.parent.frameElement={isConnected:true};await f.guard.ready;
+  f.parent.frameElement.isConnected=false;
+  await assert.rejects(f.guard.fetch('/api/tools'));
+  assert.equal(f.guard.active,false);assert.equal(f.stops.length,1);
+});
 
 async function realParent() {
   const listeners=new Map();
