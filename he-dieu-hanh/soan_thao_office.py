@@ -157,6 +157,12 @@ class SoanThaoOffice:
             )
             if reference is not None and not db.execute('SELECT 1 FROM office_editor_scopes WHERE key=? AND actor=?',(session['key'],actor['id'])).fetchone():
                 self.scopes.remember(session['key'],actor,file['project_id'],db)
+            pending_save=None
+            if reference is not None and session['pending']:
+                intent=db.execute('SELECT intent FROM office_editor_intents WHERE key=? AND actor=? AND request=?',
+                                  (session['key'],actor['id'],session['pending'])).fetchone()
+                if intent is not None:
+                    pending_save={'request_key':intent['intent'],'request_id':session['pending']}
         url = (
             self.origin
             + "/api/office-source?"
@@ -192,6 +198,7 @@ class SoanThaoOffice:
             "api_url": self.prefix + "web-apps/apps/api/documents/api.js",
             "save_protocol": "request-ledger-v1" if self.scopes.units is not None else "legacy",
             "save_intents": self.scopes.units is not None,
+            "pending_save": pending_save,
         }
 
     def source(self, query, authorization):

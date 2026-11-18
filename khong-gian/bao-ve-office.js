@@ -12,7 +12,7 @@
         const snapshot = unit?.snapshot();
         if (snapshot) initial = {...snapshot, selected: snapshot.selected ? {...snapshot.selected} : null};
       } catch (_) { owner = unit = null; }
-      let stopped = false, booted = false, scoped = false, interval, checking;
+      let stopped = false, booted = false, scoped = false, interval, checking, contextKey;
       const controller = new AbortController();
       const failure = () => new Error(message);
       function invalidate(reason = message) {
@@ -59,6 +59,8 @@
           if (scoped && (!parentCurrent() || initial?.mode !== "units" ||
             initial.actorId !== me.user.id || initial.status !== "ready" || !initial.selected)) throw failure();
           booted = true;
+          contextKey = JSON.stringify([me.user.id,scoped ? initial.selected.id : null,
+            scoped ? initial.selected.epoch : null,scoped ? initial.selected.revision : null]);
           await membership();
           if (scoped) interval = setInterval(() => { check().catch(() => {}); }, 5000);
         } catch (error) { invalidate(); throw error; }
@@ -93,6 +95,7 @@
         return response;
       }
       return Object.freeze({ready,fetch:guardedFetch,check,assertActive,
+        get contextKey() { assertActive(); return contextKey; },
         get active() { try { assertActive(); return session.active; } catch (_) { return false; } }});
     },
   });

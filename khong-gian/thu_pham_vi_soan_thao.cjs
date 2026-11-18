@@ -38,6 +38,12 @@ test('Cửa sổ gửi phạm vi đã chụp, không nhận header đơn vị gi
   assert.equal(f.guard.active,true);
 });
 
+test('Namespace trạng thái lưu ghim actor và đơn vị, hết hiệu lực cùng guard',async()=>{
+  const f=fixture();await f.guard.ready;
+  assert.deepEqual(JSON.parse(f.guard.contextKey),['actor','unit-a',2,3]);
+  f.change();assert.throws(()=>f.guard.contextKey);
+});
+
 async function realParent() {
   const listeners=new Map();
   let rows=[{id:'unit-a',name:'A',role:'member',epoch:2,revision:3},

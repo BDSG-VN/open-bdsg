@@ -103,15 +103,44 @@ khi có lệnh chờ bị báo xung đột, không mượn lệnh đang chờ l�
 Progress hỏi intent chưa có trả not-started/request_id=null, không lấy
 receipt mới nhất của key. Không nhận đồng thời request_key và request_id.
 
-Kiểm cục bộ ngày 18/11/2026: 36 bài phiên đơn vị và 15 bài Office legacy
+Ở mốc nền e255deb ngày 18/11/2026: 36 bài phiên đơn vị và 15 bài Office legacy
 đạt. Có lệnh commit, timeout/restart, hai lời gọi đồng thời, tách actor,
 scope/rejoin và input sai; transport engine tổng hợp, đọc phiên bản qua
 Office thật trên SQLite tạm. Schema MCP khai báo request_key tùy chọn;
 legacy không quảng bá hỗ trợ và từ chối nhận intent trước gọi engine.
 Đã tái lập việc tạo command mới sau commit trước sửa, rồi đạt sau sửa.
-Controller chưa dùng khả năng mới này; còn nối UI kiểm lại đúng ý định,
-giữ trạng thái khi mất phản hồi và đối soát bỏ phiên có xác nhận mất sửa
-đổi. Không coi nền backend là trải nghiệm khôi phục đã hoàn chỉnh.
+Controller nay dùng khả năng mới khi open khai báo hỗ trợ: giữ record chỉ
+có phiên bản định dạng/key/request_key/request_id trong sessionStorage,
+phân vùng theo file và actor/unit/epoch/revision do OfficeGuard đã ghim.
+Record được ghi trước write; lỗi lưu record chặn write. Mất phản hồi vẫn
+giữ record; nút chính chuyển thành Kiểm tra lần lưu, chỉ đọc đúng intent.
+not-started cho bấm Thử lưu lại cùng intent, không tự write từ polling.
+main và nút đóng bị khóa khi chưa có kết quả; cảnh báo rời trang kể cả
+chưa ghi nhận dirty. Receipt đúng mới mở lại, dirty mới không bị receipt
+cũ xóa hoặc đóng tài liệu, kể cả dirty đến trong khi chờ requestClose.
+No-op phiên mới có thông báo riêng, không gọi là đã lưu phiên bản; pending
+phục hồi mà unchanged vẫn giữ record và khóa sửa. Back/SDK close không gửi
+retry hoặc đóng khi còn pending; chỉ nút Thử lưu lại được gửi lại rõ ràng.
+Thông báo mạng được chuyển sang hướng dẫn Việt.
+
+Reload cùng phạm vi/key phục hồi record; open phía server trả pending_save
+của chính actor nếu pending có mapping, không trả intent của người khác.
+Record hỏng/key khác/xung đột hoặc backend không còn hỗ trợ không tự bỏ
+trạng thái cũ. Vẫn cần UI bỏ phiên với xác nhận có thể mất thay đổi, cùng
+nhân/HTTP toàn tuyến trước mở công cụ; chưa là khôi phục Office đầy đủ.
+
+Đo cục bộ ngày 18/11/2026: 26 Node controller, 12 Node guard, 37 phiên
+đơn vị và 15 Office legacy đạt; bài HTTP chặn công cụ chưa chuyển đổi đạt.
+Chrome parent/guard/controller thật với API/editor tổng hợp kiểm 17 ca ở
+1440/980/390, gồm mất phản hồi, reload, not-started, receipt sai, dirty
+muộn, lỗi storage, server pending, No-op, chặn Back và hạ cả protocol.
+Không lỗi JS/tràn ngang. Đã xem 18 ảnh, rồi đối chiếu SHA và xem 4 ảnh đổi
+sau sửa câu lỗi; lượt cuối có 26 ảnh, xem thêm 8 ảnh mới, 18 ảnh còn lại
+khớp SHA với bộ đã xem. Bộ 7
+ca lưu cũ và 9 ca phạm vi cửa sổ cũng đạt; ảnh giữ nguyên qua so SHA.
+Counterfactual dùng controller nguyên vẹn của e255deb với fixture mới
+thất bại ở luồng mới, không thay source để lộ helper; chưa coi fake API/
+engine là bằng chứng tích hợp thật hoặc công cụ đơn vị đã mở.
 
 Ngày 18/11/2026 thêm guard cửa sổ Office kết hợp khóa danh tính hiện có
 với capture BDSGUnit của cửa sổ mở nó, chụp đồng bộ trước IO. Editor đơn

@@ -160,6 +160,20 @@ class ThuPhienOfficeDonVi(unittest.TestCase):
         self.assertEqual(second['request_id'],initial['request_id'])
         self.assertEqual(second['state'],'chua-ro-ket-qua')
 
+    def test_reopen_exposes_only_current_actors_pending_intent(self):
+        self.app.kho.tao_agent('nguoi-c','Nguoi C','operator')
+        member={'unit_id':self.units[0],'identity':'nguoi-c'}
+        self.app.units.set_member(self.root,{**member,'role':'member'})
+        self.app.projects.share(self.a,{'id':self.project,**member,'role':'editor'})
+        other=self.app.units.bind({'id':'nguoi-c','role':'operator','name':'Nguoi C'},self.units[0])
+        opened=self.editor.open(self.a,{'id':self.file['id']})
+        connection,payload=self.command_connection()
+        with patch('soan_thao_office.http.client.HTTPConnection',return_value=connection):
+            saved=self.editor.save(self.a,{'key':opened['key'],'request_key':'reopen-pending'})
+        reopened=self.editor.open(self.a,{'id':self.file['id']})
+        self.assertEqual(reopened['pending_save'],{'request_key':'reopen-pending','request_id':saved['request_id']})
+        self.assertIsNone(self.editor.open(other,{'id':self.file['id']})['pending_save'])
+
     def test_configured_engine_port_routes_command_and_snapshot_over_real_loopback_http(self):
         requests=[];raw=changed_document('Tai lieu qua cong engine thu rieng')
         class Engine(BaseHTTPRequestHandler):
