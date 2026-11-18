@@ -84,7 +84,7 @@ test("Phản hồi cũ không được xuất sau khi phiên đổi, kể cả f
 });
 test("Trình soạn thảo hủy engine, xóa vùng riêng và bỏ qua callback engine sau đổi phiên", async () => {
   const nodes = new Map();
-  function node() { return { disabled: true, hidden: true, textContent: "", inert: false, cleared: false,
+  function node() { return { disabled: true, hidden: true, open: false, textContent: "", inert: false, cleared: false,
     listeners: {}, addEventListener(name, fn) { this.listeners[name] = fn; }, replaceChildren() { this.cleared = true; }, focus() {} }; }
   const document = { querySelector(selector) { if (!nodes.has(selector)) nodes.set(selector, node()); return nodes.get(selector); },
     createElement() { return {}; }, head: { append(script) { queueMicrotask(() => script.onload()); } } };
