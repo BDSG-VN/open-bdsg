@@ -232,6 +232,37 @@ Nhiều worker với engine thật, phục hồi toàn host/engine, tải, thu h
 reconnect/upgrade, Google theo đơn vị và cutover vẫn cần nghiệm thu. R14
 chưa phát hành production.
 
+### Vòng đời bfcache của guard trên Chromium thật - 19/11/2026
+
+`trien-khai/van-hanh/v29_thu_vong_doi_office.py` là bộ kiểm độc lập, chỉ mở
+HTTP loopback với danh tính và editor tổng hợp. Cần Playwright Python và
+Chromium đầy đủ đã cài; không dùng tài khoản, profile người dùng, ONLYOFFICE
+hoặc API đơn vị thật. Chạy từ kho, chọn tệp kết quả chưa tồn tại:
+
+```sh
+python3 trien-khai/van-hanh/v29_thu_vong_doi_office.py --output /thu-muc-rieng/guard-moi.json
+```
+
+Có thể chỉ định `--source-root` cho bản nguồn cần kiểm. Bộ kiểm dùng channel
+`chromium`, chỉ bỏ cờ tắt bfcache trong profile thử mới và giữ các cờ khác.
+Điều hướng bằng lịch sử Chrome thật, không phát sự kiện `pagehide/pageshow`
+tổng hợp. Bfcache không phát DOMContentLoaded mới, nên không dùng điều kiện
+chờ đó để kết luận trình duyệt đã phục hồi trang.
+
+Lượt CLI59 ngày 19/11/2026 đạt trên Chromium **159.0.8154.6**: chuỗi sự kiện
+`pageshow(false) → pagehide(true) → pageshow(true)` chứng minh trang thực sự
+được cache rồi phục hồi. Guard giữ trạng thái ngừng, thông báo dọn đúng
+**một lần**, vùng editor tổng hợp biến mất; gọi công cụ bị từ chối trước
+khi tới shim của backend. SHA-256 mã guard được kiểm là
+`36bb2e14387cdfefced53a0b2fe9ef1f52d3d8142bf5714b1b7365fffc29a5cd`.
+Bộ kiểm trả mã lỗi khi không chứng minh được cache thật hoặc invariant sai,
+không coi tải trang mới là đạt. Các lượt phát triển bộ kiểm trước đó chưa
+đủ điều kiện này không tính đạt.
+
+Kết quả chỉ xác nhận vòng đời guard với danh tính/editor tổng hợp. Chưa
+chứng minh bfcache cùng SDK ONLYOFFICE, cache tài liệu thật, mọi trình duyệt,
+thu hồi quyền phía backend hoặc các cổng phát hành R14 còn lại.
+
 ### Toàn bản dựng mới và cộng tác - 19/11/2026
 
 Đã đóng gói commit `3685c6e67671d16e5faa0ef52fdc516dbb544f2c` từ Git,
