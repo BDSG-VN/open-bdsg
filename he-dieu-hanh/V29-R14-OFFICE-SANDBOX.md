@@ -379,3 +379,36 @@ profile/firewall; năm dịch vụ production được kiểm hoạt động và
 Thanh Hoá trả HTTP200. Production giữ R13. R14 chưa phát hành; nhiều
 gateway worker, SDK/cache/toàn host recovery, tải, Google theo đơn vị và
 các cổng tenant/cutover còn phải nghiệm thu.
+
+### Nhiều gateway với engine thật - 19/11/2026
+
+Lượt67 dùng nguồn `c4f0e6e`, toàn UI mới và Chromium đầy đủ. Một danh tính
+tổng hợp tạo DOCX, gõ dấu đã biết, đợi SDK xác nhận đã lưu thay đổi vào
+engine nhưng chưa có snapshot BDSG. Đây là tiền điều kiện riêng của ca
+kiểm dedup backend, không chứng minh mọi thay đổi chưa gửi ở client đã
+được xử lý bởi nút lưu BDSG.
+
+Hai tiến trình gateway độc lập dùng cùng kho, nhận **8 yêu cầu** cùng ý
+định lưu, chia đều qua hai cổng HTTP loopback. Gateway thứ ba phục vụ
+callback và quét. Đã đối chiếu PID để xác nhận cả ba là tiến trình khác
+nhau, không phải ba luồng hoặc ba tên URL tới cùng tiến trình.
+
+Bộ chuyển tiếp loopback đếm **một POST /command** từ hai writer rồi chuyển
+nguyên thân yêu cầu tới DocServer thật và trả phản hồi thật. Không thay
+engine hoặc tạo callback tổng hợp. Các yêu cầu nhận cùng mã lệnh; callback
+thật commit tệp **1 → 2**, ClamAV không phát hiện. Cả ba gateway đọc cùng
+byte có đúng dấu đã nhập. Retry sau commit qua từng writer giữ mã lệnh và
+không phát POST /command thêm.
+
+Sau khi điều phối xác nhận byte đã lưu, người thử xác nhận bỏ phiên bằng
+UI, rồi đọc tệp qua kho BDSG: vẫn bản **2**, có dấu nội dung, không có lỗi
+JS trang. Đã dừng gateway phụ, proxy đếm, browser và stage/container. Bảy
+cổng thử loopback không còn bind, **651 nguồn**/**69 web**/profile và
+firewall khớp; production vẫn R13 với năm dịch vụ được kiểm hoạt động.
+Các bản sao đầu vào xác thực QA67 đã được dọn.
+
+Kết quả này kiểm một editor, hai writer đồng thời và gateway callback
+thứ ba trên cùng host. Chưa là kết hợp nhiều editor với nhiều worker,
+worker chết khi engine đã nhận lệnh, triển khai nhiều host, tải cao hoặc
+phục hồi engine/cache/toàn host. Không suy từ ca67 rằng toàn R14 đã đạt
+điều kiện phát hành.
