@@ -231,3 +231,46 @@ Phục hồi mới kiểm kho ứng dụng khi engine/cache còn nóng và một
 Nhiều worker với engine thật, phục hồi toàn host/engine, tải, thu hồi khi
 reconnect/upgrade, Google theo đơn vị và cutover vẫn cần nghiệm thu. R14
 chưa phát hành production.
+
+### Toàn bản dựng mới và cộng tác - 19/11/2026
+
+Đã đóng gói commit `3685c6e67671d16e5faa0ef52fdc516dbb544f2c` từ Git,
+đối chiếu đủ **648 blob**, không lấy tệp ngoài Git. SHA-256 gói nguồn là
+`ca196811aff624428ae142e4f81d65be3331cba4fd4f519211f49e330cadd975`.
+Môi trường thử mới dựng đủ **69 tệp web** từ nguồn này; cả backend và UI
+dùng bản mới. Không thay phản hồi JS qua route của bộ kiểm trong lượt47.
+
+PowerPoint47 với ONLYOFFICE và ClamAV thật đạt cùng luồng phục hồi đã mô tả:
+snapshot lúc còn sửa chưa lưu, đọc lại đúng bản **2**, nguồn ký cũ **200 →
+403**, tiến độ/lưu cũ bị chặn, callback trạng thái1 có đối chứng trước/sau,
+socket cũ đóng trong **5 giây**. Key mới lưu bản **3** với đúng nội dung cũ
+và mới; restart giữ đúng byte. Đã xem ảnh bản lưu mới, không có lỗi JS.
+Lượt46 thiếu helper riêng của bộ kiểm nên chưa hoàn tất, không tính đạt.
+
+Hai lượt cộng tác50/52 dùng hai tiến trình Chromium và hai danh tính thử,
+toàn UI mới, engine/scanner thật. Hai người cùng key, có thay đổi truyền
+hai chiều và bản lưu giữ đủ dấu của cả hai. Thu hồi thành viên C qua HTTP
+khi hai editor còn mở: socket C đóng trong **5 giây** từ ACK, mở lại bị
+**403**, không nhận thêm gói thay đổi sau cửa sổ kiểm. A xác nhận bỏ phiên
+chung, mở key mới, lưu bản **3** giữ nội dung trước đó và dấu mới; quét
+không phát hiện và không có lỗi JS. Hai lượt này có thêm đo đạc tạm trong
+bản sao transport riêng, không sửa nguồn Git hoặc trả dữ liệu engine giả.
+Không gọi đây là phép thử nhiều gateway worker.
+
+Chưa coi độ ổn định cộng tác đã đạt: lượt48 thiếu dấu A trong tệp lưu,
+lượt49 quan sát A mất kết nối trước khi nhập hoàn tất. Hai lượt không đạt
+vẫn được giữ làm bằng chứng, chưa xác định chắc nguyên nhân ngắt kết nối.
+Đo auth ở các lượt thành công không ghi nhận timeout; chỉ có từ chối quyền
+sau thao tác thu hồi. Không suy ra các lượt chưa đo cũng không có timeout.
+
+Lượt51 bị chặn mở tệp sau khi bộ điều phối cho C gia nhập lại đơn vị nhưng
+chưa cấp lại chia sẻ dự án. Đây không phải bằng chứng transport mất kết nối:
+thu hồi/rejoin không tự khôi phục quyền nội dung cũ. Lượt52 chia sẻ lại dự
+án đích danh qua HTTP/nhân trước khi bắt đầu, không hồi sinh lease cũ.
+
+Đã dừng stage/container; gỡ transport đo đạc và phục hồi bộ khởi động ban
+đầu. **648 nguồn**, **69 web**, profile và firewall IPv4/IPv6 khớp; năm dịch
+vụ production được kiểm hoạt động, production vẫn R13. Đã dọn các bản sao
+đầu vào xác thực QA46-52 sau khi kết thúc. Còn kiểm nguyên nhân mất kết nối,
+nhiều worker với engine thật, tải, bfcache thật, reconnect/upgrade, phục hồi
+engine/cache/toàn host, Google theo đơn vị và cutover trước phát hành R14.
