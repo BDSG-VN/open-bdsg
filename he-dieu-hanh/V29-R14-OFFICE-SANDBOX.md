@@ -1,0 +1,307 @@
+# R14 — cổng soạn thảo đơn vị thử nghiệm
+
+Cập nhật **18/11/2026**. Có opt-in backend qua nhân/HTTP và giao diện đơn vị theo capability. Đã kiểm luồng cơ bản Word/Excel/PowerPoint từ vỏ BDSG đến engine thật trong môi trường thử; chưa bật production hoặc nghiệm thu toàn bộ R14. Các bằng chứng transport trước đó ở [nghiên cứu kết nối Office](NGHIEN-CUU-THU-HOI-KET-NOI-OFFICE.md) có phạm vi riêng với các phép đo giao diện dưới đây.
+
+## Cách bật trong gateway thử riêng
+
+Constructor `UngDung(..., unit_preview=True, unit_office_preview=True)` mở đúng năm công cụ editor: `van_phong.tao_office`, `mo_soan_thao`, `luu_soan_thao`, `phien_soan_thao`, `bo_phien_soan_thao`. Mặc định `unit_office_preview=False`. Cờ phải là boolean và chỉ được dùng với gateway đơn vị; cấu hình sai bị từ chối trước khi khởi tạo kho dữ liệu.
+
+Chưa có tùy chọn CLI, biến môi trường hoặc nút quản trị để bật cờ. Chỉ dùng trên kho tổng hợp và proxy stage riêng đã cấu hình cổng transport kiểm quyền; không dùng cờ này để bỏ các gate nghiệm thu hoặc tự chuyển dữ liệu production. `PREVIEW_TOOLS` mặc định không đổi; mỗi instance có tập công cụ riêng dùng thống nhất cho HTTP và chính sách nhân.
+
+## Quyền vẫn bắt buộc
+
+Chỉ operator/chủ quản hệ thống được cấp loại công cụ; quyền dữ liệu vẫn phải đến từ đơn vị, dự án, lease và issuer hiện hành. Vai quản trị hệ thống không tự cấp quyền đọc/sửa nội dung đơn vị khác. Viewer dự án không mở được editor ghi. Tham số `actor`, `owner`, `unit_scope` hoặc `unit_id` không được thay scope do HTTP xác lập.
+
+Agent không được thêm các công cụ editor. Credential MCP hiện có vẫn bị giới hạn bởi `authorize_call` và tập công cụ của grant; opt-in web không mở rộng danh sách đó. Google vẫn đóng ở chế độ đơn vị. Cổng ghi toàn nhân tiếp tục chặn các thao tác ghi; đọc tiến trình hợp lệ vẫn hoạt động.
+
+`/api/me` bổ sung `workspace.capabilities.office_editor` ở chế độ đơn vị. Giá trị này chỉ mô tả opt-in của instance, không là quyền dữ liệu hoặc chứng nhận engine/scanner sẵn sàng. `van_phong.trang_thai` trả cấu hình editor thực khi opt-in; thiếu JWT vẫn báo chưa cấu hình.
+
+Cờ kiểm soát các entrypoint công cụ mới, không phải lệnh thu hồi quyền. Không thay vòng đời source/callback/engine-auth đã có hoặc từ chối callback của operation đang chờ chỉ vì giao diện đóng. Thu hồi thành viên/quyền dự án vẫn đi qua các fence riêng. Bỏ phiên cho phép chủ phiên đọc lại trạng thái `revoked/abandoned`; không báo đó là tài liệu đã lưu hoặc cho ghi tiếp trên key bị thu hồi.
+
+## Kiểm tra và phần còn thiếu
+
+Ngày **18/11/2026**, có **12 ca** kiểm constructor, HTTP và nhân trên dữ liệu tạm: mặc định đóng, opt-in tạo/mở/đọc tiến trình, sai đơn vị/root/viewer, giả scope, MCP/agent, cấu hình và trạng thái, tách biệt instance, cổng ghi, thu hồi thành viên, lưu cùng intent không phát lại và bỏ phiên đang pending. Engine lệnh và scanner trong các bài này là dịch vụ tổng hợp. Phép thử lưu không gửi callback committed: tài liệu vẫn phiên bản gốc sau abandon, không tính là nghiệm thu lưu engine thật.
+
+```sh
+python3 he-dieu-hanh/thu_office_preview_http.py -v
+python3 he-dieu-hanh/thu_don_vi_http.py -v
+python3 he-dieu-hanh/thu_oauth_http.py -v
+```
+
+### Nghiệm thu Word qua HTTP với engine thật
+
+Ngày **18/11/2026**, trên nguồn `dcdb3d5fd3546545a133a4eff7537dbc2978ddca`, đã đối chiếu **644 tệp Git** trước và sau thử trong môi trường riêng. Gateway dùng constructor opt-in đã đóng góp, không sửa allowlist hoặc gọi trực tiếp phương thức Office từ bộ điều phối.
+
+Lượt `http-office-16` tạo DOCX và mở cấu hình cho hai người qua HTTPS `/api/tools` → nhân. Một trình duyệt riêng chạy SDK ONLYOFFICE thật, gõ nội dung và giữ tài liệu mở. Bộ điều phối gửi đúng một yêu cầu lưu HTTP, đọc biên nhận tiến trình đến `committed`, rồi đọc lại DOCX qua HTTP: phiên bản **1 → 2**, có dấu nội dung mới và ClamAV trả `khong-phat-hien`. Khi đã lưu, editor vẫn còn kết nối.
+
+Sau đó gọi bỏ phiên qua cùng cổng HTTP với hai xác nhận. Gọi lại cùng ý định nhận biên nhận giống nhau; phiên bản và SHA của tài liệu đã lưu không đổi. Kết nối WebSocket gốc của SDK đóng trong **5 giây** tính từ xác nhận bỏ phiên. Đóng kết nối không xóa nội dung đã tải về trình duyệt.
+
+Đây là launcher SDK thử riêng với cấu hình cấp qua HTTP, **chưa phải giao diện kho tệp/launcher BDSG**. Chỉ chứng minh Word và một editor đang kết nối; chưa chứng minh Excel/PowerPoint, tải hoặc nhiều worker. Lượt `http-office-15` trước đó đã mở và sửa tài liệu nhưng thiếu bước điều phối/kết quả lưu cuối, không tính đạt.
+
+[CI đúng nguồn dcdb3d5](https://github.com/bdsgthanhhoa/open-bdsg/actions/runs/44247151633) đạt: **703 ca ứng dụng** gồm **688 đạt, 15 bỏ qua**; **52 ca vận hành**, **4 ca đóng gói**, các bước Node và MCP/TLS đạt. Không tính ca bỏ qua là tích hợp thật.
+
+Sau thử đã dừng gateway/proxy/transport và container thử; không còn listener stage. Tệp firewall IPv4/IPv6 khớp trước thử, năm dịch vụ chính hoạt động, production vẫn R13. Bốn bản sao đầu vào xác thực của QA15/16 được xóa sau khi tiến trình kết thúc; cấu hình gốc vẫn giữ riêng ngoài Git để đối chiếu.
+
+### Giao diện kho tệp và cửa sổ soạn thảo
+
+Nguồn `698875e13d51bd5cac6e898b19ca9530773564a8` nối capability boolean vào `BDSGUnit`. Cửa sổ ứng dụng con chỉ có capability khi cả cha và phản hồi danh tính đều bật. Chỉ giao diện có quyền ghi mới bật tạo/mở tài liệu Office; Google theo đơn vị vẫn đóng. Legacy giữ cách mở thẻ riêng trước đó.
+
+Trong chế độ đơn vị, editor nằm trong iframe cùng origin của kho tệp. URL chỉ chứa mã tệp; guard tiếp tục chụp danh tính và phạm vi từ cha trước I/O. Đổi đơn vị hoặc gỡ cửa sổ cha dừng ngữ cảnh cũ. Escape không tự đóng tài liệu. Sau lưu/đóng hoặc bỏ phiên có biên nhận, editor trả về kho tệp trong cửa sổ cha. Nếu phục hồi lỗi trước khi dựng editor, người dùng vẫn về kho tệp được và bản ghi phục hồi giữ nguyên, không tự gửi thao tác ghi.
+
+Ngày **18/11/2026**, **69 ca Node liên quan** và **4 ca đóng gói** đạt. Rà soát Spec tìm lỗi kẹt phục hồi nói trên; hồi quy đã đỏ rồi đạt sau sửa. Rà soát lại Spec và Standards không còn finding. Trình duyệt kiểm **9 tình huống** ở rộng **1440/980/390 px**: tạo/lưu/đóng, bỏ phiên, đổi đơn vị, mở tệp có sẵn, mặc định đóng, chỉ đọc, điện thoại và hai dạng bản ghi phục hồi hỏng. Dùng DOM/launcher/guard/controller/CSS từ kho thật, nhưng vỏ cha, API và engine tổng hợp; không gọi đó là nghiệm thu full UI với engine thật.
+
+Toàn **646 tệp Git** của nguồn này đã đối chiếu trong thư mục staging riêng trên máy chủ. Phép thử giao diện tổng hợp ở trên là bước trước các phép đo engine thật trong phần kế tiếp; không thay cho kết quả runtime đó. Website chính chưa dùng opt-in này.
+
+[CI đúng nguồn giao diện 698875e](https://github.com/bdsgthanhhoa/open-bdsg/actions/runs/44250877698) đã kết thúc thành công ngày **18/11/2026**: **703 ca ứng dụng** gồm **688 đạt, 15 bỏ qua**, **52 ca vận hành**, **4 ca đóng gói** và các bước Node/MCP TLS đạt. Đây vẫn không thay phép đo giao diện với engine thật.
+
+### Luồng cơ bản qua toàn giao diện và engine thật
+
+Ngày **18/11/2026**, chạy toàn bộ web được đóng gói từ nguồn `698875e13d51bd5cac6e898b19ca9530773564a8`, không thay vỏ cha bằng HTML kiểm thử hoặc giả API/engine. Trình duyệt riêng đăng nhập bằng giao diện, chọn đơn vị, mở ứng dụng Văn phòng và dùng dự án tổng hợp có quyền ghi. Dùng HTTPS kiểm chứng chứng thư/hostname; ánh xạ kết nối tới loopback của máy chủ thử, không tắt kiểm TLS.
+
+| Lượt | Tài liệu/thao tác | Bằng chứng đọc lại |
+|---|---|---|
+| Word17 | Tạo DOCX, gõ, bấm Lưu phiên bản khi editor còn mở | Phiên bản 1 → 2; XML trong DOCX có đúng nội dung đã gõ |
+| Excel18 | Tạo XLSX, nhập công thức ở A1 và nội dung ở A2 | Phiên bản 1 → 2; công thức `SUM(10,20)`, giá trị **30**, A2 đúng nội dung |
+| Slide26 | Tạo PPTX, chèn hộp văn bản ngang và gõ | Phiên bản 1 → 2; XML slide có đúng nội dung |
+| Mobile23 | Giao diện rộng **390 px**, tạo DOCX và mở cửa sổ Office | Hiện giới hạn Community, nút lưu bị khóa, **0** request tải SDK; về được kho tệp, không tràn ngang |
+
+Ba lượt desktop rộng **1440 px** đều dùng nút bỏ phiên với hai xác nhận, đọc tệp qua hộp thoại kho BDSG và kiểm ClamAV trả `khong-phat-hien`. Sau đó mở lại bằng giao diện, bấm Lưu và đóng trên tài liệu không sửa thêm; tải lại vỏ ứng dụng vẫn giữ đơn vị đã chọn và thấy tệp. Mỗi lượt không có lỗi JavaScript trang. Đã xem ảnh sau lưu và mở lại của cả ba định dạng. Không suy kết quả này ra mọi tài liệu phức tạp, tính năng Office hoặc cộng tác nhiều người.
+
+Các lượt PowerPoint19/20/21/22/25 chưa hoàn thành thao tác chèn do bộ điều khiển kiểm thử dùng selector/menu chưa đúng; lượt24 chỉ quan sát điều khiển. Chúng không được tính là nghiệm thu đạt. Slide26 chọn đúng menu chèn hộp văn bản ngang rồi kiểm nội dung tệp sau lưu; không sửa SDK hoặc mã sản phẩm để làm phép thử đạt.
+
+Sau thử, **646 tệp nguồn Git** và **69 tệp web** vẫn khớp dấu kiểm. So với bản dựng Windows, **65 tệp UTF-8** cần chuẩn hóa CRLF → LF để đối chiếu bản Linux; tệp nhị phân giữ nguyên. Không gọi hai bản dựng đó là giống byte trước chuẩn hóa. Đã dừng gateway/proxy/transport và container thử, không còn listener stage; firewall IPv4/IPv6 khớp trước thử, năm dịch vụ chính và R13 hoạt động. Đã xóa **20 bản sao đầu vào riêng của 10 lượt QA** sau khi các tiến trình kết thúc; cấu hình gốc giữ riêng ngoài Git.
+
+Gate luồng cơ bản UI → nhân → HTTP → engine thật trên dữ liệu tổng hợp đã có bằng chứng cho ba định dạng. Vẫn cần kiểm thay đổi quyền/đơn vị trong editor thật, nhiều người và nhiều worker, tải, upgrade và thu hồi trong lúc reconnect, tài liệu phức tạp, Google theo đơn vị, snapshot/restore/cutover trước phát hành R14.
+
+## Phục hồi qua HTTP và nhân — 18/11/2026
+
+Đã bổ sung **2 bài kiểm tra** tại `thu_office_khoi_phuc_http.py`, dùng cookie đăng nhập thật, công cụ HTTP qua nhân, SQLite và cơ chế sao lưu/phục hồi công khai. Sau khi tạo và mở DOCX/XLSX/PPTX, phục hồi bản sao vào thư mục mới rồi chạy gateway khác: giữ nguyên byte tệp, phiên bản và quyền đơn vị; nguồn ký, tiến độ, lệnh lưu và callback của phiên soạn thảo cũ đều bị từ chối. Phiên mới dùng khóa mới và đọc đúng nội dung; đơn vị khác không đọc được tệp.
+
+Trường hợp đang chờ lưu được kiểm riêng: bản phục hồi không tự gửi lại lệnh engine, retry phiên cũ bị chặn và callback cũ không tải nội dung hoặc ghi phiên bản. Phiên mới gửi lệnh đúng một lần dù client retry; callback mới mới được tải kết quả và commit phiên bản **1 → 2** với byte nội dung đã biết trước.
+
+Hai bài đạt trên máy phát triển và trong dịch vụ Linux tách mạng, chạy bằng danh tính động không phải root, capability hiệu lực bằng **0**, `NoNewPrivs=1`, chỉ có loopback. Toàn **646 tệp nguồn** của backend `698875e13d51bd5cac6e898b19ca9530773564a8` được đối chiếu trước khi sao sang vùng thử chỉ đọc; bộ điều khiển kiểm mới có SHA-256 `2de6a057500c666d9e059c28d2e01a615be153dadf88559b1427ab379ba45ac0`. Dịch vụ thử kết thúc; firewall IPv4/IPv6 không đổi, các dịch vụ production được kiểm vẫn hoạt động.
+
+Đây là kiểm hợp đồng phục hồi HTTP/nhân với engine HTTP và scanner tổng hợp, **không phải** phục hồi ONLYOFFICE/ClamAV thật, giao diện trình duyệt, WebSocket, nhiều worker hay RTO toàn máy chủ. Gate snapshot/restore/cutover với toàn bộ dịch vụ vẫn chưa hoàn tất; không bật R14 production từ kết quả này.
+
+## Hai tiến trình gateway dùng chung kho — 18/11/2026
+
+`thu_office_nhieu_tien_trinh_http.py` chạy hai tiến trình Python độc lập bằng
+`spawn`, cùng kho SQLite nhưng mỗi tiến trình tự dựng ứng dụng và cổng HTTP.
+Mở đồng thời trả cùng khóa editor. Tám yêu cầu lưu cùng ý định, phân đều qua hai
+cổng, chỉ gửi **một** lệnh engine; retry trả được trong khi lệnh đầu vẫn chờ
+phản hồi. Tệp chưa tăng phiên bản trước callback.
+
+Hai callback giống nhau được buộc cùng tải kết quả trước khi bên nào commit.
+Cả hai nhận xác nhận, nhưng tệp chỉ tăng **1 → 2**, đúng byte tài liệu tổng hợp
+đã biết. Đọc tệp và tiến độ qua cả hai gateway đều thấy kết quả committed.
+Retry lưu và callback sau commit không phát lệnh hay tải kết quả thêm.
+Đây không phải cam kết chỉ tải một lần khi hai callback đang đồng thời xử lý.
+
+Một ca đạt trên Windows và Linux cô lập. Phép thử Linux dùng nguồn backend
+`698875e13d51bd5cac6e898b19ca9530773564a8`, đối chiếu **646 tệp** trước khi sao
+sang vùng chỉ đọc; SHA-256 bộ kiểm mới là
+`0930fe2bafac55c3ae7a108c1a1b99d4e597fe8e539b756868c5e1a456edb574`.
+Dịch vụ thử không phải root, không có capability, chỉ mạng loopback và đã
+kết thúc sạch. Firewall không đổi, sáu dịch vụ production được kiểm vẫn hoạt động.
+
+Engine HTTP và scanner trong ca này là tổng hợp. Kết quả chưa chứng minh tải
+thực tế, engine/SDK/WebSocket thật với nhiều worker, worker chết giữa lệnh,
+hoặc toàn bộ điều kiện phát hành R14. Không thay cấu hình production từ ca này.
+
+### Tiến trình chết sau khi engine nhận lệnh — 18/11/2026
+
+Bộ kiểm hai gateway có thêm một ca thực sự kết thúc cưỡng bức tiến trình QA
+gửi lệnh, sau khi engine HTTP tổng hợp đã nhận lệnh nhưng chưa trả ACK.
+Client mất kết nối; gateway còn lại retry cùng ý định nhận trạng thái chưa rõ
+kết quả và cùng mã lệnh, giữ tệp ở phiên bản **1**, không phát lại lệnh.
+Callback hợp lệ đến trễ được gateway còn lại xử lý: phiên bản **1 → 2**, đúng
+byte; replay callback và retry lưu không tải hoặc phát lệnh thêm.
+
+Cả **2 ca** trong `thu_office_nhieu_tien_trinh_http.py` đạt trên Windows và
+Linux cô lập không root. SHA-256 bộ kiểm ở lượt Linux mới là
+`ccbf46eac619718836c816298496f7b7faa822c986a24be7caf7878b6bacebef`;
+backend vẫn là nguồn `698875e` đủ **646 tệp** đã đối chiếu. Không thay mã
+sản phẩm để làm ca đạt. Lượt đầu bộ kiểm dọn sai Event của process đã chết
+bị kẹt; đã sửa chính bộ kiểm và chạy lại, không tính lượt kẹt là đạt.
+Kết quả này vẫn dùng engine/scanner tổng hợp, chưa thay phép nghiệm thu sự cố
+với SDK/ONLYOFFICE/ClamAV thật hoặc khôi phục toàn máy chủ.
+
+## Phục hồi Word qua toàn giao diện với engine thật — 18/11/2026
+
+Lượt Word34 dùng toàn webOS nguồn `698875e13d51bd5cac6e898b19ca9530773564a8`,
+ONLYOFFICE và ClamAV thật, tài khoản/dự án tổng hợp trong stage riêng.
+Giao diện tạo DOCX, gõ dấu nội dung đã biết, lưu phiên bản **2**, rồi gõ thêm
+một dấu khác chưa lưu vào BDSG. Ảnh trước phục hồi thấy cả hai dấu và trạng
+thái chưa lưu. Bộ điều phối xác minh qua HTTP rằng byte phiên bản **2** chỉ
+chứa nội dung đã commit, rồi chụp SQLite bằng cơ chế sao lưu công khai.
+
+Kho được phục hồi vào thư mục mới, không mang theo `office-editor-epoch`.
+Chỉ gateway thử được thay bằng tiến trình đọc kho phục hồi; engine, cache,
+proxy và cổng cộng tác thử vẫn giữ nguyên. Nguồn ký của phiên cũ có đối chứng
+**200 trước → 403 sau**; tiến độ và lệnh lưu cũ bị từ chối. Callback ký
+trạng thái **1** có đối chứng `error:0 → error:1`; không gọi đó là phép thử
+callback lưu trạng thái 6 đến trễ với engine thật. Socket cũ đóng không muộn
+hơn **5 giây** sau lúc gateway phục hồi sẵn sàng. Nội dung đã tải về vẫn còn
+hiển thị ở trình duyệt cũ; không tuyên bố xóa được bản dữ liệu đó từ xa.
+
+Tải lại giao diện giữ cookie/đơn vị, đọc đúng byte phiên bản **2**, có dấu đã
+commit và không có dấu chưa lưu. Mở lại cấp khóa editor mới; gõ nội dung mới,
+lưu/đóng qua UI và đọc lại DOCX phiên bản **3** có đủ nội dung đã commit và
+nội dung mới, không có phần chưa lưu của phiên cũ. ClamAV trả không phát hiện.
+Khởi động lại gateway phục hồi rồi đọc bằng cả HTTP và giao diện vẫn đúng
+phiên bản **3** và cùng byte; không có lỗi JavaScript trang. Đã xem ba ảnh
+trước phục hồi, phiên cũ mất kết nối và phiên mới lưu thành công.
+
+Đã dừng browser, gateway phục hồi, ba dịch vụ stage và container thử. Sau đó
+**646 tệp nguồn**, **69 tệp web** và các profile stage khớp trước thử; firewall
+IPv4/IPv6 không đổi, R13 cùng sáu dịch vụ production được kiểm hoạt động.
+Hai bản sao đầu vào xác thực của lượt QA đã được xóa sau khi tiến trình kết
+thúc; đầu vào gốc và dữ liệu diễn tập giữ riêng ngoài Git.
+
+Đây là phục hồi dữ liệu ứng dụng khi engine thật vẫn nóng, chỉ DOCX và một
+người. Chưa phải khôi phục cả engine/cache từ bản sao, mất host, sao lưu ngoài
+máy, RPO/RTO toàn hệ thống, phục hồi Excel/PowerPoint hoặc đủ điều kiện cutover.
+R14 vẫn chưa phát hành production.
+
+### Phục hồi bảng tính với engine thật — 18/11/2026
+
+Excel36 chạy cùng nguồn và mô hình phục hồi của Word34, trên dữ liệu tổng
+hợp: A1 có công thức `SUM(10,20)` với giá trị **30**, A2 chứa dấu đã commit,
+A3 chứa dấu chưa lưu khi chụp snapshot. Sau phục hồi, nguồn ký cũ **200 → 403**,
+tiến độ/lưu cũ bị chặn, callback ký trạng thái 1 có đối chứng `error:0 → error:1`,
+socket cũ đóng trong **5 giây** từ gateway sẵn sàng.
+
+Giao diện đọc lại đúng byte bản **2**, giữ công thức/giá trị và A2; không có
+dấu chưa lưu trong A3. Editor khóa mới ghi nội dung mới vào A3, lưu bản **3**;
+OOXML xác nhận công thức và giá trị **30** vẫn nguyên, có nội dung mới và không
+có phần chưa lưu của phiên cũ. HTTP và giao diện đọc cùng byte bản **3** sau
+restart gateway. ClamAV không phát hiện, không có lỗi JavaScript trang.
+
+Lượt Excel35 bị timeout khi tải lại và không tính đạt. Lượt36 ghi nhận hộp
+thoại `beforeunload` đúng tại bước này; bộ kiểm xác nhận rời trang rồi toàn
+luồng đạt. Không sửa SDK hay mã sản phẩm, không vô hiệu cảnh báo cho người dùng.
+Đã xem ảnh bảng tính trước phục hồi và bản mới sau lưu. Dịch vụ thử và engine
+đã dừng, source/web/profile và firewall khớp trước thử, sáu dịch vụ production
+hoạt động; bốn bản sao đầu vào riêng của QA35/36 được dọn sau terminal.
+
+Đây vẫn là phục hồi kho ứng dụng với engine nóng, một người, không phải
+phục hồi cả engine/cache hoặc mất host. PowerPoint, nhiều worker với engine
+thật, tải, thu hồi khi reconnect/upgrade và cutover còn cần kiểm riêng.
+
+### Sửa kẹt tải lại PowerPoint sau phục hồi - 19/11/2026
+
+Lượt42 tái lập lỗi khi tải lại toàn webOS sau phục hồi kho ứng dụng. Cảnh báo
+`beforeunload` đầu được chấp nhận, nhưng thao tác hủy SDK trong `pagehide`
+phát cảnh báo thứ hai trên frame đã tách; Chromium trả
+`Not attached to an active page`. Trang không điều hướng, không có lỗi
+JavaScript trang. Lượt44 bỏ riêng callback dọn giao diện trong `pagehide`
+trên tuyến thử thì hoàn tất cùng luồng; đây chỉ là phép chẩn đoán.
+
+Guard mới vẫn khóa quyền, hủy IO, ngừng kiểm định kỳ và tháo listener cha
+ngay khi rời trang. Việc thông báo để hủy SDK được giữ đến `pageshow` nếu
+trang quay lại; không hồi sinh quyền của editor cũ. Thu hồi danh tính hoặc
+đơn vị khi trang còn mở vẫn dọn giao diện ngay. Bài hồi quy qua giao diện
+guard công khai đã đỏ trước sửa, sau sửa đạt cùng các bài liên quan:
+**61 bài Node đạt** ngày 19/11/2026. Ca `pageshow` trong bộ Node là sự kiện
+tổng hợp, chưa chứng minh vòng đời bfcache thực trên mọi trình duyệt.
+
+Lượt45 dùng toàn webOS nền `698875e`, ONLYOFFICE và ClamAV thật, nhưng thay
+riêng phản hồi tĩnh `bao-ve-office.js` bằng đúng byte mã sửa trong checkout.
+SHA-256 phần thay là
+`36bb2e14387cdfefced53a0b2fe9ef1f52d3d8142bf5714b1b7365fffc29a5cd`.
+Không gọi đây là phép thử toàn bản dựng mới hoặc triển khai production.
+Sau sửa chỉ còn một cảnh báo và tải lại thành công. PPTX bản **2** giữ dấu
+đã commit, không có dấu chưa lưu; phiên mới dùng key khác, lưu bản **3**
+giữ dấu cũ và dấu mới, không có phần chưa commit. HTTP và UI đọc đúng cùng
+byte sau restart gateway; ClamAV không phát hiện và không có lỗi JS trang.
+Nguồn ký cũ **200 → 403**, tiến độ/lưu cũ bị chặn, callback ký trạng thái
+1 có đối chứng `error:0 → error:1`; socket cũ đóng trong **5 giây** sau
+gateway sẵn sàng. Đã xem ảnh bản PowerPoint lưu mới.
+
+Môi trường thử đã dừng cả gateway/proxy/transport và container. **646 tệp
+nguồn**, **69 tệp web** nền và profile thử khớp sau nghiệm thu; firewall
+IPv4/IPv6 khớp trước thử, năm dịch vụ production đã kiểm vẫn hoạt động,
+production giữ R13. Các bản sao đầu vào xác thực của QA40-45 đã được dọn
+sau khi các tiến trình kết thúc. Lượt41 lỗi bộ kiểm, lượt43 lỗi cơ chế lấy
+JS trong driver, không tính đạt. Trước các lượt này đã sửa riêng nginx stage
+để dùng đường tạm riêng, thay việc ghi thư mục tạm nginx chung; giữ bản cấu
+hình trước và không sửa nginx production.
+
+Phục hồi mới kiểm kho ứng dụng khi engine/cache còn nóng và một người.
+Nhiều worker với engine thật, phục hồi toàn host/engine, tải, thu hồi khi
+reconnect/upgrade, Google theo đơn vị và cutover vẫn cần nghiệm thu. R14
+chưa phát hành production.
+
+### Vòng đời bfcache của guard trên Chromium thật - 19/11/2026
+
+`trien-khai/van-hanh/v29_thu_vong_doi_office.py` là bộ kiểm độc lập, chỉ mở
+HTTP loopback với danh tính và editor tổng hợp. Cần Playwright Python và
+Chromium đầy đủ đã cài; không dùng tài khoản, profile người dùng, ONLYOFFICE
+hoặc API đơn vị thật. Chạy từ kho, chọn tệp kết quả chưa tồn tại:
+
+```sh
+python3 trien-khai/van-hanh/v29_thu_vong_doi_office.py --output /thu-muc-rieng/guard-moi.json
+```
+
+Có thể chỉ định `--source-root` cho bản nguồn cần kiểm. Bộ kiểm dùng channel
+`chromium`, chỉ bỏ cờ tắt bfcache trong profile thử mới và giữ các cờ khác.
+Điều hướng bằng lịch sử Chrome thật, không phát sự kiện `pagehide/pageshow`
+tổng hợp. Bfcache không phát DOMContentLoaded mới, nên không dùng điều kiện
+chờ đó để kết luận trình duyệt đã phục hồi trang.
+
+Lượt CLI59 ngày 19/11/2026 đạt trên Chromium **159.0.8154.6**: chuỗi sự kiện
+`pageshow(false) → pagehide(true) → pageshow(true)` chứng minh trang thực sự
+được cache rồi phục hồi. Guard giữ trạng thái ngừng, thông báo dọn đúng
+**một lần**, vùng editor tổng hợp biến mất; gọi công cụ bị từ chối trước
+khi tới shim của backend. SHA-256 mã guard được kiểm là
+`36bb2e14387cdfefced53a0b2fe9ef1f52d3d8142bf5714b1b7365fffc29a5cd`.
+Bộ kiểm trả mã lỗi khi không chứng minh được cache thật hoặc invariant sai,
+không coi tải trang mới là đạt. Các lượt phát triển bộ kiểm trước đó chưa
+đủ điều kiện này không tính đạt.
+
+Kết quả chỉ xác nhận vòng đời guard với danh tính/editor tổng hợp. Chưa
+chứng minh bfcache cùng SDK ONLYOFFICE, cache tài liệu thật, mọi trình duyệt,
+thu hồi quyền phía backend hoặc các cổng phát hành R14 còn lại.
+
+### Toàn bản dựng mới và cộng tác - 19/11/2026
+
+Đã đóng gói commit `3685c6e67671d16e5faa0ef52fdc516dbb544f2c` từ Git,
+đối chiếu đủ **648 blob**, không lấy tệp ngoài Git. SHA-256 gói nguồn là
+`ca196811aff624428ae142e4f81d65be3331cba4fd4f519211f49e330cadd975`.
+Môi trường thử mới dựng đủ **69 tệp web** từ nguồn này; cả backend và UI
+dùng bản mới. Không thay phản hồi JS qua route của bộ kiểm trong lượt47.
+
+PowerPoint47 với ONLYOFFICE và ClamAV thật đạt cùng luồng phục hồi đã mô tả:
+snapshot lúc còn sửa chưa lưu, đọc lại đúng bản **2**, nguồn ký cũ **200 →
+403**, tiến độ/lưu cũ bị chặn, callback trạng thái1 có đối chứng trước/sau,
+socket cũ đóng trong **5 giây**. Key mới lưu bản **3** với đúng nội dung cũ
+và mới; restart giữ đúng byte. Đã xem ảnh bản lưu mới, không có lỗi JS.
+Lượt46 thiếu helper riêng của bộ kiểm nên chưa hoàn tất, không tính đạt.
+
+Hai lượt cộng tác50/52 dùng hai tiến trình Chromium và hai danh tính thử,
+toàn UI mới, engine/scanner thật. Hai người cùng key, có thay đổi truyền
+hai chiều và bản lưu giữ đủ dấu của cả hai. Thu hồi thành viên C qua HTTP
+khi hai editor còn mở: socket C đóng trong **5 giây** từ ACK, mở lại bị
+**403**, không nhận thêm gói thay đổi sau cửa sổ kiểm. A xác nhận bỏ phiên
+chung, mở key mới, lưu bản **3** giữ nội dung trước đó và dấu mới; quét
+không phát hiện và không có lỗi JS. Hai lượt này có thêm đo đạc tạm trong
+bản sao transport riêng, không sửa nguồn Git hoặc trả dữ liệu engine giả.
+Không gọi đây là phép thử nhiều gateway worker.
+
+Chưa coi độ ổn định cộng tác đã đạt: lượt48 thiếu dấu A trong tệp lưu,
+lượt49 quan sát A mất kết nối trước khi nhập hoàn tất. Hai lượt không đạt
+vẫn được giữ làm bằng chứng, chưa xác định chắc nguyên nhân ngắt kết nối.
+Đo auth ở các lượt thành công không ghi nhận timeout; chỉ có từ chối quyền
+sau thao tác thu hồi. Không suy ra các lượt chưa đo cũng không có timeout.
+
+Lượt51 bị chặn mở tệp sau khi bộ điều phối cho C gia nhập lại đơn vị nhưng
+chưa cấp lại chia sẻ dự án. Đây không phải bằng chứng transport mất kết nối:
+thu hồi/rejoin không tự khôi phục quyền nội dung cũ. Lượt52 chia sẻ lại dự
+án đích danh qua HTTP/nhân trước khi bắt đầu, không hồi sinh lease cũ.
+
+Đã dừng stage/container; gỡ transport đo đạc và phục hồi bộ khởi động ban
+đầu. **648 nguồn**, **69 web**, profile và firewall IPv4/IPv6 khớp; năm dịch
+vụ production được kiểm hoạt động, production vẫn R13. Đã dọn các bản sao
+đầu vào xác thực QA46-52 sau khi kết thúc. Còn kiểm nguyên nhân mất kết nối,
+nhiều worker với engine thật, tải, bfcache thật, reconnect/upgrade, phục hồi
+engine/cache/toàn host, Google theo đơn vị và cutover trước phát hành R14.

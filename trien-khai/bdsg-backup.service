@@ -1,0 +1,17 @@
+[Unit]
+Description=BDSG snapshot SQLite and private configuration
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/local/sbin/bdsg-backup
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+# SQLite có thể cần tạo sidecar WAL/SHM; kết nối nguồn vẫn mở mode=ro.
+ReadWritePaths=/var/backups/bdsg-thanhhoa /var/lib/bdsg-thanhhoa
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=180

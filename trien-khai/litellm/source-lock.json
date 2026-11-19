@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-11-17",
+  "repository": "https://github.com/BerriAI/litellm",
+  "tag": "v1.109.1",
+  "commit": "6c4ead4fc064d14e36b0c69d6795acc130c866bf",
+  "archive_bytes": 67987774,
+  "archive_sha256": "c569648e8e4facf43dd308b79b230779fb6723716bd542d6f2de3afb10ea6244",
+  "oss_license": "MIT; enterprise/ has separate terms and is not enabled by this integration",
+  "image": "ghcr.io/berriai/litellm@sha256:11175975a3093e05e92faee2fe2fe3412a3ae2fcaa849eb0fe25d5f0d8bcb2e9",
+  "signature_verified": true,
+  "signing_key_commit": "e82a3c646908ba0a6ee0beddc4310d7a6cac4065",
+  "signing_key_sha256": "e3fe3e08c44b16407fe0b37c43b4f8b603b3a0f4ee74c29e647bc022d762c2c0",
+  "cosign_version": "v3.1.4"
+}

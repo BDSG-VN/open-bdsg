@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily BDSG restore drill after backup window
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Asia/Ho_Chi_Minh
+AccuracySec=1min
+Persistent=true
+Unit=bdsg-recovery-drill.service
+
+[Install]
+WantedBy=timers.target

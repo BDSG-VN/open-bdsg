@@ -1,0 +1,35 @@
+name: Thanh Hoa checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Cài thư viện kiểm thử Office, Google và MCP
+        run: |
+          python3 -m pip install --only-binary=:all: -r requirements-office.txt
+          python3 -m pip install --only-binary=:all: -r requirements-office-transport.txt
+          python3 -m pip install --only-binary=:all: -r requirements-google-login.txt
+          python3 -m pip install --only-binary=:all: -r requirements-mcp-test.txt
+      - name: Verify Python interfaces
+        run: |
+          for check in nhan/thu_*.py; do python3 "$check"; done
+          python3 -m unittest discover -s he-dieu-hanh -p 'thu_*.py' -v
+          python3 trien-khai/thu_giao_dien.py -v
+          python3 -m unittest discover -s trien-khai/van-hanh -p 'thu_*.py' -v
+      - name: Verify browser source
+        run: |
+          for source in khong-gian/*.js; do node --check "$source"; done
+          node khong-gian/thu_mo_dun.cjs
+          node khong-gian/thu_xuong.cjs
+          node khong-gian/thu_tro_ly.cjs
+          node --test khong-gian/thu_he_dieu_hanh.cjs khong-gian/thu_trinh_duyet.cjs khong-gian/thu_van_phong_cua_so.cjs khong-gian/thu_bao_ve_phien.cjs khong-gian/thu_may_chu.cjs khong-gian/thu_phien_web.cjs
+          node --test khong-gian/thu_don_vi.cjs khong-gian/thu_vo_don_vi.cjs khong-gian/thu_du_an_form.cjs
+          node --test khong-gian/thu_luu_soan_thao.cjs
+          node --test khong-gian/thu_pham_vi_soan_thao.cjs khong-gian/thu_mo_soan_thao.cjs
+          git diff --check
+      - name: Verify MCP TLS and slow headers in a private network
+        run: sudo python3 trien-khai/van-hanh/v29_thu_mcp_tls.py

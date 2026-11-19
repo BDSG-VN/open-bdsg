@@ -1,0 +1,2 @@
+# Chỉ dùng khi bật đăng nhập Google, bản kiểm ngày 17/11/2026.
+google-auth[requests]==2.62.2

@@ -7,7 +7,9 @@ var NHAN = {
   'trang-trang': { lop: 'n-trang',   chu: 'trang trắng' },
   'mot-phan':    { lop: 'n-motphan', chu: 'một phần' },
   'hong':        { lop: 'n-hong',    chu: 'hỏng' },
-  'chua-do':     { lop: 'n-chuado',  chu: 'chưa đo' }
+  'chua-do':     { lop: 'n-chuado',  chu: 'chưa đo' },
+  'giao-dien':   { lop: 'n-motphan', chu: 'xem giao diện' },
+  'chua-trien-khai': { lop: 'n-chuado', chu: 'chưa kết nối' }
 };
 
 function el(t, lop, chu) {
@@ -18,7 +20,7 @@ function el(t, lop, chu) {
 }
 
 function veO(lv, tt) {
-  var mo = tt && tt.trang_thai === 'chay-duoc';
+  var mo = tt && (tt.trang_thai === 'chay-duoc' || tt.trang_thai === 'giao-dien');
   var a = el('a', 'o');
   a.href = lv.duong_dan + '/';
   if (!mo) a.setAttribute('aria-disabled', 'true');
@@ -44,9 +46,25 @@ function veO(lv, tt) {
 Promise.all([
   fetch('../cong/so-ghi-linh-vuc.json').then(function (r) { return r.json(); }),
   fetch('../cong/trang-thai-linh-vuc.json').then(function (r) { return r.json(); })
-    .catch(function () { return { muc: [], do_luc: null, goc_da_goi: null }; })
+    .catch(function () { return { muc: [], do_luc: null, goc_da_goi: null }; }),
+  fetch('../thuc-the.json').then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
 ]).then(function (kq) {
   var ds = kq[0], tt = kq[1];
+  var thucThe = kq[2];
+  if (thucThe && typeof thucThe.ten === 'string') {
+    document.querySelector('header .ten').textContent = thucThe.ten;
+    document.title = thucThe.ten + ' — Open BDSG';
+    if (typeof thucThe.mo_ta === 'string') {
+      document.querySelector('header .phu').textContent = thucThe.mo_ta;
+    }
+    var thongBao = document.getElementById('thuc-the');
+    if (thongBao && typeof thucThe.thong_bao === 'string') {
+      // textContent giữ cấu hình thực thể ở dạng dữ liệu, không biến nó thành HTML.
+      thongBao.textContent = thucThe.thong_bao;
+      thongBao.hidden = false;
+    }
+  }
   var theoMa = {};
   (tt.muc || []).forEach(function (m) { theoMa[m.ma] = m; });
 

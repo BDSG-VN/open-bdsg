@@ -1,0 +1,3 @@
+# Chỉ cổng cộng tác thử nghiệm; gateway lõi không import aiohttp.
+# Đối chiếu PyPI và kiểm loopback ngày 18/11/2026.
+aiohttp==3.14.5

@@ -1,0 +1,3 @@
+# Chỉ cần khi bật kho OAuth Google; lõi không phụ thuộc gói này.
+# Bản đã kiểm trên Thanh Hoá ngày 15/11/2026.
+cryptography==46.0.5

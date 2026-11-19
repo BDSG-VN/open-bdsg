@@ -1,0 +1,9 @@
+# Tệp thực thi triển khai phải giữ LF khi đóng gói trên Windows cho Linux.
+*.sh text eol=lf
+*.service text eol=lf
+*.timer text eol=lf
+*.path text eol=lf
+# Dấu SHA của nguồn kỹ năng phải kiểm đúng byte gốc, không đổi newline.
+nhan-su/vendor/** -text -whitespace
+nhan-su/skills/** text eol=lf
+nhan-su/bo-dieu-phoi/** text eol=lf

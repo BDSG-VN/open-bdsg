@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>Chấp thuận kết nối — BDSG Thanh Hoá</title>
+  <link rel="stylesheet" href="/oauth/consent.css">
+  <script src="/oauth/don-vi.js" defer></script>
+  <script src="/oauth/consent.js" defer></script>
+</head>
+<body>
+  <header class="brand"><a href="/" aria-label="Về màn hình chính BDSG"><svg aria-hidden="true" viewBox="0 0 32 32"><rect width="32" height="32" rx="9"/><path d="M9 9h6v6H9zm8 0h6v6h-6zm-8 8h6v6H9zm8 0h6v6h-6z"/></svg><span>BDSG <strong>Thanh Hoá</strong></span></a></header>
+  <main id="consent" tabindex="-1">
+    <h1>Chấp thuận kết nối</h1>
+    <p class="intro">Anh chọn dữ liệu và công cụ mà ứng dụng được dùng thay mình.</p>
+    <p id="message" role="status" aria-live="polite">Đang xác minh yêu cầu…</p>
+    <section id="login-panel" hidden aria-labelledby="login-title">
+      <h2 id="login-title">Đăng nhập BDSG</h2>
+      <p>Dùng tài khoản có quyền trong đơn vị anh muốn kết nối.</p>
+      <form id="login-form">
+        <label for="username">Tên đăng nhập</label><input id="username" name="username" autocomplete="username" required maxlength="80">
+        <label for="password">Mật khẩu</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit">Đăng nhập</button>
+      </form>
+    </section>
+    <section id="unit-panel" hidden aria-labelledby="unit-title">
+      <h2 id="unit-title">Đơn vị cấp quyền</h2>
+      <div class="identity"><span id="identity"></span><button id="logout" class="text-button" type="button">Đổi tài khoản</button></div>
+      <label for="unit">Làm việc trong đơn vị</label><select id="unit"></select>
+      <button id="inspect" type="button">Xem quyền ứng dụng yêu cầu</button>
+    </section>
+    <form id="permission-form" hidden>
+      <section aria-labelledby="app-title"><h2 id="app-title">Ứng dụng yêu cầu kết nối</h2><p id="client-name" class="app-name"></p><p id="bound-identity"></p><p class="note">Ứng dụng hoạt động bằng quyền anh chọn dưới đây. Quyền mới được cấp sau này không tự thêm vào kết nối này.</p></section>
+      <section><fieldset><legend>Công cụ được phép</legend><p class="note">Chỉ chọn những việc anh muốn giao cho ứng dụng.</p><div id="tools" class="choices"></div></fieldset></section>
+      <section><fieldset><legend>Phạm vi dự án</legend><p class="note">Các dự án không chọn sẽ không được đọc hoặc dùng để tạo công việc.</p><div id="projects" class="choices"></div></fieldset></section>
+      <section id="task-profile" hidden aria-labelledby="profile-title"><h2 id="profile-title">Quyền cho công việc</h2><label class="choice"><input id="allow-ai" type="checkbox"><span>Cho phép dùng AI của đơn vị<small>AI có thể phát sinh chi phí và gửi ngữ cảnh được cấp cho nhà cung cấp mô hình.</small></span></label><p class="note">Mặc định chỉ chạy quy trình danh mục. Agent không được tự duyệt hoặc ghi trực tiếp.</p><div id="module-permissions" hidden></div></section>
+      <section><label for="duration">Quyền truy cập có hiệu lực trong</label><select id="duration"><option value="900">15 phút</option><option value="3600">1 giờ</option><option value="28800">8 giờ</option><option value="86400">24 giờ</option></select><p id="deadline" class="note"></p><p class="note">Chỉ những quyền anh chọn được cấp. Đầu nối chưa xác minh không có công cụ để chọn; mỗi đề xuất ghi vẫn cần người có quyền dự án duyệt riêng. Anh có thể thu hồi kết nối đã cấp.</p></section>
+      <div class="actions"><button id="approve" type="submit">Cho phép kết nối</button><button id="deny" type="button" class="secondary">Từ chối</button></div>
+    </form>
+    <div class="recovery"><button id="retry" type="button" class="secondary" hidden>Kiểm tra lại</button><a id="home" href="/">Về màn hình chính</a></div>
+  </main>
+</body>
+</html>

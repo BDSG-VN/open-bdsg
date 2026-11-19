@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-17T04:36:08.734Z",
+  "title": "Design System: BDSG Thanh Hoá",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Xanh hành động",
+        "tonalRamp": [
+          "oklch(15% 0.0350 257.73)",
+          "oklch(26% 0.0770 257.73)",
+          "oklch(38% 0.1120 257.73)",
+          "oklch(49% 0.1400 257.73)",
+          "oklch(61% 0.1400 257.73)",
+          "oklch(73% 0.1120 257.73)",
+          "oklch(85% 0.0700 257.73)",
+          "oklch(95% 0.0252 257.73)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Xanh khi trỏ",
+        "tonalRamp": [
+          "oklch(15% 0.0350 258.02)",
+          "oklch(26% 0.0770 258.02)",
+          "oklch(38% 0.1120 258.02)",
+          "oklch(49% 0.1400 258.02)",
+          "oklch(61% 0.1400 258.02)",
+          "oklch(73% 0.1120 258.02)",
+          "oklch(85% 0.0700 258.02)",
+          "oklch(95% 0.0252 258.02)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Nền nhóm",
+        "tonalRamp": [
+          "oklch(15% 0.0017 286.27)",
+          "oklch(26% 0.0037 286.27)",
+          "oklch(38% 0.0053 286.27)",
+          "oklch(49% 0.0066 286.27)",
+          "oklch(61% 0.0066 286.27)",
+          "oklch(73% 0.0053 286.27)",
+          "oklch(85% 0.0033 286.27)",
+          "oklch(95% 0.0012 286.27)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Trắng bề mặt",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(73% 0.0000 89.88)",
+          "oklch(85% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "Xám tab",
+        "tonalRamp": [
+          "oklch(15% 0.0017 286.27)",
+          "oklch(26% 0.0037 286.27)",
+          "oklch(38% 0.0054 286.27)",
+          "oklch(49% 0.0067 286.27)",
+          "oklch(61% 0.0067 286.27)",
+          "oklch(73% 0.0054 286.27)",
+          "oklch(85% 0.0034 286.27)",
+          "oklch(95% 0.0012 286.27)"
+        ]
+      },
+      "surface-hover": {
+        "role": "neutral",
+        "displayName": "Xanh bề mặt tương tác",
+        "tonalRamp": [
+          "oklch(15% 0.0050 257.47)",
+          "oklch(26% 0.0110 257.47)",
+          "oklch(38% 0.0160 257.47)",
+          "oklch(49% 0.0200 257.47)",
+          "oklch(61% 0.0200 257.47)",
+          "oklch(73% 0.0160 257.47)",
+          "oklch(85% 0.0100 257.47)",
+          "oklch(95% 0.0036 257.47)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Chữ nội dung",
+        "tonalRamp": [
+          "oklch(15% 0.0035 285.55)",
+          "oklch(26% 0.0078 285.55)",
+          "oklch(38% 0.0114 285.55)",
+          "oklch(49% 0.0142 285.55)",
+          "oklch(61% 0.0142 285.55)",
+          "oklch(73% 0.0114 285.55)",
+          "oklch(85% 0.0071 285.55)",
+          "oklch(95% 0.0026 285.55)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Mực tiêu đề",
+        "tonalRamp": [
+          "oklch(15% 0.0010 286.09)",
+          "oklch(26% 0.0021 286.09)",
+          "oklch(38% 0.0031 286.09)",
+          "oklch(49% 0.0038 286.09)",
+          "oklch(61% 0.0038 286.09)",
+          "oklch(73% 0.0031 286.09)",
+          "oklch(85% 0.0019 286.09)",
+          "oklch(95% 0.0007 286.09)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Chữ phụ",
+        "tonalRamp": [
+          "oklch(15% 0.0039 285.82)",
+          "oklch(26% 0.0087 285.82)",
+          "oklch(38% 0.0126 285.82)",
+          "oklch(49% 0.0157 285.82)",
+          "oklch(61% 0.0157 285.82)",
+          "oklch(73% 0.0126 285.82)",
+          "oklch(85% 0.0079 285.82)",
+          "oklch(95% 0.0028 285.82)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Viền phân nhóm",
+        "tonalRamp": [
+          "oklch(15% 0.0024 286.20)",
+          "oklch(26% 0.0052 286.20)",
+          "oklch(38% 0.0076 286.20)",
+          "oklch(49% 0.0095 286.20)",
+          "oklch(61% 0.0095 286.20)",
+          "oklch(73% 0.0076 286.20)",
+          "oklch(85% 0.0048 286.20)",
+          "oklch(95% 0.0017 286.20)"
+        ]
+      },
+      "link": {
+        "role": "primary",
+        "displayName": "Xanh liên kết",
+        "tonalRamp": [
+          "oklch(15% 0.0350 257.73)",
+          "oklch(26% 0.0770 257.73)",
+          "oklch(38% 0.1120 257.73)",
+          "oklch(49% 0.1400 257.73)",
+          "oklch(61% 0.1400 257.73)",
+          "oklch(73% 0.1120 257.73)",
+          "oklch(85% 0.0700 257.73)",
+          "oklch(95% 0.0252 257.73)"
+        ]
+      },
+      "selection": {
+        "role": "neutral",
+        "displayName": "Vùng chọn chữ",
+        "tonalRamp": [
+          "oklch(15% 0.0125 254.89)",
+          "oklch(26% 0.0274 254.89)",
+          "oklch(38% 0.0399 254.89)",
+          "oklch(49% 0.0499 254.89)",
+          "oklch(61% 0.0499 254.89)",
+          "oklch(73% 0.0399 254.89)",
+          "oklch(85% 0.0249 254.89)",
+          "oklch(95% 0.0090 254.89)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Tiêu đề Home",
+        "purpose": "Tiêu đề Home 44px trên máy tính, 32px tại chiều rộng tối đa 600px."
+      },
+      "headline": {
+        "displayName": "Tiêu đề khu vực",
+        "purpose": "Tiêu đề khu vực trong shell và ứng dụng."
+      },
+      "body": {
+        "displayName": "Nội dung",
+        "purpose": "Nội dung trong shell và ứng dụng."
+      },
+      "label": {
+        "displayName": "Nhãn điều khiển",
+        "purpose": "Nhãn điều khiển trong shell và ứng dụng."
+      }
+    },
+    "shadows": [
+      {
+        "name": "icon",
+        "value": "0 5px 12px #12325b14",
+        "purpose": "Biểu tượng Home."
+      },
+      {
+        "name": "dock",
+        "value": "0 10px 32px #182f5420",
+        "purpose": "Tách Dock khỏi nội dung."
+      },
+      {
+        "name": "window",
+        "value": "0 12px 36px #182f541a",
+        "purpose": "Cửa sổ máy tính; bỏ ở điện thoại."
+      },
+      {
+        "name": "notice",
+        "value": "0 7px 18px #182f541c",
+        "purpose": "Thông báo nổi."
+      }
+    ],
+    "motion": [
+      {
+        "name": "icon-transition",
+        "value": "transform .18s cubic-bezier(.16,1,.3,1), filter .18s",
+        "purpose": "Phản hồi icon khi trỏ; tắt khi giảm chuyển động."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet",
+        "value": "900px"
+      },
+      {
+        "name": "phone",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Nút chính",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Hành động chính trong shell.",
+      "html": "<button class=\"ds-primary\">Mở ứng dụng</button>",
+      "css": ".ds-primary{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--action, #0067dc);color:#fff;border:0;border-radius:12px;min-height:44px;padding:12px 18px;font-weight:600}.ds-primary:hover{background:var(--deep, #004fae)}.ds-primary:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}.ds-primary:disabled{opacity:.45;cursor:default}"
+    },
+    {
+      "name": "Nút chữ",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Thao tác nhẹ cạnh tiêu đề.",
+      "html": "<button class=\"ds-text\">Tùy chỉnh</button>",
+      "css": ".ds-text{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#005bc4;border:0;background:transparent;min-height:44px;padding:10px 0;font-weight:600}.ds-text:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}.ds-text:disabled{opacity:.45;cursor:default}"
+    },
+    {
+      "name": "Tìm ứng dụng",
+      "kind": "input",
+      "refersTo": "search",
+      "description": "Khung tìm kiếm Home, focus trên cả nhóm.",
+      "html": "<label class=\"ds-search\"><span>Tìm</span><input aria-label=\"Tìm ứng dụng\" placeholder=\"Tìm ứng dụng BDSG\"></label>",
+      "css": ".ds-search{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:0 18px;min-height:56px;color:var(--muted, #62626c);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-search input{width:100%;min-width:0;border:0;background:transparent;padding:16px 0;font:inherit;font-size:16px;color:var(--ink, #1c1c1e)}.ds-search input::placeholder{color:var(--muted, #62626c)}.ds-search:focus-within{outline:3px solid var(--action, #0067dc);outline-offset:2px}.ds-search input:focus-visible{outline:none}"
+    },
+    {
+      "name": "Tab thư viện",
+      "kind": "nav",
+      "refersTo": "navigation-selected",
+      "description": "Tab chọn có chữ xanh và gạch dưới.",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"Thư viện\"><button aria-pressed=\"true\">Ứng dụng</button><button aria-pressed=\"false\">Nền tảng</button></nav>",
+      "css": ".ds-tabs{display:flex;gap:5px;border-bottom:1px solid #cbd5e6;width:fit-content;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-tabs button{font:inherit;border:0;background:transparent;min-height:44px;padding:10px 16px;color:#51586a;font-size:14px;font-weight:600;border-bottom:2px solid transparent}.ds-tabs button[aria-pressed=\"true\"]{color:#005bc4;border-bottom-color:var(--action, #0067dc)}.ds-tabs button:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}"
+    },
+    {
+      "name": "Gợi ý tìm kiếm",
+      "kind": "chip",
+      "description": "Gợi ý thao tác trong trình duyệt.",
+      "html": "<button class=\"ds-suggestion\">Tìm nền tảng</button>",
+      "css": ".ds-suggestion{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;border:0;background:#e4e4eb;color:#3c3c43;padding:10px 14px;min-height:44px;border-radius:10px}.ds-suggestion:hover{background:#d8d8e2}.ds-suggestion:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:3px}.ds-suggestion:disabled{opacity:.4;cursor:default}"
+    },
+    {
+      "name": "Thẻ cửa sổ",
+      "kind": "card",
+      "refersTo": "session-card",
+      "description": "Vùng mở lại ứng dụng trong Switcher.",
+      "html": "<article class=\"ds-session\"><button class=\"ds-session-open\"><h2>Công việc</h2><p>Tiếp tục cửa sổ đang mở.</p><span>Tiếp tục</span></button></article>",
+      "css": ".ds-session{background:#fff;border-radius:20px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-session-open{font:inherit;display:block;width:100%;padding:30px 24px;text-align:left;border:0;background:transparent;color:var(--ink, #1c1c1e)}.ds-session h2{font-size:21px;margin:24px 0 10px}.ds-session p{color:var(--muted, #62626c);font-size:14px;margin:0 0 28px;line-height:1.6}.ds-session span{font-size:14px;color:#005bc4}.ds-session-open:focus-visible{outline:3px solid var(--action, #0067dc);outline-offset:4px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Không gian ứng dụng iOS BDSG",
+    "overview": "Chủ quản chọn thay toàn bộ diện mạo sang phong cách iOS ngày 17/11/2026.\nBề mặt sáng, chữ hệ thống, hành động xanh và biểu tượng vuông bo góc tạo\nkhông gian mở ứng dụng, làm việc rồi quay lại. Tên, biểu tượng và tiếng Việt\nvẫn thuộc BDSG; không dùng tài sản Apple.\n\nTài liệu ghi nhận mã ngày 17/11/2026: `ios.css` là stylesheet nạp cuối của\n`index.html`, ghi đè các lớp cũ; trình duyệt riêng dùng `trinh-duyet.css`.\nĐây là kết quả quét nguồn, không phải xác nhận kiểm thử hình ảnh hay triển\nkhai. Bố cục từng ứng dụng giữ nhu cầu nghiệp vụ; vỏ webOS là ngữ cảnh chung.",
+    "keyCharacteristics": [
+      "Hành động xanh và chữ tối trên bề mặt sáng.",
+      "Chữ hệ thống dùng cho tiêu đề, nội dung và điều khiển.",
+      "Nhóm nội dung bo góc; Dock và cửa sổ có chiều sâu nhẹ.",
+      "Focus bàn phím rõ, có tùy chỉnh chữ lớn và giảm chuyển động."
+    ],
+    "rules": [
+      {
+        "name": "The Hành động xanh Rule",
+        "body": "Hành động chính dùng màu `primary`; màu biểu tượng chỉ giúp nhận diện ứng dụng. Không lấy nút đen ở stylesheet cũ làm chuẩn.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lớp nổi có vai trò Rule",
+        "body": "Dùng chiều sâu cho Dock, cửa sổ và thông báo; nhóm danh sách thường chỉ cần nền và đường phân cách.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do giữ nhận diện BDSG, tiếng Việt và lựa chọn phong cách iOS mới nhất.",
+      "Do dùng hành động xanh, chữ tối và nhóm bề mặt sáng theo token.",
+      "Do giữ focus, tên trợ năng, phản hồi lỗi và hỗ trợ giảm chuyển động.",
+      "Do kiểm cả điện thoại, máy tính, chữ lớn và trạng thái rỗng trước nghiệm thu."
+    ],
+    "donts": [
+      "Don't khôi phục nút đen và tiêu đề Lora từ stylesheet đã bị ghi đè.",
+      "Don't dùng tài sản Apple hoặc bịa pin, thời tiết, tín hiệu hay trạng thái kết nối.",
+      "Don't mô tả liên kết web như SSO, đồng bộ hoặc ứng dụng native đã cài.",
+      "Don't coi việc ghi tài liệu từ mã là bằng chứng giao diện đã qua kiểm thử hình ảnh."
+    ]
+  }
+}

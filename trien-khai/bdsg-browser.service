@@ -1,0 +1,36 @@
+[Unit]
+Description=BDSG Thanh Hoa task browser
+After=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=bdsg-browser
+Group=bdsg-thanhhoa
+ExecStart=/opt/bdsg-browser-venv/bin/python /usr/local/lib/bdsg-browser/worker.py
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/bdsg-browser-binaries
+Environment=BDSG_BROWSER_SOCKET=/run/bdsg-browser/worker.sock
+RuntimeDirectory=bdsg-browser
+RuntimeDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+InaccessiblePaths=/srv /root /var/lib/bdsg-thanhhoa /etc/bdsg-thanhhoa
+TasksMax=256
+MemoryMax=1G
+CPUQuota=150%
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

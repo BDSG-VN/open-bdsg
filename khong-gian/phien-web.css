@@ -1,0 +1,37 @@
+.sessions-page{max-width:880px;margin:0 auto;padding:28px 24px 48px;color:#1c1c1e;font-size:16px;line-height:1.6}
+.sessions-heading{display:flex;justify-content:space-between;align-items:start;gap:24px;margin-bottom:32px}
+.sessions-page h1{font-size:32px;line-height:1.2;letter-spacing:-.025em;margin:0 0 10px}
+.sessions-heading p,.sessions-note{color:#62626c;margin:8px 0;max-width:72ch}
+.sessions-group{margin:32px 0}
+.sessions-group h2{font-size:16px;margin:0 0 12px}
+.sessions-list{list-style:none;margin:16px 0 0;padding:0;background:#fff;border-radius:16px;overflow:hidden}
+.sessions-item{display:flex;justify-content:space-between;flex-wrap:wrap;gap:18px;padding:20px;border-bottom:1px solid #e8e8ed}
+.sessions-item:last-child{border-bottom:0}
+.sessions-detail{min-width:0;flex:1 1 300px}
+.sessions-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sessions-title h3{font-size:16px;margin:0 0 8px;overflow-wrap:anywhere}
+.sessions-detail p{font-size:14px;color:#62626c;margin:4px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.sessions-current{font-size:14px;color:#005bc4;background:#e5eefb;border-radius:10px;padding:3px 8px}
+.sessions-actions{display:flex;align-items:start;gap:8px;flex-wrap:wrap}
+.sessions-page .button.sessions-danger,.sessions-dialog .button.sessions-danger{background:#fff0ee;color:#a51b16;border:0}
+.sessions-page .button.sessions-danger:hover,.sessions-dialog .button.sessions-danger:hover{background:#ffe2df}
+.sessions-note{font-size:14px}
+.sessions-controls>div{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+.sessions-controls>p{max-width:72ch}
+.sessions-message{padding:14px 18px;background:#e5eefb;border-radius:12px}
+.sessions-message[role=alert]{background:#fff0ee;color:#a51b16}
+.sessions-rename{flex:1 1 100%;display:grid;gap:8px;max-width:480px}
+.sessions-rename label{font-size:14px;font-weight:600}
+.sessions-rename input{font:inherit;width:100%;min-width:0;box-sizing:border-box;border:1px solid #d8d8df;border-radius:12px;padding:10px 12px;background:#fff;color:#1c1c1e;caret-color:#0067dc}
+.sessions-rename input::placeholder{color:#62626c}
+.sessions-rename>div{display:flex;gap:8px;margin-top:4px}
+.sessions-dialog{max-width:480px;width:calc(100% - 48px);box-sizing:border-box;padding:24px;border:0;border-radius:16px;color:#1c1c1e;background:#fff;box-shadow:0 12px 36px #1c1c1e30}
+.sessions-dialog::backdrop{background:#1c1c1e55}
+.sessions-dialog h2{font-size:16px;margin:0 0 12px}
+.sessions-dialog p{line-height:1.6;overflow-wrap:anywhere}
+.sessions-dialog>div{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-top:24px}
+.sessions-page :focus-visible,.sessions-dialog :focus-visible{outline:3px solid #0067dc;outline-offset:3px}
+.sessions-page button:disabled{opacity:.55;cursor:wait}
+.sessions-page ::selection{background:#c8e0ff}
+.sessions-page .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:560px){.sessions-page{padding:24px 16px 40px}.sessions-heading{flex-direction:column;gap:12px}.sessions-item{padding:16px}.sessions-detail{flex-basis:100%}.sessions-actions{width:100%}.sessions-dialog{padding:20px}.sessions-controls>div{align-items:stretch;flex-direction:column}}

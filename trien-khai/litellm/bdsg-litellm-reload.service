@@ -1,0 +1,7 @@
+[Unit]
+Description=Reload BDSG LiteLLM after an owner configuration change
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart bdsg-litellm.service
+TimeoutStartSec=60

@@ -1,0 +1,349 @@
+{
+  "schema": "open-bdsg/catalogue-v1",
+  "source": "BDSG public product registry and https://bdsg.vn/hst.js",
+  "observed_on": "2026-11-14",
+  "products": [
+    {
+      "id": "bdsg_super",
+      "name": "BDSG",
+      "url": "https://bdsg.vn/",
+      "group": "Điều phối",
+      "purpose": "Cổng BDSG và siêu ứng dụng",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_app",
+      "name": "BDSG APP",
+      "url": "https://app.bdsg.vn/",
+      "group": "Cộng đồng",
+      "purpose": "Mạng xã hội BDSG",
+      "color": "#0055B8",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_messenger",
+      "name": "BDSG Messenger",
+      "url": "https://app.bdsg.vn/",
+      "group": "Cộng đồng",
+      "purpose": "Nhắn tin cá nhân và nhóm",
+      "color": "#0055B8",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_land",
+      "name": "BDSG LAND",
+      "url": "https://bdsgland.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "Nền tảng bất động sản tổng quát",
+      "color": "#005ca6",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_academy",
+      "name": "BDSG ACADEMY",
+      "url": "https://bdsgacademy.bdsg.vn/",
+      "group": "Tri thức",
+      "purpose": "Học tập và đào tạo trực tuyến",
+      "color": "#6f42f5",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_aichat",
+      "name": "BDSG AI",
+      "url": "https://bdsgai.bdsg.vn/",
+      "group": "AI",
+      "purpose": "Không gian ứng dụng AI",
+      "color": "#6f42f5",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_ask",
+      "name": "BDSG ASK",
+      "url": "https://ask.bdsg.vn/",
+      "group": "Cộng đồng",
+      "purpose": "Hỏi đáp",
+      "color": "#00573f",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_bio",
+      "name": "BDSG BIO",
+      "url": "https://bdsgbio.bdsg.vn/",
+      "group": "Thương mại số",
+      "purpose": "SaaS Bio link và liên kết",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_connect",
+      "name": "BDSG CONNECT",
+      "url": "https://connect.bdsg.vn/",
+      "group": "Cộng đồng",
+      "purpose": "Kết nối chuyên môn và kinh doanh",
+      "color": "#7b2d8b",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_crm",
+      "name": "BDSG CRM",
+      "url": "https://crm.bdsg.vn/",
+      "group": "Vận hành",
+      "purpose": "Quan hệ khách hàng và cổng khách",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_erp",
+      "name": "BDSG ERP",
+      "url": "https://bdsgerp.bdsg.vn/",
+      "group": "Vận hành",
+      "purpose": "Quản trị nguồn lực doanh nghiệp",
+      "color": "#10069f",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_groupchat",
+      "name": "BDSG GROUPCHAT",
+      "url": "https://groupchat.bdsg.vn/",
+      "group": "Cộng đồng",
+      "purpose": "Phòng trao đổi cộng đồng doanh nghiệp",
+      "color": "#0f766e",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_homes",
+      "name": "BDSG Homes",
+      "url": "https://bdsghomes.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "Nhà phố và thổ cư",
+      "color": "#005ca6",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_host",
+      "name": "BDSG HOST",
+      "url": "https://bdsghost.bdsg.vn/",
+      "group": "Hạ tầng dịch vụ",
+      "purpose": "Dịch vụ hosting",
+      "color": "#a34400",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_industrial",
+      "name": "BDSG Industrial",
+      "url": "https://bdsgindustrial.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "Tư vấn và môi giới bất động sản công nghiệp",
+      "color": "#005ca6",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_news",
+      "name": "BDSG NEWS",
+      "url": "https://news.bdsg.vn/",
+      "group": "Tri thức",
+      "purpose": "Tin tức chuyển đổi số và AI",
+      "color": "#f5821f",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_office",
+      "name": "BDSG Office",
+      "url": "https://bdsgoffice.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "Văn phòng cho thuê",
+      "color": "#005ca6",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_pos",
+      "name": "BDSG POS",
+      "url": "https://bdsgpos.bdsg.vn/",
+      "group": "Vận hành",
+      "purpose": "Bán hàng và quản trị cửa hàng",
+      "color": "#0f766e",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_property",
+      "name": "BDSG PROPERTY",
+      "url": "https://bdsgproperty.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "Dự án căn hộ",
+      "color": "#005ca6",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_retail",
+      "name": "BDSG Retail",
+      "url": "https://bdsgretail.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "Mặt bằng bán lẻ và thương mại",
+      "color": "#005ca6",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_shop",
+      "name": "BDSG SHOP",
+      "url": "https://bdsgshop.bdsg.vn/",
+      "group": "Thương mại số",
+      "purpose": "Thương mại điện tử",
+      "color": "#5bba46",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_travel",
+      "name": "BDSG TRAVEL",
+      "url": "https://bdsgtravel.bdsg.vn/",
+      "group": "Thương mại số",
+      "purpose": "Du lịch và hành trình",
+      "color": "#0891b2",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_video",
+      "name": "BDSG VIDEO",
+      "url": "https://video.bdsg.vn/",
+      "group": "Tri thức",
+      "purpose": "Nội dung video",
+      "color": "#a6192e",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "phamvanthu",
+      "name": "PHẠM VĂN THƯ BDSG",
+      "url": "https://phamvanthu.bdsg.vn/",
+      "group": "Tri thức",
+      "purpose": "Kênh PHẠM VĂN THƯ BDSG",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_agent",
+      "name": "BDSG Agent",
+      "url": "https://agent.bdsg.vn/",
+      "group": "AI",
+      "purpose": "Nền tảng agent",
+      "color": "#00573f",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_aff",
+      "name": "BDSG Affiliate",
+      "url": "https://bdsgaff.bdsg.vn/",
+      "group": "Thương mại số",
+      "purpose": "Giới thiệu và cộng tác viên",
+      "color": "#b45309",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_housing",
+      "name": "BDSG Housing",
+      "url": "https://bdsghousing.bdsg.vn/",
+      "group": "Bất động sản",
+      "purpose": "SaaS nhà ở xã hội",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_vr",
+      "name": "BDSG VR",
+      "url": "https://bdsgvr.bdsg.vn/",
+      "group": "Không gian số",
+      "purpose": "Tour 360 và trải nghiệm không gian",
+      "color": "#7b2d8b",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_iot",
+      "name": "BDSG IoT",
+      "url": "https://iot.bdsg.vn/",
+      "group": "Không gian số",
+      "purpose": "Thiết bị và số đo theo tenant",
+      "color": "#c2410c",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_map",
+      "name": "BDSG Map",
+      "url": "https://map.bdsg.vn/",
+      "group": "Không gian số",
+      "purpose": "Bản đồ và địa điểm",
+      "color": "#0f766e",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_twin",
+      "name": "BDSG Twin",
+      "url": "https://twin.bdsg.vn/",
+      "group": "Không gian số",
+      "purpose": "Không gian 3D trên web",
+      "color": "#7b2d8b",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_web3",
+      "name": "BDSG Web3",
+      "url": "https://web3.bdsg.vn/",
+      "group": "Không gian số",
+      "purpose": "Nghiên cứu ứng dụng sổ cái chung",
+      "color": "#a34400",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_agris",
+      "name": "BDSG Agris",
+      "url": "https://bdsgagri.bdsg.vn/",
+      "group": "Nông nghiệp",
+      "purpose": "Quản lý trang trại và nghiệp vụ nông nghiệp",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_farm",
+      "name": "BDSG Farm",
+      "url": "https://bdsgfarm.bdsg.vn/",
+      "group": "Nông nghiệp",
+      "purpose": "Nền tảng Farm",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_law",
+      "name": "BDSG Law",
+      "url": "https://bdsglaw.bdsg.vn/",
+      "group": "Dịch vụ chuyên môn",
+      "purpose": "Dịch vụ pháp lý với hai ứng dụng",
+      "color": "#166b71",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_openos",
+      "name": "BDSG OS",
+      "url": "https://openos.bdsg.vn/",
+      "group": "AI & công nghệ",
+      "purpose": "Nền tảng mã nguồn mở",
+      "color": "#0f2d4d",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_llm",
+      "name": "BDSG LLM",
+      "url": "https://llm.bdsg.vn/",
+      "group": "AI & công nghệ",
+      "purpose": "Mô hình ngôn ngữ và API tri thức doanh nghiệp",
+      "color": "#10069f",
+      "mcp_status": "chua-cau-hinh"
+    },
+    {
+      "id": "bdsg_chat",
+      "name": "BDSG Chat",
+      "url": "https://chat.bdsg.vn/",
+      "group": "AI & công nghệ",
+      "purpose": "Trợ lý AI hỏi đáp",
+      "color": "#0891b2",
+      "mcp_status": "chua-cau-hinh"
+    }
+  ]
+}

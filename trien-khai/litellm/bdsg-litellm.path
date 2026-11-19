@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch BDSG private LiteLLM configuration
+
+[Path]
+PathChanged=/var/lib/bdsg-thanhhoa/litellm-config.json
+Unit=bdsg-litellm-reload.service
+
+[Install]
+WantedBy=multi-user.target

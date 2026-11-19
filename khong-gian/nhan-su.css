@@ -1,0 +1,212 @@
+.bdsg-team {
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.bdsg-task-detail .bdsg-work-page-heading > div {
+  min-width: 0;
+}
+#bdsg-task-stop {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#bdsg-task-stop[hidden] { display: none; }
+.bdsg-team-heading,
+.bdsg-team-person {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bdsg-team h2 {
+  font-size: 14px;
+  margin: 0;
+}
+.bdsg-team p {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  margin: 12px 0;
+}
+.bdsg-team-lead,
+.bdsg-team small {
+  color: var(--muted);
+}
+.bdsg-team small {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.bdsg-team-members {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bdsg-team-members > li {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.bdsg-team-person strong {
+  font-size: 14px;
+}
+.bdsg-team-state {
+  font-size: 13px;
+  color: var(--muted);
+}
+.bdsg-team-state[data-state="running"],
+.bdsg-team-state[data-state="working"],
+.bdsg-team-state[data-state="synthesizing"] {
+  color: var(--ink, #1a1a19);
+  font-weight: 600;
+}
+.bdsg-team details summary {
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.bdsg-team-history {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.bdsg-staff-page .bdsg-work-page-heading p {
+  max-width: 65ch;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.bdsg-staff-search {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 20px 0;
+  border-block: 1px solid var(--line);
+}
+.bdsg-staff-search input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  color: var(--ink, #1a1a19);
+  font: inherit;
+}
+.bdsg-staff-search label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.bdsg-staff-search span,
+.bdsg-staff-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+.bdsg-staff-note {
+  line-height: 1.6;
+  margin: 16px 0;
+}
+.bdsg-staff-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.7fr);
+  gap: 32px;
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+.bdsg-staff-row h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.bdsg-staff-row p {
+  margin: 0;
+  max-width: 65ch;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.bdsg-staff-row summary {
+  cursor: pointer;
+  font-size: 14px;
+  padding-bottom: 8px;
+}
+.bdsg-staff-row ul {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+.bdsg-staff-row li {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.bdsg-staff-empty {
+  padding: 32px 0;
+}
+.bdsg-staff-export {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 0 0;
+}
+.bdsg-staff-export label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.bdsg-staff-export select {
+  max-width: 100%;
+  padding: 10px;
+  background: #fff;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+.bdsg-staff-export p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.bdsg-workflow-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.bdsg-workflow-picker select {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  padding: 8px;
+  border-radius: 8px;
+  color: inherit;
+  background: #fff;
+  font: inherit;
+}
+.bdsg-workflow-picker a {
+  margin-left: auto;
+}
+.bdsg-team :focus-visible,
+.bdsg-staff-page :focus-visible {
+  outline: 2px solid var(--focus, #555550);
+  outline-offset: 3px;
+}
+.bdsg-task-artifact:focus {
+  outline: 2px solid var(--focus, #555550);
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .bdsg-staff-search {
+    grid-template-columns: 1fr auto;
+  }
+  .bdsg-staff-search label {
+    grid-column: 1 / -1;
+  }
+  .bdsg-staff-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
