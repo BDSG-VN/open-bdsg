@@ -15,13 +15,21 @@
       let stopped = false, booted = false, scoped = false, interval, checking, contextKey;
       const controller = new AbortController();
       const failure = () => new Error(message);
-      function invalidate(reason = message) {
+      let pendingInvalidation = null;
+      function notifyInvalidation() {
+        if (pendingInvalidation === null) return;
+        const reason = pendingInvalidation;
+        pendingInvalidation = null;
+        onInvalidate(reason);
+      }
+      function invalidate(reason = message, deferNotification = false) {
         if (stopped) return;
         stopped = true;
         controller.abort();
         clearInterval(interval);
         try { owner?.removeEventListener("bdsg-unit-changed", parentChanged); } catch (_) {}
-        onInvalidate(reason);
+        pendingInvalidation = reason;
+        if (!deferNotification) notifyInvalidation();
       }
       const session = window.BDSGSessionGuard.create({onInvalidate: invalidate});
       function parentCurrent() {
@@ -75,7 +83,10 @@
         return checking;
       }
       window.addEventListener("focus", () => { check().catch(() => {}); });
-      window.addEventListener("pagehide", () => invalidate());
+      // Khóa IO ngay; hủy SDK trong pagehide có thể mở dialog trên frame đang bị tách.
+      // Trang quay lại từ bfcache phải dọn editor trước khi người dùng tiếp tục.
+      window.addEventListener("pagehide", () => invalidate(message, true));
+      window.addEventListener("pageshow", notifyInvalidation);
       document.addEventListener("visibilitychange", () => { check().catch(() => {}); });
       async function guardedFetch(path, options = {}) {
         await ready;

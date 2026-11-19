@@ -187,3 +187,47 @@ hoạt động; bốn bản sao đầu vào riêng của QA35/36 được dọn 
 Đây vẫn là phục hồi kho ứng dụng với engine nóng, một người, không phải
 phục hồi cả engine/cache hoặc mất host. PowerPoint, nhiều worker với engine
 thật, tải, thu hồi khi reconnect/upgrade và cutover còn cần kiểm riêng.
+
+### Sửa kẹt tải lại PowerPoint sau phục hồi - 19/11/2026
+
+Lượt42 tái lập lỗi khi tải lại toàn webOS sau phục hồi kho ứng dụng. Cảnh báo
+`beforeunload` đầu được chấp nhận, nhưng thao tác hủy SDK trong `pagehide`
+phát cảnh báo thứ hai trên frame đã tách; Chromium trả
+`Not attached to an active page`. Trang không điều hướng, không có lỗi
+JavaScript trang. Lượt44 bỏ riêng callback dọn giao diện trong `pagehide`
+trên tuyến thử thì hoàn tất cùng luồng; đây chỉ là phép chẩn đoán.
+
+Guard mới vẫn khóa quyền, hủy IO, ngừng kiểm định kỳ và tháo listener cha
+ngay khi rời trang. Việc thông báo để hủy SDK được giữ đến `pageshow` nếu
+trang quay lại; không hồi sinh quyền của editor cũ. Thu hồi danh tính hoặc
+đơn vị khi trang còn mở vẫn dọn giao diện ngay. Bài hồi quy qua giao diện
+guard công khai đã đỏ trước sửa, sau sửa đạt cùng các bài liên quan:
+**61 bài Node đạt** ngày 19/11/2026. Ca `pageshow` trong bộ Node là sự kiện
+tổng hợp, chưa chứng minh vòng đời bfcache thực trên mọi trình duyệt.
+
+Lượt45 dùng toàn webOS nền `698875e`, ONLYOFFICE và ClamAV thật, nhưng thay
+riêng phản hồi tĩnh `bao-ve-office.js` bằng đúng byte mã sửa trong checkout.
+SHA-256 phần thay là
+`36bb2e14387cdfefced53a0b2fe9ef1f52d3d8142bf5714b1b7365fffc29a5cd`.
+Không gọi đây là phép thử toàn bản dựng mới hoặc triển khai production.
+Sau sửa chỉ còn một cảnh báo và tải lại thành công. PPTX bản **2** giữ dấu
+đã commit, không có dấu chưa lưu; phiên mới dùng key khác, lưu bản **3**
+giữ dấu cũ và dấu mới, không có phần chưa commit. HTTP và UI đọc đúng cùng
+byte sau restart gateway; ClamAV không phát hiện và không có lỗi JS trang.
+Nguồn ký cũ **200 → 403**, tiến độ/lưu cũ bị chặn, callback ký trạng thái
+1 có đối chứng `error:0 → error:1`; socket cũ đóng trong **5 giây** sau
+gateway sẵn sàng. Đã xem ảnh bản PowerPoint lưu mới.
+
+Môi trường thử đã dừng cả gateway/proxy/transport và container. **646 tệp
+nguồn**, **69 tệp web** nền và profile thử khớp sau nghiệm thu; firewall
+IPv4/IPv6 khớp trước thử, năm dịch vụ production đã kiểm vẫn hoạt động,
+production giữ R13. Các bản sao đầu vào xác thực của QA40-45 đã được dọn
+sau khi các tiến trình kết thúc. Lượt41 lỗi bộ kiểm, lượt43 lỗi cơ chế lấy
+JS trong driver, không tính đạt. Trước các lượt này đã sửa riêng nginx stage
+để dùng đường tạm riêng, thay việc ghi thư mục tạm nginx chung; giữ bản cấu
+hình trước và không sửa nginx production.
+
+Phục hồi mới kiểm kho ứng dụng khi engine/cache còn nóng và một người.
+Nhiều worker với engine thật, phục hồi toàn host/engine, tải, thu hồi khi
+reconnect/upgrade, Google theo đơn vị và cutover vẫn cần nghiệm thu. R14
+chưa phát hành production.
