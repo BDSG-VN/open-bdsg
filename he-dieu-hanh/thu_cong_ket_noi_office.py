@@ -1,7 +1,12 @@
 """Kiểm qua HTTP/WebSocket thật; engine ngoài được thay bằng server loopback."""
 import asyncio
 import gzip
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 try:
     from aiohttp import ClientSession, WSServerHandshakeError, WSMsgType, web
@@ -59,6 +64,9 @@ class ThuCongKetNoiOffice(unittest.IsolatedAsyncioTestCase):
             try:
                 async for message in ws:
                     if message.type == WSMsgType.TEXT:
+                        if message.data == 'close-engine-for-test':
+                            await ws.close(code=1011)
+                            break
                         received.append(message.data)
                         await ws.send_str(message.data)
                     elif message.type == WSMsgType.BINARY:
@@ -241,6 +249,94 @@ class ThuCongKetNoiOffice(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await ws.receive(timeout=4)).data, 'authorized-slow-auth')
             self.allowed = False
             self.assertIn((await ws.receive(timeout=5)).type, (WSMsgType.CLOSE, WSMsgType.CLOSED))
+
+    async def observed_proxy(self, observe):
+        proxy = TestServer(tao_cong(engine_origin=str(self.engine.make_url('')).rstrip('/'),
+            auth_origin=str(self.auth.make_url('')).rstrip('/'),
+            public_origin='https://office.example', observe=observe))
+        await proxy.start_server()
+        self.addAsyncCleanup(proxy.close)
+        return proxy
+
+    async def test_observer_classifies_revocation_without_document_or_credentials(self):
+        events = []
+        proxy = await self.observed_proxy(events.append)
+        marker = 'private-document-body-never-export'
+        async with self.client.ws_connect(proxy.make_url(self.path), headers={
+                'Origin': 'https://office.example', 'Cookie': 'session=synthetic'}) as ws:
+            await ws.send_str(marker)
+            self.assertEqual((await ws.receive(timeout=2)).data, marker)
+            self.allowed = False
+            self.assertIn((await ws.receive(timeout=5)).type, (WSMsgType.CLOSE, WSMsgType.CLOSED))
+            await asyncio.wait_for(self.engine_closed.wait(), 2)
+        self.assertTrue(any(e['event'] == 'auth' and e.get('status') == 403 for e in events))
+        self.assertTrue(any(e['event'] == 'channel_end' and e['reason'] == 'auth_failed' for e in events))
+        exported = json.dumps(events)
+        for private in (marker, 'session=synthetic', 'office.example', 'a' * 32, '/office-docs/'):
+            self.assertNotIn(private, exported)
+
+    async def test_observer_distinguishes_engine_close_from_auth_denial(self):
+        events = []
+        proxy = await self.observed_proxy(events.append)
+        async with self.client.ws_connect(proxy.make_url(self.path), headers={
+                'Origin': 'https://office.example', 'Cookie': 'session=synthetic'}) as ws:
+            await ws.send_str('close-engine-for-test')
+            self.assertIn((await ws.receive(timeout=5)).type, (WSMsgType.CLOSE, WSMsgType.CLOSED))
+        self.assertTrue(any(e['event'] == 'channel_end' and e['side'] == 'engine'
+                            and e['reason'] == 'eof' and e['close_code'] == 1011 for e in events))
+        self.assertFalse(any(e.get('reason') == 'auth_failed' for e in events))
+
+    async def test_observer_timeout_does_not_become_a_permission_denial(self):
+        events = []
+        proxy = await self.observed_proxy(events.append)
+        self.auth_slow = True
+        try:
+            with self.assertRaises(WSServerHandshakeError) as raised:
+                await self.client.ws_connect(proxy.make_url(self.path), headers={
+                    'Origin': 'https://office.example', 'Cookie': 'session=synthetic'})
+            self.assertEqual(raised.exception.status, 403)
+            self.assertTrue(any(e['event'] == 'auth' and e['outcome'] == 'timeout' for e in events))
+            self.assertFalse(any(e.get('status') == 403 for e in events))
+        finally:
+            self.auth_release.set()
+
+    async def test_broken_observer_neither_grants_rights_nor_breaks_valid_channel(self):
+        def broken(_event):
+            raise RuntimeError('private-observer-error')
+        proxy = await self.observed_proxy(broken)
+        async with self.client.ws_connect(proxy.make_url(self.path), headers={
+                'Origin': 'https://office.example', 'Cookie': 'session=synthetic'}) as ws:
+            await ws.send_str('still-authorized')
+            self.assertEqual((await ws.receive(timeout=2)).data, 'still-authorized')
+            self.allowed = False
+            self.assertIn((await ws.receive(timeout=5)).type, (WSMsgType.CLOSE, WSMsgType.CLOSED))
+
+
+class ThuChuanBiChanDoanCLI(unittest.TestCase):
+    def command(self, report, check=False):
+        return [sys.executable, str(Path(__file__).with_name('cong_ket_noi_office.py')),
+            '--listen-port', '18080', '--engine-port', '18081', '--auth-port', '18082',
+            '--public-origin', 'https://office.example', '--diagnostics-file', str(report),
+            *(['--check'] if check else [])]
+
+    def test_check_does_not_create_report_or_overwrite_existing_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            report = Path(folder) / 'report.json'
+            result = subprocess.run(self.command(report, check=True), capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0)
+            self.assertFalse(report.exists())
+            report.write_bytes(b'preserve-existing-content')
+            result = subprocess.run(self.command(report, check=True), capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(report.read_bytes(), b'preserve-existing-content')
+
+    def test_existing_report_refuses_start_before_serving(self):
+        with tempfile.TemporaryDirectory() as folder:
+            report = Path(folder) / 'report.json'
+            report.write_bytes(b'preserve-existing-content')
+            result = subprocess.run(self.command(report), capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(report.read_bytes(), b'preserve-existing-content')
 
 
 if __name__ == '__main__':

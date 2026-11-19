@@ -305,3 +305,35 @@ vụ production được kiểm hoạt động, production vẫn R13. Đã dọn
 đầu vào xác thực QA46-52 sau khi kết thúc. Còn kiểm nguyên nhân mất kết nối,
 nhiều worker với engine thật, tải, bfcache thật, reconnect/upgrade, phục hồi
 engine/cache/toàn host, Google theo đơn vị và cutover trước phát hành R14.
+
+### Chẩn đoán transport có giới hạn - 19/11/2026
+
+`tao_cong(..., observe=...)` nhận callback đồng bộ, nhanh, mặc định tắt.
+Sự kiện chỉ gồm số kênh tạm trong một tiến trình, thời gian đơn điệu, kết
+quả/mã HTTP kiểm quyền, phía kết nối và mã đóng WebSocket. Không chuyển
+request, URL, cookie, JWT, thông điệp, tên người dùng hoặc exception cho
+callback. Callback lỗi không được thay quyết định quyền hoặc làm ngắt kênh.
+
+`QuanSatCongOffice.record/snapshot` lọc nhãn/số theo danh sách hữu hạn,
+đếm kết quả, giữ tối đa **32 sự kiện auth lỗi/chậm** và **32 sự kiện kết
+thúc/lỗi transport**. Đây là giới hạn thiết kế, không phải phép đo tải.
+`auth_failed` chỉ có nghĩa lần kiểm không đạt; xem bản ghi auth tương ứng
+để phân biệt HTTP401/403, HTTP lỗi khác, timeout và lỗi mạng. `side` chỉ
+phía iterator nhận dữ liệu, không tự là bên có lỗi nghiệp vụ. Một kênh có
+thể có nhiều sự kiện kết thúc, không dùng tổng số đó làm số người dùng.
+
+CLI có `--diagnostics-file <tệp-mới>` để xuất JSON khi dịch vụ kết thúc
+bình thường. Linux tạo tệp độc quyền mode0600, không ghi đè; `--check` không
+tạo hay thay tệp. Dữ liệu giữ trong bộ nhớ trong lúc phục vụ để không thêm
+ghi đĩa vào đường kiểm quyền. SIGKILL hoặc mất host có thể không để lại bản
+đo hoàn chỉnh. Không có endpoint xuất chẩn đoán công khai; người vận hành
+phải chọn thư mục riêng. Thời hạn kiểm quyền và kiểm từng thông điệp giữ
+nguyên; chẩn đoán không cache quyền hoặc cho phép thêm dữ liệu qua kênh.
+
+Ngày 19/11/2026, **25 bài** liên quan đạt trên máy phát triển: 22 bài HTTP,
+WebSocket/CLI và 3 bài bộ đếm. Ca mới kiểm phân biệt engine đóng1011 với
+thu hồi quyền, timeout với HTTP403, callback quan sát lỗi, không xuất nội
+dung/chứng thư, giới hạn bộ nhớ, không mở rộng nhãn động, không sửa được
+bản đo tương lai qua snapshot, `--check` không ghi và tệp đã có chặn khởi
+động. Bài qua HTTP/WebSocket dùng engine/auth loopback tổng hợp. Chưa dùng
+kết quả này để kết luận nguyên nhân ngắt kết nối trong các lượt engine thật.
