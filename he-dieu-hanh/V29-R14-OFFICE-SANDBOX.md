@@ -336,4 +336,46 @@ thu hồi quyền, timeout với HTTP403, callback quan sát lỗi, không xuấ
 dung/chứng thư, giới hạn bộ nhớ, không mở rộng nhãn động, không sửa được
 bản đo tương lai qua snapshot, `--check` không ghi và tệp đã có chặn khởi
 động. Bài qua HTTP/WebSocket dùng engine/auth loopback tổng hợp. Chưa dùng
-kết quả này để kết luận nguyên nhân ngắt kết nối trong các lượt engine thật.
+kết quả loopback riêng lẻ để kết luận nguyên nhân ngắt kết nối ở engine thật.
+
+### Đối chứng tài nguyên khi mở hai editor - 19/11/2026
+
+Đã chạy toàn UI nguồn `c4f0e6e3dd42a94207dcbefcfdaef2106bd27677`, đối
+chiếu **651 tệp nguồn** và **69 tệp web**, với ONLYOFFICE/ClamAV thật.
+CLI xuất bản đo riêng tư sau mỗi lượt, không dùng bản sao transport chèn
+mã đo tạm. Một gateway phục vụ hai danh tính ở hai tiến trình Chromium.
+
+Ca63 ghi nhận **hai timeout kiểm quyền** trước khi bài thử thất bại, không
+có thao tác thu hồi từ chủ quản. Hai kênh đóng theo `auth_failed`; ảnh SDK
+hiện Connection is lost. Các phím vẫn tới textarea, nên chỉ đếm sự kiện
+bàn phím không chứng minh nội dung đã được editor nhận và đồng bộ.
+
+Giữ cùng mã/engine/scanner và thao tác, chỉ thay hạn mức CPU gateway thử:
+
+| Lượt | CPUQuota gateway | Timeout auth | Thời gian auth cao nhất | Kết quả |
+|---|---|---|---|---|
+| 63 | 100% | 2 | 1,5018 giây | Ngắt kênh trước baseline |
+| 64 | 200% | 0 | 0,2830 giây | Đủ nội dung hai người, thu hồi C, A lưu tiếp bản3 |
+| 65 | 100% | 1 | 1,5017 giây | Đổi lại mức cũ thì lỗi tái xuất hiện |
+| 66 | 200% | 0 | 0,2062 giây | Lặp mức mới, toàn luồng đạt |
+
+Đối chứng A/B/A/B này xác định giới hạn CPU của gateway thử là một nguyên
+nhân làm vượt ngân sách kiểm quyền trong ca đã tái lập. Đã chọn 200% làm
+baseline **riêng staging** cho ca hai editor, giữ bản cấu hình cũ và dấu
+SHA để quay lại. Không đổi deadline auth **1,5 giây**, không cache quyền,
+không bỏ kiểm thông điệp và không sửa tài nguyên production. Mức tài nguyên
+này không phải cam kết công suất production, nhiều worker hoặc mọi tải.
+
+Ca62 vẫn được giữ là chưa đạt: thiếu dấu A trong DOCX nhưng không có lỗi
+auth hoặc kênh kết thúc trước khi driver báo lỗi. Không quy ca đó cho
+timeout, cũng chưa kết luận mất dữ liệu đã được engine nhận. Cần kiểm
+tiếp thao tác/đồng bộ và các điều kiện tải, không xóa ca không đạt để làm
+báo cáo xanh.
+
+Các lượt đạt61/64/66 đều đọc OOXML có đủ hai dấu trước thu hồi và dấu A
+sau khi mở key mới; bản3 được quét thật, không có lỗi JS trang. Đã dừng
+stage/container, dọn bản sao đầu vào QA61-66, đối chiếu lại source/web/
+profile/firewall; năm dịch vụ production được kiểm hoạt động và trang
+Thanh Hoá trả HTTP200. Production giữ R13. R14 chưa phát hành; nhiều
+gateway worker, SDK/cache/toàn host recovery, tải, Google theo đơn vị và
+các cổng tenant/cutover còn phải nghiệm thu.
